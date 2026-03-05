@@ -1,0 +1,505 @@
+import { create } from 'zustand'
+import { supabase } from '@/lib/supabase'
+import type {
+  Document,
+  DocumentInsert,
+  SignatureField,
+  SignatureFieldInsert,
+  DocumentSigner,
+  SignaturePlacement,
+  AuditTrailEntry,
+} from '@/types/database'
+
+interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
+  id: string
+  created_at?: string
+  isNew?: boolean
+}
+
+interface DocumentState {
+  documents: Document[]
+  currentDocument: Document | null
+  signatureFields: SignatureFieldLocal[]
+  signers: DocumentSigner[]
+  placements: SignaturePlacement[]
+  auditTrail: AuditTrailEntry[]
+  loading: boolean
+  currentPage: number
+  totalPages: number
+
+  setCurrentPage: (page: number) => void
+  setTotalPages: (total: number) => void
+  setLoading: (loading: boolean) => void
+
+  fetchDocuments: () => Promise<void>
+  fetchDocument: (id: string) => Promise<void>
+  createDocument: (doc: DocumentInsert, file: File) => Promise<Document | null>
+  deleteDocument: (id: string) => Promise<void>
+  updateDocumentStatus: (id: string, status: Document['status']) => Promise<void>
+
+  addSignatureField: (field: SignatureFieldLocal) => void
+  updateSignatureField: (id: string, updates: Partial<SignatureFieldLocal>) => void
+  removeSignatureField: (id: string) => void
+  saveSignatureFields: (documentId: string) => Promise<void>
+  fetchSignatureFields: (documentId: string) => Promise<void>
+
+  addSigner: (documentId: string, email: string, name?: string) => Promise<void>
+  updateSigner: (signerId: string, updates: Partial<{ signer_email: string; signer_name: string }>) => Promise<void>
+  fetchSigners: (documentId: string) => Promise<void>
+  removeSigner: (signerId: string) => Promise<void>
+
+  fetchPlacements: (documentId: string) => Promise<void>
+  addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>) => Promise<void>
+
+  fetchSignerByToken: (token: string) => Promise<(DocumentSigner & { documents: { title: string; original_pdf_url: string; status: string } }) | null>
+  updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed') => Promise<void>
+
+  fetchAuditTrail: (documentId: string) => Promise<void>
+  addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string) => Promise<void>
+
+  sendForSigning: (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => Promise<void>
+  sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
+}
+
+export const useDocumentStore = create<DocumentState>((set, get) => ({
+  documents: [],
+  currentDocument: null,
+  signatureFields: [],
+  signers: [],
+  placements: [],
+  auditTrail: [],
+  loading: false,
+  currentPage: 1,
+  totalPages: 0,
+
+  setCurrentPage: (page) => set({ currentPage: page }),
+  setTotalPages: (total) => set({ totalPages: total }),
+  setLoading: (loading) => set({ loading }),
+
+  fetchDocuments: async () => {
+    set({ loading: true })
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('Error fetching documents:', error)
+      set({ loading: false })
+      return
+    }
+    set({ documents: (data as Document[]) || [], loading: false })
+  },
+
+  fetchDocument: async (id: string) => {
+    set({ loading: true })
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error) {
+      console.error('Error fetching document:', error)
+      set({ loading: false })
+      return
+    }
+    set({ currentDocument: data as Document, loading: false })
+
+    await Promise.all([
+      get().fetchSignatureFields(id),
+      get().fetchSigners(id),
+      get().fetchPlacements(id),
+    ])
+  },
+
+  createDocument: async (doc: DocumentInsert, file: File) => {
+    set({ loading: true })
+    try {
+      const fileName = `${Date.now()}_${file.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName)
+      console.log('PDF public URL:', urlData.publicUrl)
+
+      const { data, error } = await supabase
+        .from('documents')
+        .insert({ ...doc, original_pdf_url: urlData.publicUrl })
+        .select()
+        .single()
+      if (error) throw error
+
+      const newDoc = data as Document
+      set((state) => ({
+        documents: [newDoc, ...state.documents],
+        loading: false,
+      }))
+      return newDoc
+    } catch (error) {
+      console.error('Error creating document:', error)
+      set({ loading: false })
+      return null
+    }
+  },
+
+  deleteDocument: async (id: string) => {
+    const doc = get().documents.find((d) => d.id === id)
+    if (doc?.original_pdf_url) {
+      const url = new URL(doc.original_pdf_url)
+      const pathParts = url.pathname.split('/documents/')
+      if (pathParts[1]) {
+        await supabase.storage.from('documents').remove([decodeURIComponent(pathParts[1])])
+      }
+    }
+    await supabase.from('signature_placements').delete().eq('document_id', id)
+    await supabase.from('signature_fields').delete().eq('document_id', id)
+    await supabase.from('audit_trail').delete().eq('document_id', id)
+    await supabase.from('document_signers').delete().eq('document_id', id)
+    const { error } = await supabase.from('documents').delete().eq('id', id)
+    if (error) {
+      console.error('Error deleting document:', error)
+      return
+    }
+    set((state) => ({
+      documents: state.documents.filter((d) => d.id !== id),
+      currentDocument: state.currentDocument?.id === id ? null : state.currentDocument,
+    }))
+  },
+
+  updateDocumentStatus: async (id: string, status: Document['status']) => {
+    const { error } = await supabase
+      .from('documents')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) {
+      console.error('Error updating document status:', error)
+      return
+    }
+    set((state) => ({
+      documents: state.documents.map((d) =>
+        d.id === id ? { ...d, status } : d
+      ),
+      currentDocument:
+        state.currentDocument?.id === id
+          ? { ...state.currentDocument, status }
+          : state.currentDocument,
+    }))
+  },
+
+  addSignatureField: (field) => {
+    set((state) => ({
+      signatureFields: [...state.signatureFields, field],
+    }))
+  },
+
+  updateSignatureField: (id, updates) => {
+    set((state) => ({
+      signatureFields: state.signatureFields.map((f) =>
+        f.id === id ? { ...f, ...updates } : f
+      ),
+    }))
+  },
+
+  removeSignatureField: (id) => {
+    set((state) => ({
+      signatureFields: state.signatureFields.filter((f) => f.id !== id),
+    }))
+  },
+
+  saveSignatureFields: async (documentId: string) => {
+    const fields = get().signatureFields.filter(
+      (f) => f.document_id === documentId
+    )
+
+    await supabase
+      .from('signature_fields')
+      .delete()
+      .eq('document_id', documentId)
+
+    if (fields.length === 0) return
+
+    const inserts: SignatureFieldInsert[] = fields.map((f, index) => ({
+      document_id: f.document_id,
+      page_number: f.page_number,
+      x: f.x,
+      y: f.y,
+      width: f.width,
+      height: f.height,
+      assigned_to_email: f.assigned_to_email,
+      field_type: f.field_type,
+      field_order: index + 1,
+      label: f.label,
+    }))
+
+    const { error } = await supabase.from('signature_fields').insert(inserts)
+    if (error) console.error('Error saving fields:', error)
+  },
+
+  fetchSignatureFields: async (documentId: string) => {
+    const { data, error } = await supabase
+      .from('signature_fields')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('field_order')
+    if (error) {
+      console.error('Error fetching fields:', error)
+      return
+    }
+    set({ signatureFields: (data as SignatureFieldLocal[]) || [] })
+  },
+
+  addSigner: async (documentId: string, email: string, name?: string) => {
+    const { data, error } = await supabase
+      .from('document_signers')
+      .insert({
+        document_id: documentId,
+        signer_email: email,
+        signer_name: name || null,
+      })
+      .select()
+      .single()
+    if (error) {
+      console.error('Error adding signer:', error)
+      return
+    }
+    set((state) => ({
+      signers: [...state.signers, data as DocumentSigner],
+    }))
+  },
+
+  updateSigner: async (signerId: string, updates: Partial<{ signer_email: string; signer_name: string }>) => {
+    const { data, error } = await supabase
+      .from('document_signers')
+      .update(updates)
+      .eq('id', signerId)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Error updating signer:', error)
+      return
+    }
+    
+    set((state) => ({
+      signers: state.signers.map(s => s.id === signerId ? (data as DocumentSigner) : s),
+    }))
+  },
+
+  fetchSigners: async (documentId: string) => {
+    const { data, error } = await supabase
+      .from('document_signers')
+      .select('*')
+      .eq('document_id', documentId)
+    if (error) {
+      console.error('Error fetching signers:', error)
+      return
+    }
+    set({ signers: (data as DocumentSigner[]) || [] })
+  },
+
+  removeSigner: async (signerId: string) => {
+    const { error } = await supabase
+      .from('document_signers')
+      .delete()
+      .eq('id', signerId)
+    if (error) {
+      console.error('Error removing signer:', error)
+      return
+    }
+    set((state) => ({
+      signers: state.signers.filter((s) => s.id !== signerId),
+    }))
+  },
+
+  fetchPlacements: async (documentId: string) => {
+    const { data, error } = await supabase
+      .from('signature_placements')
+      .select('*')
+      .eq('document_id', documentId)
+    if (error) {
+      console.error('Error fetching placements:', error)
+      return
+    }
+    set({ placements: (data as SignaturePlacement[]) || [] })
+  },
+
+  addPlacement: async (placement) => {
+    const { data, error } = await supabase
+      .from('signature_placements')
+      .insert(placement)
+      .select()
+      .single()
+    if (error) {
+      console.error('Error adding placement:', error)
+      return
+    }
+    set((state) => ({
+      placements: [...state.placements, data as SignaturePlacement],
+    }))
+  },
+
+  fetchSignerByToken: async (token: string) => {
+    const { data, error } = await (supabase as any)
+      .rpc('get_signer_by_token', { p_token: token })
+    if (error || !data) {
+      console.error('Error fetching signer by token:', error)
+      return null
+    }
+    return data as any
+  },
+
+  updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed') => {
+    const { error } = await (supabase as any)
+      .rpc('update_signer_status_by_id', { p_signer_id: signerId, p_status: status })
+    if (error) {
+      console.error('Error updating signer status:', error)
+    }
+  },
+
+  fetchAuditTrail: async (documentId: string) => {
+    const { data, error } = await supabase
+      .from('audit_trail')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('created_at', { ascending: true })
+    if (error) {
+      console.error('Error fetching audit trail:', error)
+      return
+    }
+    set({ auditTrail: (data as AuditTrailEntry[]) || [] })
+  },
+
+  addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string) => {
+    let ipAddress: string | null = null
+    try {
+      const res = await fetch('https://api.ipify.org?format=json')
+      const json = await res.json()
+      ipAddress = json.ip || null
+    } catch {
+      // silently fail
+    }
+
+    const { data, error } = await supabase
+      .from('audit_trail')
+      .insert({
+        document_id: documentId,
+        action,
+        user_email: userEmail,
+        user_name: userName || null,
+        ip_address: ipAddress,
+        metadata: metadata || null,
+      })
+      .select()
+      .single()
+    if (error) {
+      console.error('Error adding audit entry:', error)
+      return
+    }
+    set((state) => ({
+      auditTrail: [...state.auditTrail, data as AuditTrailEntry],
+    }))
+  },
+
+  sendForSigning: async (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => {
+    await get().saveSignatureFields(documentId)
+    await get().updateDocumentStatus(documentId, 'pending')
+    
+    // Send emails to all signers
+    const signers = get().signers
+    const doc = get().currentDocument
+    
+    if (!doc) return
+    
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+    
+    for (const signer of signers) {
+      try {
+        const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-signing-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            to: signer.signer_email,
+            documentTitle: doc.title,
+            signingLink,
+            senderName: senderName || 'A user',
+            message: message || '',
+            ccEmails: ccEmails || [],
+          }),
+        })
+        
+        if (!response.ok) {
+          console.error(`Failed to send email to ${signer.signer_email}`)
+        }
+      } catch (error) {
+        console.error(`Error sending email to ${signer.signer_email}:`, error)
+      }
+    }
+  },
+
+  sendReminder: async (documentId: string, senderName?: string) => {
+    // Fetch signers who haven't completed signing
+    const { data: signersList } = await supabase
+      .from('document_signers')
+      .select('*')
+      .eq('document_id', documentId)
+      .neq('status', 'signed')
+
+    if (!signersList || signersList.length === 0) return { sent: 0, failed: 0 }
+
+    // Get document title
+    const { data: doc } = await supabase
+      .from('documents')
+      .select('title')
+      .eq('id', documentId)
+      .single()
+
+    if (!doc) return { sent: 0, failed: 0 }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+    let sent = 0
+    let failed = 0
+
+    for (const signer of signersList) {
+      try {
+        const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/send-signing-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            to: signer.signer_email,
+            documentTitle: doc.title,
+            signingLink,
+            senderName: senderName || 'A user',
+            message: 'This is a friendly reminder to sign the document. Please review and sign at your earliest convenience.',
+            ccEmails: [],
+          }),
+        })
+
+        if (response.ok) {
+          sent++
+        } else {
+          failed++
+        }
+      } catch {
+        failed++
+      }
+    }
+
+    return { sent, failed }
+  },
+}))
