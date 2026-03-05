@@ -71,7 +71,7 @@ export default function LandingPage() {
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
               Sign documents with{' '}
-              <span className="text-[hsl(var(--primary))]">Somadhan</span>
+              <span className="text-[hsl(var(--primary))]">RocketSign</span>
             </h1>
             <p className="text-lg text-[hsl(var(--muted-foreground))] mb-8 max-w-2xl mx-auto">
               Upload documents, define signature fields, invite multiple signers,
@@ -151,7 +151,7 @@ export default function LandingPage() {
           <div className="bg-gradient-to-br from-[hsl(var(--primary))] to-teal-800 rounded-3xl p-12 text-center text-white">
             <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
             <p className="text-white/70 mb-8 max-w-xl mx-auto">
-              Join thousands of users who trust Somadhan for their document signing needs.
+              Join thousands of users who trust RocketSign for their document signing needs.
             </p>
             <Link to="/login">
               <Button
@@ -181,11 +181,11 @@ export default function LandingPage() {
       <footer className="border-t border-[hsl(var(--border))] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={SomadhanLogo} alt="Somadhan" className="w-7 h-7 rounded-lg" />
-            <span className="font-semibold">Somadhan</span>
+            <img src={SomadhanLogo} alt="RocketSign" className="w-7 h-7 rounded-lg" />
+            <span className="font-semibold">RocketSign</span>
           </div>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            &copy; {new Date().getFullYear()} Somadhan. All rights reserved.
+            &copy; {new Date().getFullYear()} RocketSign. All rights reserved.
           </p>
         </div>
       </footer>

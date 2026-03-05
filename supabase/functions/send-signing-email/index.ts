@@ -79,7 +79,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'RocketSign <onboarding@resend.dev>', // For production: replace with 'RocketSign <noreply@yourdomain.com>' after verifying domain in Resend
+        from: 'RocketSign <onboarding@resend.dev>', // Resend test email - only sends to rocketsign00@gmail.com until domain verified
         to: recipients,
         subject: `${senderName} has requested your signature on "${documentTitle}"`,
         html: emailHtml,

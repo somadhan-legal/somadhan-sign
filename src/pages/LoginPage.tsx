@@ -95,12 +95,12 @@ export default function LoginPage() {
       {/* Left - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[hsl(var(--primary))] to-teal-900 p-12 flex-col justify-between">
         <div className="flex items-center gap-3">
-          <img src={SomadhanLogo} alt="Somadhan" className="w-12 h-12 rounded-2xl" />
-          <span className="text-2xl font-bold text-white">Somadhan</span>
+          <img src={SomadhanLogo} alt="RocketSign" className="w-12 h-12 rounded-2xl" />
+          <span className="text-2xl font-bold text-white">RocketSign</span>
         </div>
         <div>
           <h1 className="text-4xl font-bold text-white mb-4">
-            Sign documents with Somadhan
+            Sign documents with RocketSign
           </h1>
           <p className="text-lg text-white/70">
             Upload, define signature fields, invite signers, and get documents signed — all in one place.
@@ -126,8 +126,8 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
-            <img src={SomadhanLogo} alt="Somadhan" className="w-9 h-9 rounded-xl" />
-            <span className="text-xl font-bold">Somadhan</span>
+            <img src={SomadhanLogo} alt="RocketSign" className="w-9 h-9 rounded-xl" />
+            <span className="text-xl font-bold">RocketSign</span>
           </div>
 
           {/* Forgot Password Screen */}
@@ -286,7 +286,7 @@ export default function LoginPage() {
               <p className="text-[hsl(var(--muted-foreground))] mb-6">
                 {mode === 'login'
                   ? 'Sign in to your account to continue'
-                  : 'Get started with Somadhan today'}
+                  : 'Get started with RocketSign today'}
               </p>
 
               {/* Google Sign In */}
@@ -439,7 +439,7 @@ export default function LoginPage() {
             </div>
             <h3 className="text-xl font-bold mb-2">Account Verified!</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">
-              Your email has been confirmed. You can now use Somadhan.
+              Your email has been confirmed. You can now use RocketSign.
             </p>
             <Button
               className="w-full h-11"

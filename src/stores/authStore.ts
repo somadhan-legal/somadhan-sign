@@ -17,6 +17,9 @@ interface AuthState {
   resendSignupOtp: (email: string) => Promise<void>
   verifySignupOtp: (email: string, token: string) => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
+  isRecovery: boolean
+  setIsRecovery: (val: boolean) => void
   signOut: () => Promise<void>
 }
 
@@ -25,6 +28,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   session: null,
   loading: true,
   initialized: false,
+  isRecovery: false,
+  setIsRecovery: (val) => set({ isRecovery: val }),
 
   setUser: (user) => set({ user }),
   setSession: (session) => set({ session }),
@@ -40,11 +45,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         initialized: true,
       })
 
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange((event, session) => {
         set({
           session,
           user: session?.user ?? null,
         })
+        if (event === 'PASSWORD_RECOVERY') {
+          set({ isRecovery: true })
+        }
       })
     } catch {
       set({ loading: false, initialized: true })
@@ -135,10 +143,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true })
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
+        redirectTo: `${window.location.origin}/reset-password`,
       })
       if (error) throw error
       set({ loading: false })
+    } catch (error) {
+      set({ loading: false })
+      throw error
+    }
+  },
+
+  updatePassword: async (newPassword: string) => {
+    set({ loading: true })
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      set({ loading: false, isRecovery: false })
     } catch (error) {
       set({ loading: false })
       throw error

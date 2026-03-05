@@ -20,6 +20,8 @@ import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
 import { generateColor } from '@/lib/utils'
 import { generateAuditPdf } from '@/lib/auditPdf'
+import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
+import { supabase } from '@/lib/supabase'
 
 const fieldTypeIcons: Record<string, React.ReactNode> = {
   signature: <PenTool className="w-3 h-3" />,
@@ -51,12 +53,10 @@ export default function InviteSigningPage() {
     fetchPlacements,
     fetchSignerByToken,
     updateSignerStatus,
+    updateDocumentStatus,
+    fetchSigners,
     addPlacement,
     addAuditEntry,
-    fetchAuditTrail,
-    currentPage,
-    setCurrentPage,
-    setTotalPages,
   } = useDocumentStore()
 
   const [signerData, setSignerData] = useState<SignerData | null>(null)
@@ -94,6 +94,13 @@ export default function InviteSigningPage() {
       await fetchSignatureFields(data.document_id)
       await fetchPlacements(data.document_id)
 
+      // If signer already signed, show finished state
+      if (data.status === 'signed') {
+        setFinished(true)
+        setPageLoading(false)
+        return
+      }
+
       if (data.status === 'pending') {
         await updateSignerStatus(data.id, 'viewed')
       }
@@ -128,11 +135,9 @@ export default function InviteSigningPage() {
     (index: number) => {
       if (index >= 0 && index < allMyUnsigned.length) {
         setCurrentFieldIndex(index)
-        const field = allMyUnsigned[index]
-        setCurrentPage(field.page_number)
       }
     },
-    [allMyUnsigned, setCurrentPage]
+    [allMyUnsigned]
   )
 
   const handleSaveSignature = (dataUrl: string) => {
@@ -260,12 +265,21 @@ export default function InviteSigningPage() {
     if (remaining.length === 0) {
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
+      
+      // Check if ALL signers have signed, then update document status
+      await fetchSigners(documentId)
+      const allSigners = useDocumentStore.getState().signers
+      const allDone = allSigners.length > 0 && allSigners.every(s => s.status === 'signed' || s.id === signerData.id)
+      if (allDone) {
+        await updateDocumentStatus(documentId, 'completed')
+      }
+      
       setFinished(true)
     }
   }
 
-  const currentPageFields = signatureFields.filter(
-    (f) => f.document_id === documentId && f.page_number === currentPage
+  const getPageFields = (pageNumber: number) => signatureFields.filter(
+    (f) => f.document_id === documentId && f.page_number === pageNumber
   )
 
   if (pageLoading) {
@@ -295,38 +309,135 @@ export default function InviteSigningPage() {
     )
   }
 
+  const fetchSignedFields = async (): Promise<SignedField[]> => {
+    if (!documentId) return []
+    
+    // Fetch placements
+    const { data: placementsData, error: pErr } = await supabase
+      .from('signature_placements')
+      .select('*')
+      .eq('document_id', documentId)
+    
+    if (pErr) { console.error('Error fetching placements:', pErr); return [] }
+    if (!placementsData || placementsData.length === 0) return []
+
+    // Fetch corresponding fields
+    const fieldIds = placementsData.map(p => p.field_id)
+    const { data: fieldsData, error: fErr } = await supabase
+      .from('signature_fields')
+      .select('*')
+      .in('id', fieldIds)
+
+    if (fErr) { console.error('Error fetching fields:', fErr); return [] }
+    if (!fieldsData) return []
+
+    const fieldsMap = new Map(fieldsData.map(f => [f.id, f]))
+
+    return placementsData
+      .filter(p => fieldsMap.has(p.field_id))
+      .map(p => {
+        const field = fieldsMap.get(p.field_id)!
+        return {
+          field_type: field.field_type,
+          page_number: field.page_number,
+          x_percent: field.x,
+          y_percent: field.y,
+          width_percent: field.width,
+          height_percent: field.height,
+          signature_id: p.signature_id,
+        }
+      })
+  }
+
+  const buildSignedAuditPdf = async (): Promise<Blob> => {
+    // Fetch document fresh from Supabase to avoid stale data
+    const docId = signerData!.document_id
+    const { data: freshDoc } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', docId)
+      .single()
+
+    const pdfUrl = freshDoc?.original_pdf_url || signerData!.documents.original_pdf_url
+    const title = freshDoc?.title || signerData!.documents.title
+
+    // Step 1: Generate signed PDF with overlays
+    const signedFields = await fetchSignedFields()
+    let basePdfUrl = pdfUrl
+    if (signedFields.length > 0) {
+      const signedBlob = await generateSignedPdf(pdfUrl, signedFields)
+      basePdfUrl = URL.createObjectURL(signedBlob)
+    }
+
+    // Step 2: Fetch audit trail for THIS document ONLY using the exact document ID
+    console.log('[InviteSigningPage] Fetching audit trail for doc_id:', docId, 'title:', title)
+    const { data: auditData, error: auditErr } = await supabase
+      .from('audit_trail')
+      .select('*')
+      .eq('document_id', docId)
+      .order('created_at', { ascending: true })
+
+    if (auditErr) console.error('[InviteSigningPage] Audit trail error:', auditErr)
+    console.log('[InviteSigningPage] Audit entries returned:', auditData?.length,
+      'doc_ids in result:', [...new Set(auditData?.map(e => e.document_id) || [])])
+    console.log('[InviteSigningPage] Full audit data:', JSON.stringify(auditData?.map(e => ({ 
+      action: e.action, 
+      doc_id: e.document_id, 
+      user: e.user_email 
+    })), null, 2))
+
+    // EXTRA SAFETY: Filter client-side in case Supabase RLS returns extra rows
+    const filteredAudit = (auditData || []).filter(e => e.document_id === docId)
+    console.log('[InviteSigningPage] After client-side filter:', filteredAudit.length)
+    console.log('[InviteSigningPage] Filtered audit data:', JSON.stringify(filteredAudit.map(e => ({ 
+      action: e.action, 
+      doc_id: e.document_id, 
+      user: e.user_email 
+    })), null, 2))
+
+    // Step 3: Append audit trail pages to the signed PDF
+    const finalBlob = await generateAuditPdf(basePdfUrl, filteredAudit, title)
+
+    // Cleanup temp blob URL
+    if (basePdfUrl !== pdfUrl) URL.revokeObjectURL(basePdfUrl)
+
+    return finalBlob
+  }
+
   const handleViewDocument = async () => {
     if (!signerData || !documentId) return
     setGeneratingPdf(true)
     try {
-      await fetchAuditTrail(documentId)
-      const trail = useDocumentStore.getState().auditTrail
-      const blob = await generateAuditPdf(
-        signerData.documents.original_pdf_url,
-        trail,
-        signerData.documents.title,
-      )
+      const blob = await buildSignedAuditPdf()
       const url = URL.createObjectURL(blob)
       setAuditPdfUrl(url)
       setShowPreview(true)
     } catch (err) {
-      console.error('Error generating audit PDF:', err)
+      console.error('Error generating PDF:', err)
+      alert('Error generating document. Please try again.')
     } finally {
       setGeneratingPdf(false)
     }
   }
 
-  const handleDownloadPdf = () => {
-    if (!auditPdfUrl || !signerData) return
-    const a = document.createElement('a')
-    a.href = auditPdfUrl
-    a.download = `${signerData.documents.title} - Signed.pdf`
-    a.click()
+  const handleDownloadPdf = async () => {
+    if (!signerData || !documentId) return
+    try {
+      const blob = await buildSignedAuditPdf()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${signerData.documents.title} - Signed.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Error generating signed PDF:', err)
+      alert('Error generating PDF. Please try again.')
+    }
   }
 
-  const previewPageFields = signatureFields.filter(
-    (f) => f.document_id === documentId && f.page_number === currentPage
-  )
 
   if (finished && showPreview && auditPdfUrl) {
     return (
@@ -349,64 +460,6 @@ export default function InviteSigningPage() {
         <div className="flex-1 overflow-auto flex justify-center p-6">
           <PdfViewer
             fileUrl={auditPdfUrl}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            onTotalPages={setTotalPages}
-            overlay={
-              <>
-                {previewPageFields.map((field) => {
-                  const placement = placements.find((p) => p.field_id === field.id)
-                  if (!placement) return null
-                  const val = placement.signature_id
-
-                  const renderSigned = () => {
-                    const ft = field.field_type
-                    const isImg = val.startsWith('data:image')
-                    if (ft === 'date' || val.startsWith('date:')) {
-                      return (
-                        <div className="w-full h-full flex items-end">
-                          <span className="text-sm font-bold text-black leading-tight">{val.replace('date:', '')}</span>
-                        </div>
-                      )
-                    }
-                    if (ft === 'checkbox' || val === 'checkbox:checked' || val === 'checked') {
-                      return (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <svg className="w-[70%] h-[70%] text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                        </div>
-                      )
-                    }
-                    if (ft === 'text' || (!isImg && val.startsWith('text:'))) {
-                      return (
-                        <div className="w-full h-full flex items-end">
-                          <span className="text-sm font-bold text-black leading-tight truncate px-0.5">{val.replace('text:', '')}</span>
-                        </div>
-                      )
-                    }
-                    return (
-                      <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                        <img src={val} alt="Signed" className="max-w-full max-h-full object-contain" />
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <div
-                      key={field.id}
-                      className="absolute z-10"
-                      style={{
-                        left: `${field.x}%`,
-                        top: `${field.y}%`,
-                        width: `${field.width}%`,
-                        height: `${field.height}%`,
-                      }}
-                    >
-                      {renderSigned()}
-                    </div>
-                  )
-                })}
-              </>
-            }
           />
         </div>
       </div>
@@ -425,18 +478,24 @@ export default function InviteSigningPage() {
             Thank you, <strong>{userName || userEmail}</strong>. All your fields have been signed successfully.
           </p>
           <div className="space-y-3">
-            <Button className="w-full" onClick={handleViewDocument} disabled={generatingPdf}>
+            <Button className="w-full" onClick={handleDownloadPdf} disabled={generatingPdf}>
               {generatingPdf ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Generating Document...
+                  Generating PDF...
                 </>
               ) : (
-                'View Signed Document'
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Signed Document
+                </>
               )}
             </Button>
+            <Button variant="outline" className="w-full" onClick={handleViewDocument} disabled={generatingPdf}>
+              View Signed Document
+            </Button>
             <p className="text-xs text-[hsl(var(--muted-foreground))]">
-              View the complete document with the audit trail certificate
+              Download includes signatures and audit trail certificate
             </p>
           </div>
         </div>
@@ -549,7 +608,6 @@ export default function InviteSigningPage() {
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
                   onClick={() => {
-                    setCurrentPage(field.page_number)
                     if (!isSigned) {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
@@ -619,12 +677,11 @@ export default function InviteSigningPage() {
       <div className="flex-1 overflow-auto bg-gray-50 p-6 flex justify-center">
         <PdfViewer
           fileUrl={signerData.documents.original_pdf_url}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onTotalPages={setTotalPages}
-          overlay={
+          renderPageOverlay={(pageNumber) => {
+            const pageFields = getPageFields(pageNumber)
+            return (
             <>
-              {currentPageFields.map((field) => {
+              {pageFields.map((field) => {
                 const isMine = field.assigned_to_email === userEmail
                 const placement = placements.find((p) => p.field_id === field.id)
                 const isSigned = !!placement
@@ -660,7 +717,7 @@ export default function InviteSigningPage() {
                       </div>
                     ) : isSigned && placement && (isCheckbox || placement.signature_id === 'checkbox:checked') ? (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-[70%] h-[70%] text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        <svg className="w-[70%] h-[70%] text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </div>
                     ) : isSigned && placement && (isText || placement.signature_id.startsWith('text:')) ? (
                       <div className="w-full h-full flex items-end">
@@ -803,7 +860,8 @@ export default function InviteSigningPage() {
                 )
               })}
             </>
-          }
+            )
+          }}
         />
       </div>
 

@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react'
+import { ZoomIn, ZoomOut } from 'lucide-react'
 import Button from '@/components/ui/Button'
-// Text and annotation layers disabled for click handling
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -11,73 +10,87 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 interface PdfViewerProps {
   fileUrl: string
-  currentPage: number
-  onPageChange: (page: number) => void
-  onTotalPages: (total: number) => void
-  onPageClick?: (x: number, y: number, pageWidth: number, pageHeight: number) => void
-  overlay?: React.ReactNode
+  onTotalPages?: (total: number) => void
+  onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
+  renderPageOverlay?: (pageNumber: number) => React.ReactNode
   scale?: number
+}
+
+function PageWithOverlay({
+  pageNumber,
+  scale,
+  onPageClick,
+  renderPageOverlay,
+}: {
+  pageNumber: number
+  scale: number
+  onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
+  renderPageOverlay?: (pageNumber: number) => React.ReactNode
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!onPageClick || !ref.current) return
+      const rect = ref.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      onPageClick(pageNumber, x, y, rect.width, rect.height)
+    },
+    [onPageClick, pageNumber]
+  )
+
+  return (
+    <div
+      ref={ref}
+      className="relative cursor-crosshair"
+      onClick={handleClick}
+      style={{ userSelect: 'none' }}
+    >
+      <Page
+        pageNumber={pageNumber}
+        scale={scale}
+        renderTextLayer={false}
+        renderAnnotationLayer={false}
+      />
+      {renderPageOverlay && (
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
+          <div className="relative w-full h-full pointer-events-auto">
+            {renderPageOverlay(pageNumber)}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function PdfViewer({
   fileUrl,
-  currentPage,
-  onPageChange,
   onTotalPages,
   onPageClick,
-  overlay,
+  renderPageOverlay,
   scale: externalScale,
 }: PdfViewerProps) {
   const [totalPages, setTotalPages] = useState(0)
   const [internalScale, setInternalScale] = useState(1.0)
-  const pageRef = useRef<HTMLDivElement>(null)
 
   const scale = externalScale ?? internalScale
 
   const onDocumentLoadSuccess = useCallback(
     ({ numPages }: { numPages: number }) => {
       setTotalPages(numPages)
-      onTotalPages(numPages)
+      onTotalPages?.(numPages)
     },
     [onTotalPages]
   )
 
-  const handlePageClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!onPageClick || !pageRef.current) return
-      const rect = pageRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      onPageClick(x, y, rect.width, rect.height)
-    },
-    [onPageClick]
-  )
-
   return (
-    <div className="flex flex-col items-center">
-      {/* Controls */}
-      <div className="flex items-center gap-2 mb-4 bg-white rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage <= 1}
-          className="h-8 w-8"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        <span className="text-sm font-medium min-w-[80px] text-center">
-          {currentPage} / {totalPages}
+    <div className="flex flex-col items-center w-full">
+      {/* Zoom Controls */}
+      <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-white rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
+        <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
+          {totalPages} {totalPages === 1 ? 'page' : 'pages'}
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage >= totalPages}
-          className="h-8 w-8"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
         <div className="w-px h-6 bg-[hsl(var(--border))] mx-1" />
         <Button
           variant="ghost"
@@ -100,44 +113,34 @@ export default function PdfViewer({
         </Button>
       </div>
 
-      {/* PDF Viewer */}
-      <div className="relative bg-gray-100 rounded-lg overflow-auto max-h-[calc(100vh-250px)] p-4">
-        <Document
-          file={fileUrl}
-          onLoadSuccess={onDocumentLoadSuccess}
-          loading={
-            <div className="w-[600px] h-[800px] flex items-center justify-center">
-              <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
-            </div>
-          }
-          error={
-            <div className="w-[600px] h-[400px] flex items-center justify-center text-[hsl(var(--muted-foreground))]">
-              Failed to load PDF. Make sure you have a valid PDF URL.
-            </div>
-          }
-        >
-          <div
-            ref={pageRef}
-            className="relative cursor-crosshair"
-            onClick={handlePageClick}
-            style={{ userSelect: 'none' }}
-          >
-            <Page
-              pageNumber={currentPage}
-              scale={scale}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-            />
-            {overlay && (
-              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-                <div className="relative w-full h-full pointer-events-auto">
-                  {overlay}
-                </div>
-              </div>
-            )}
+      {/* PDF Pages — continuous scroll */}
+      <Document
+        file={fileUrl}
+        onLoadSuccess={onDocumentLoadSuccess}
+        loading={
+          <div className="w-[600px] h-[800px] flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
           </div>
-        </Document>
-      </div>
+        }
+        error={
+          <div className="w-[600px] h-[400px] flex items-center justify-center text-[hsl(var(--muted-foreground))]">
+            Failed to load PDF. Make sure you have a valid PDF URL.
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center gap-4">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+            <div key={pageNum} className="shadow-md">
+              <PageWithOverlay
+                pageNumber={pageNum}
+                scale={scale}
+                onPageClick={onPageClick}
+                renderPageOverlay={renderPageOverlay}
+              />
+            </div>
+          ))}
+        </div>
+      </Document>
     </div>
   )
 }

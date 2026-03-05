@@ -14,7 +14,7 @@ type TabType = 'draw' | 'type' | 'upload'
 export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
-  const [activeTab, setActiveTab] = useState<TabType>('draw')
+  const [activeTab, setActiveTab] = useState<TabType>('upload')
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
 
@@ -78,9 +78,9 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
   }
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'upload', label: 'Upload', icon: <Upload className="w-4 h-4" /> },
     { id: 'draw', label: 'Draw', icon: <Pen className="w-4 h-4" /> },
     { id: 'type', label: 'Type', icon: <Type className="w-4 h-4" /> },
-    { id: 'upload', label: 'Upload', icon: <Upload className="w-4 h-4" /> },
   ]
 
   return (
@@ -158,9 +158,12 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
               ) : (
                 <>
                   <Upload className="w-8 h-8 mx-auto text-[hsl(var(--muted-foreground))]/50 mb-2" />
-                  <p className="text-sm">Click to upload signature image</p>
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <p className="text-sm font-medium mb-1">Click to upload signature image</p>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
                     PNG, JPG up to 2MB
+                  </p>
+                  <p className="text-xs text-blue-600 font-medium">
+                    💡 Upload PNG/JPG with transparent background for better appearance
                   </p>
                 </>
               )}

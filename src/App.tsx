@@ -9,6 +9,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import DocumentEditorPage from '@/pages/DocumentEditorPage'
 import DocumentPreviewPage from '@/pages/DocumentPreviewPage'
 import InviteSigningPage from '@/pages/InviteSigningPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
 
 function HomeRedirect() {
   const user = useAuthStore((s) => s.user)
@@ -32,6 +33,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/dashboard"
             element={

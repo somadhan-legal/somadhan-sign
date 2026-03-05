@@ -19,6 +19,9 @@ import {
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
+import { supabase } from '@/lib/supabase'
+import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
+import { generateAuditPdf } from '@/lib/auditPdf'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
@@ -273,9 +276,87 @@ export default function DashboardPage() {
                           </Link>
                           <button
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
-                            onClick={() => {
-                              window.open(documents.find(d => d.id === doc.id)?.original_pdf_url, '_blank')
+                            onClick={async () => {
                               setMenuOpen(null)
+                              const currentDoc = documents.find(d => d.id === doc.id)
+                              if (!currentDoc) return
+
+                              try {
+                                // Fetch placements
+                                const { data: placementsArr, error: pErr } = await supabase
+                                  .from('signature_placements')
+                                  .select('*')
+                                  .eq('document_id', doc.id)
+
+                                if (pErr) console.error('Error fetching placements:', pErr)
+
+                                if (!placementsArr || placementsArr.length === 0) {
+                                  window.open(currentDoc.original_pdf_url, '_blank')
+                                  return
+                                }
+
+                                // Fetch corresponding fields
+                                const fieldIds = placementsArr.map(p => p.field_id)
+                                const { data: fieldsArr, error: fErr } = await supabase
+                                  .from('signature_fields')
+                                  .select('*')
+                                  .in('id', fieldIds)
+
+                                if (fErr) console.error('Error fetching fields:', fErr)
+
+                                if (!fieldsArr || fieldsArr.length === 0) {
+                                  window.open(currentDoc.original_pdf_url, '_blank')
+                                  return
+                                }
+
+                                const fieldsMap = new Map(fieldsArr.map(f => [f.id, f]))
+                                const signedFields: SignedField[] = placementsArr
+                                  .filter(p => fieldsMap.has(p.field_id))
+                                  .map(p => {
+                                    const field = fieldsMap.get(p.field_id)!
+                                    return {
+                                      field_type: field.field_type,
+                                      page_number: field.page_number,
+                                      x_percent: field.x,
+                                      y_percent: field.y,
+                                      width_percent: field.width,
+                                      height_percent: field.height,
+                                      signature_id: p.signature_id,
+                                    }
+                                  })
+
+                                // Generate signed PDF
+                                const signedBlob = await generateSignedPdf(currentDoc.original_pdf_url, signedFields)
+                                const signedUrl = URL.createObjectURL(signedBlob)
+
+                                // Fetch audit trail for THIS document only
+                                const { data: auditData } = await supabase
+                                  .from('audit_trail')
+                                  .select('*')
+                                  .eq('document_id', doc.id)
+                                  .order('created_at', { ascending: true })
+
+                                // Client-side safety filter
+                                const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
+                                console.log('[Dashboard] doc_id:', doc.id, 'total from DB:', auditData?.length, 'after filter:', filteredAudit.length)
+
+                                // Append audit trail
+                                const finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)
+                                URL.revokeObjectURL(signedUrl)
+
+                                const url = URL.createObjectURL(finalBlob)
+                                const link = window.document.createElement('a')
+                                link.href = url
+                                link.download = `${currentDoc.title} - Signed.pdf`
+                                document.body.appendChild(link)
+                                link.click()
+                                document.body.removeChild(link)
+                                URL.revokeObjectURL(url)
+                              } catch (error) {
+                                console.error('Error generating signed PDF:', error)
+                                alert('Error generating PDF. Downloading original instead.')
+                                window.open(currentDoc.original_pdf_url, '_blank')
+                              }
                             }}
                           >
                             <Download className="w-4 h-4" />

@@ -40,9 +40,6 @@ export default function SigningPage() {
     addPlacement,
     addAuditEntry,
     updateDocumentStatus,
-    currentPage,
-    setCurrentPage,
-    setTotalPages,
     loading,
   } = useDocumentStore()
 
@@ -92,11 +89,9 @@ export default function SigningPage() {
     (index: number) => {
       if (index >= 0 && index < allMyUnsigned.length) {
         setCurrentFieldIndex(index)
-        const field = allMyUnsigned[index]
-        setCurrentPage(field.page_number)
       }
     },
-    [allMyUnsigned, setCurrentPage]
+    [allMyUnsigned]
   )
 
   const handleSaveSignature = (dataUrl: string) => {
@@ -244,8 +239,8 @@ export default function SigningPage() {
     navigate('/dashboard')
   }
 
-  const currentPageFields = signatureFields.filter(
-    (f) => f.document_id === id && f.page_number === currentPage
+  const getPageFields = (pageNumber: number) => signatureFields.filter(
+    (f) => f.document_id === id && f.page_number === pageNumber
   )
 
   if (loading && !currentDocument) {
@@ -372,7 +367,6 @@ export default function SigningPage() {
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
                   onClick={() => {
-                    setCurrentPage(field.page_number)
                     if (!isSigned) {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
@@ -457,12 +451,11 @@ export default function SigningPage() {
       <div className="flex-1 overflow-auto bg-gray-50 p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onTotalPages={setTotalPages}
-          overlay={
+          renderPageOverlay={(pageNumber) => {
+            const pageFields = getPageFields(pageNumber)
+            return (
             <>
-              {currentPageFields.map((field) => {
+              {pageFields.map((field) => {
                 const isMine = field.assigned_to_email === userEmail
                 const isSigned = signedFieldIds.has(field.id)
                 const isCurrentNav = currentField?.id === field.id
@@ -498,7 +491,7 @@ export default function SigningPage() {
                       </div>
                     ) : isSigned && isCheckbox && placement ? (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-[70%] h-[70%] text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        <svg className="w-[70%] h-[70%] text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </div>
                     ) : isSigned && isText && placement ? (
                       <div className="w-full h-full flex items-end">
@@ -640,7 +633,8 @@ export default function SigningPage() {
                 )
               })}
             </>
-          }
+            )
+          }}
         />
       </div>
 

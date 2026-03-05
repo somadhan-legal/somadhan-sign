@@ -147,22 +147,48 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   deleteDocument: async (id: string) => {
     const doc = get().documents.find((d) => d.id === id)
+    
+    // Delete PDF from storage
     if (doc?.original_pdf_url) {
-      const url = new URL(doc.original_pdf_url)
-      const pathParts = url.pathname.split('/documents/')
-      if (pathParts[1]) {
-        await supabase.storage.from('documents').remove([decodeURIComponent(pathParts[1])])
+      try {
+        // Extract file path from URL
+        // URL format: https://[project].supabase.co/storage/v1/object/public/documents/[filename]
+        const url = new URL(doc.original_pdf_url)
+        const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/documents\/(.+)/)
+        
+        if (pathMatch && pathMatch[1]) {
+          const filePath = decodeURIComponent(pathMatch[1])
+          console.log('Deleting file from storage:', filePath)
+          const { error: storageError } = await supabase.storage
+            .from('documents')
+            .remove([filePath])
+          
+          if (storageError) {
+            console.error('Error deleting file from storage:', storageError)
+          } else {
+            console.log('File deleted successfully from storage')
+          }
+        } else {
+          console.warn('Could not parse file path from URL:', doc.original_pdf_url)
+        }
+      } catch (err) {
+        console.error('Error parsing storage URL:', err)
       }
     }
+    
+    // Delete related records (cascade should handle most, but explicit for safety)
     await supabase.from('signature_placements').delete().eq('document_id', id)
     await supabase.from('signature_fields').delete().eq('document_id', id)
     await supabase.from('audit_trail').delete().eq('document_id', id)
     await supabase.from('document_signers').delete().eq('document_id', id)
+    
+    // Delete document record
     const { error } = await supabase.from('documents').delete().eq('id', id)
     if (error) {
       console.error('Error deleting document:', error)
       return
     }
+    
     set((state) => ({
       documents: state.documents.filter((d) => d.id !== id),
       currentDocument: state.currentDocument?.id === id ? null : state.currentDocument,
@@ -360,6 +386,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchAuditTrail: async (documentId: string) => {
+    // Clear existing audit trail first to avoid stale data
+    set({ auditTrail: [] })
+    
     const { data, error } = await supabase
       .from('audit_trail')
       .select('*')
@@ -369,6 +398,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       console.error('Error fetching audit trail:', error)
       return
     }
+    
+    console.log(`Fetched ${data?.length || 0} audit entries for document ${documentId}`)
     set({ auditTrail: (data as AuditTrailEntry[]) || [] })
   },
 
@@ -420,6 +451,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       try {
         const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
         
+        console.log('Sending email to:', signer.signer_email)
+        console.log('Signing link:', signingLink)
+        console.log('Signing token:', signer.signing_token)
+        
         const response = await fetch(`${supabaseUrl}/functions/v1/send-signing-email`, {
           method: 'POST',
           headers: {
@@ -437,7 +472,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         })
         
         if (!response.ok) {
-          console.error(`Failed to send email to ${signer.signer_email}`)
+          const errorData = await response.json()
+          console.error(`Failed to send email to ${signer.signer_email}:`, errorData)
+        } else {
+          const successData = await response.json()
+          console.log(`Email sent successfully to ${signer.signer_email}:`, successData)
         }
       } catch (error) {
         console.error(`Error sending email to ${signer.signer_email}:`, error)

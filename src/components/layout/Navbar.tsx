@@ -18,9 +18,9 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline">
-            <img src={SomadhanLogo} alt="Somadhan" className="w-9 h-9 rounded-xl" />
+            <img src={SomadhanLogo} alt="RocketSign" className="w-9 h-9 rounded-xl" />
             <span className="text-xl font-bold text-[hsl(var(--foreground))]">
-              Somadhan
+              RocketSign
             </span>
           </Link>
 

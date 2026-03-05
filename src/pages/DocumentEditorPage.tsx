@@ -11,8 +11,6 @@ import {
   Type,
   Calendar,
   SquareCheck,
-  Copy,
-  Link2,
   CheckCircle2,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
@@ -20,7 +18,6 @@ import { useAuthStore } from '@/stores/authStore'
 import PdfViewer from '@/components/PdfViewer'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Modal from '@/components/ui/Modal'
 
 type FieldType = 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
 
@@ -29,7 +26,6 @@ const SIGNER_COLORS = [
   '#0D9488', '#EC4899', '#06B6D4', '#F97316',
 ]
 
-const SIGNER_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 const fieldTypeIcons: Record<FieldType, React.ReactNode> = {
   signature: <PenTool className="w-4 h-4" />,
@@ -72,7 +68,6 @@ export default function DocumentEditorPage() {
     signatureFields,
     signers,
     placements,
-    currentPage,
     fetchDocument,
     addSignatureField,
     updateSignatureField,
@@ -84,8 +79,6 @@ export default function DocumentEditorPage() {
     fetchSigners,
     sendForSigning,
     addAuditEntry,
-    setCurrentPage,
-    setTotalPages,
     loading,
   } = useDocumentStore()
 
@@ -98,9 +91,8 @@ export default function DocumentEditorPage() {
   const [saving, setSaving] = useState(false)
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
   const [selectedSignerIdx, setSelectedSignerIdx] = useState(0)
-  const [showInviteLinks, setShowInviteLinks] = useState(false)
-  const [copiedToken, setCopiedToken] = useState<string | null>(null)
   const [savedToast, setSavedToast] = useState(false)
+  const [sentToast, setSentToast] = useState(false)
   const [ccEmails, setCcEmails] = useState('')
   const [showSendConfirm, setShowSendConfirm] = useState(false)
   const [sendMessage, setSendMessage] = useState('We kindly request your review and signature on the attached document. Please complete this at your earliest convenience. Should you have any questions or require clarification, feel free to reach out. Thank you for your prompt attention to this matter.')
@@ -215,7 +207,7 @@ export default function DocumentEditorPage() {
   }, [signatureFields, updateSignatureField])
 
   const handlePageClick = useCallback(
-    (x: number, y: number, pageWidth: number, pageHeight: number) => {
+    (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => {
       if (!id || !user || isInteracting.current) return
       if (currentDocument?.status !== 'draft') return // Locked
       if (signers.length === 0) {
@@ -238,7 +230,7 @@ export default function DocumentEditorPage() {
       addSignatureField({
         id: fieldId,
         document_id: id,
-        page_number: currentPage,
+        page_number: pageNumber,
         x: Math.max(0, Math.min(100 - size.w, rawX - size.w / 2)),
         y: Math.max(0, Math.min(100 - size.h, rawY - size.h / 2)),
         width: size.w,
@@ -250,7 +242,7 @@ export default function DocumentEditorPage() {
         isNew: true,
       })
     },
-    [id, user, currentPage, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx]
+    [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx]
   )
 
   const handleSaveSigner = async (e: React.FormEvent) => {
@@ -258,20 +250,32 @@ export default function DocumentEditorPage() {
     if (!id) return
     const fullName = [signerFirstName.trim(), signerLastName.trim()].filter(Boolean).join(' ')
 
-    if (editingSignerId) {
-      await updateSigner(editingSignerId, {
-        signer_email: signerEmail,
-        signer_name: fullName || undefined,
-      })
-    } else {
-      await addSigner(id, signerEmail, fullName || undefined)
-    }
+    try {
+      if (editingSignerId) {
+        console.log('[DocumentEditor] Updating signer:', editingSignerId, { email: signerEmail, name: fullName })
+        await updateSigner(editingSignerId, {
+          signer_email: signerEmail,
+          signer_name: fullName || undefined,
+        })
+        console.log('[DocumentEditor] Signer updated successfully')
+      } else {
+        console.log('[DocumentEditor] Adding new signer:', { email: signerEmail, name: fullName })
+        await addSigner(id, signerEmail, fullName || undefined)
+        console.log('[DocumentEditor] Signer added successfully')
+      }
 
-    setSignerFirstName('')
-    setSignerLastName('')
-    setSignerEmail('')
-    setEditingSignerId(null)
-    setShowSignerModal(false)
+      // Refetch signers to ensure UI is in sync
+      await fetchSigners(id)
+      
+      setSignerFirstName('')
+      setSignerLastName('')
+      setSignerEmail('')
+      setEditingSignerId(null)
+      setShowSignerModal(false)
+    } catch (err) {
+      console.error('[DocumentEditor] Error saving signer:', err)
+      alert('Failed to save signer. Please try again.')
+    }
   }
 
   const openEditSignerModal = (signer: typeof signers[0]) => {
@@ -353,7 +357,14 @@ export default function DocumentEditorPage() {
     await fetchSigners(id)
     await fetchDocument(id) // Refresh to get updated status
     setSaving(false)
-    setShowInviteLinks(true)
+    setShowSendConfirm(false)
+    
+    // Show success toast
+    setSentToast(true)
+    setTimeout(() => setSentToast(false), 5000)
+    
+    // Navigate after showing the toast
+    setTimeout(() => navigate('/dashboard'), 5000)
   }
 
   const handleFieldDragStop = (fieldId: string, _e: unknown, data: { x: number; y: number }) => {
@@ -372,8 +383,8 @@ export default function DocumentEditorPage() {
     })
   }
 
-  const currentPageFields = signatureFields.filter(
-    (f) => f.document_id === id && f.page_number === currentPage
+  const getPageFields = (pageNumber: number) => signatureFields.filter(
+    (f) => f.document_id === id && f.page_number === pageNumber
   )
 
   if (loading && !currentDocument) {
@@ -525,13 +536,12 @@ export default function DocumentEditorPage() {
       <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onTotalPages={setTotalPages}
           onPageClick={handlePageClick}
-          overlay={
+          renderPageOverlay={(pageNumber) => {
+            const pageFields = getPageFields(pageNumber)
+            return (
             <>
-              {currentPageFields.map((field) => {
+              {pageFields.map((field) => {
                 const color = field.assigned_to_email ? getSignerColor(field.assigned_to_email) : '#9CA3AF'
                 const sName = field.assigned_to_email ? getSignerName(field.assigned_to_email) : 'Unassigned'
                 const ft = (field.field_type || 'signature') as FieldType
@@ -623,7 +633,8 @@ export default function DocumentEditorPage() {
                 )
               })}
             </>
-          }
+            )
+          }}
         />
       </div>
 
@@ -804,68 +815,45 @@ export default function DocumentEditorPage() {
         </div>
       )}
 
-      {/* Invite Links Modal */}
-      <Modal
-        isOpen={showInviteLinks}
-        onClose={() => { setShowInviteLinks(false); navigate('/dashboard') }}
-        title="Document Sent for Signing!"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span>Your document has been sent. Share these links with signers.</span>
-          </div>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
-            Each signer has a unique link. They can sign without creating an account.
-          </p>
-          <div className="space-y-3">
-            {signers.map((signer, idx) => {
-              const link = `${window.location.origin}/sign/${signer.signing_token}`
-              const isCopied = copiedToken === signer.id
-              const color = SIGNER_COLORS[idx % SIGNER_COLORS.length]
-              return (
-                <div key={signer.id} className="border border-[hsl(var(--border))] rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: color }}>
-                      {SIGNER_LABELS[idx % SIGNER_LABELS.length]}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{signer.signer_name || signer.signer_email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-[hsl(var(--muted))] rounded-md px-3 py-2 text-xs text-[hsl(var(--muted-foreground))] truncate flex items-center gap-1">
-                      <Link2 className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{link}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(link)
-                        setCopiedToken(signer.id)
-                        setTimeout(() => setCopiedToken(null), 2000)
-                      }}
-                    >
-                      {isCopied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <Button className="w-full" onClick={() => { setShowInviteLinks(false); navigate('/dashboard') }}>
-            Done
-          </Button>
-        </div>
-      </Modal>
-
       {/* Saved Toast */}
       {savedToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
           <CheckCircle2 className="w-4 h-4" />
           Document saved successfully
+        </div>
+      )}
+
+      {/* Loading Overlay - While Sending */}
+      {saving && !sentToast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4">
+                <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Sending Document...</h3>
+              <p className="text-[hsl(var(--muted-foreground))]">
+                Please wait while we send emails to signers.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sent Toast - Centered Card */}
+      {sentToast && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-9 h-9 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Document Sent!</h3>
+              <p className="text-[hsl(var(--muted-foreground))]">
+                Signers will receive emails shortly.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

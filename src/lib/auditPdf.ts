@@ -6,6 +6,7 @@ export interface AuditEntry {
   user_name?: string | null
   created_at: string
   metadata?: string | null
+  ip_address?: string | null
 }
 
 /**
@@ -17,9 +18,24 @@ export async function generateAuditPdf(
   auditEntries: AuditEntry[],
   documentTitle: string,
 ): Promise<Blob> {
+  console.log('[generateAuditPdf] Called with:', { documentTitle, entryCount: auditEntries.length, url: originalPdfUrl.substring(0, 50) })
+  console.log('[generateAuditPdf] Audit entries:', auditEntries.map(e => ({ action: e.action, user: e.user_email })))
+  
   // Fetch the original PDF
-  const originalBytes = await fetch(originalPdfUrl).then((r) => r.arrayBuffer())
-  const pdfDoc = await PDFDocument.load(originalBytes)
+  const response = await fetch(originalPdfUrl)
+  if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
+  const originalBytes = await response.arrayBuffer()
+  const pdfDoc = await PDFDocument.load(originalBytes, { ignoreEncryption: true })
+  
+  const existingPageCount = pdfDoc.getPageCount()
+  console.log('[generateAuditPdf] Original PDF has', existingPageCount, 'pages')
+  
+  // If no audit entries, just return the original PDF
+  if (!auditEntries || auditEntries.length === 0) {
+    console.log('[generateAuditPdf] No audit entries, returning original PDF')
+    const pdfBytes = await pdfDoc.save()
+    return new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+  }
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
@@ -193,8 +209,16 @@ export async function generateAuditPdf(
     const dateStr = dt.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
     const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 
+    // Helper function to sanitize text for WinAnsi encoding
+    const sanitize = (text: string) => text
+      .replace(/✓/g, '[x]')
+      .replace(/✔/g, '[x]')
+      .replace(/✗/g, '[ ]')
+      .replace(/✘/g, '[ ]')
+      .replace(/[^\x20-\x7E]/g, '') // Remove non-ASCII printable characters
+
     // Action
-    page.drawText(entry.action, {
+    page.drawText(sanitize(entry.action), {
       x: margin,
       y: yPos,
       size: 9,
@@ -204,14 +228,14 @@ export async function generateAuditPdf(
 
     // User
     const userName = entry.user_name || entry.user_email.split('@')[0]
-    page.drawText(userName, {
+    page.drawText(sanitize(userName), {
       x: 220,
       y: yPos,
       size: 9,
       font: fontBold,
       color: rgb(0.15, 0.15, 0.15),
     })
-    page.drawText(entry.user_email, {
+    page.drawText(sanitize(entry.user_email), {
       x: 220,
       y: yPos - smallLine,
       size: 8,
@@ -234,29 +258,40 @@ export async function generateAuditPdf(
       font: font,
       color: rgb(0.5, 0.5, 0.5),
     })
-
-    // Metadata
-    if (entry.metadata) {
-      page.drawText(entry.metadata, {
-        x: margin + 10,
-        y: yPos - smallLine,
+    
+    // IP Address (below date/time)
+    if (entry.ip_address) {
+      page.drawText(entry.ip_address, {
+        x: 400,
+        y: yPos - smallLine * 2,
         size: 8,
         font: font,
         color: rgb(0.5, 0.5, 0.5),
       })
-      yPos -= smallLine
     }
 
-    yPos -= lineHeight + smallLine + 4
+    // Metadata
+    if (entry.metadata) {
+      const sanitized = sanitize(entry.metadata)
+      if (sanitized.trim()) {
+        page.drawText(sanitized, {
+          x: margin + 10,
+          y: yPos - smallLine,
+          size: 8,
+          font: font,
+          color: rgb(0.5, 0.5, 0.5),
+        })
+      }
+    }
 
-    // Light separator
+    // Separator line
     page.drawLine({
-      start: { x: margin, y: yPos + 2 },
-      end: { x: pageWidth - margin, y: yPos + 2 },
+      start: { x: margin, y: yPos - smallLine * 2 - 6 },
+      end: { x: pageWidth - margin, y: yPos - smallLine * 2 - 6 },
       thickness: 0.3,
       color: rgb(0.9, 0.9, 0.9),
     })
-    yPos -= 6
+    yPos -= smallLine * 2 + 12
   }
 
   // Footer on last page

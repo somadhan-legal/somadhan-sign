@@ -18,6 +18,8 @@ import AuditTrailModal from '@/components/AuditTrailModal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { generateAuditPdf } from '@/lib/auditPdf'
+import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
+import { supabase } from '@/lib/supabase'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -45,10 +47,6 @@ export default function DocumentPreviewPage() {
     fetchSigners,
     fetchPlacements,
     fetchSignatureFields,
-    fetchAuditTrail,
-    currentPage,
-    setCurrentPage,
-    setTotalPages,
     loading,
   } = useDocumentStore()
 
@@ -77,31 +75,100 @@ export default function DocumentPreviewPage() {
     return signer?.signer_name || email.split('@')[0]
   }
 
-  const currentPageFields = signatureFields.filter(
-    (f) => f.document_id === id && f.page_number === currentPage
+  const getPageFields = (pageNumber: number) => signatureFields.filter(
+    (f) => f.document_id === id && f.page_number === pageNumber
   )
 
   const allSigned = signers.length > 0 && signers.every((s) => s.status === 'signed')
 
   const handleDownloadWithAudit = async () => {
-    if (!currentDocument || !id) return
+    if (!id) return
     setDownloadingPdf(true)
     try {
-      await fetchAuditTrail(id)
-      const trail = useDocumentStore.getState().auditTrail
+      // Fetch the document fresh to avoid stale store data
+      const { data: docData, error: docErr } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (docErr || !docData) {
+        alert('Could not find document.')
+        return
+      }
+
+      const docTitle = docData.title
+      const originalPdfUrl = docData.original_pdf_url
+
+      // Fetch placements for THIS document
+      const { data: placementsData } = await supabase
+        .from('signature_placements')
+        .select('*')
+        .eq('document_id', id)
+
+      let pdfUrl = originalPdfUrl
+
+      // If there are placements, generate signed PDF first
+      if (placementsData && placementsData.length > 0) {
+        const fieldIds = placementsData.map(p => p.field_id)
+        const { data: fieldsData } = await supabase
+          .from('signature_fields')
+          .select('*')
+          .in('id', fieldIds)
+
+        if (fieldsData && fieldsData.length > 0) {
+          const fieldsMap = new Map(fieldsData.map(f => [f.id, f]))
+          const signedFields: SignedField[] = placementsData
+            .filter(p => fieldsMap.has(p.field_id))
+            .map(p => {
+              const field = fieldsMap.get(p.field_id)!
+              return {
+                field_type: field.field_type,
+                page_number: field.page_number,
+                x_percent: field.x,
+                y_percent: field.y,
+                width_percent: field.width,
+                height_percent: field.height,
+                signature_id: p.signature_id,
+              }
+            })
+
+          const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
+          pdfUrl = URL.createObjectURL(signedBlob)
+        }
+      }
+
+      // Fetch audit trail for THIS document ONLY
+      const { data: auditData } = await supabase
+        .from('audit_trail')
+        .select('*')
+        .eq('document_id', id)
+        .order('created_at', { ascending: true })
+
+      // Client-side safety filter
+      const filteredAudit = (auditData || []).filter(e => e.document_id === id)
+      console.log('[AuditTrail] doc_id:', id, 'title:', docTitle, 'total from DB:', auditData?.length, 'after filter:', filteredAudit.length)
+
+      // Generate audit trail PDF
       const blob = await generateAuditPdf(
-        currentDocument.original_pdf_url,
-        trail,
-        currentDocument.title,
+        pdfUrl,
+        filteredAudit,
+        docTitle,
       )
+
+      if (pdfUrl !== originalPdfUrl) URL.revokeObjectURL(pdfUrl)
+
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${currentDocument.title} - Complete.pdf`
+      a.download = `${docTitle} - Complete.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Error generating PDF:', err)
+      alert('Error generating PDF. Please try again.')
     } finally {
       setDownloadingPdf(false)
     }
@@ -259,12 +326,11 @@ export default function DocumentPreviewPage() {
       <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          onTotalPages={setTotalPages}
-          overlay={
+          renderPageOverlay={(pageNumber) => {
+            const pageFields = getPageFields(pageNumber)
+            return (
             <>
-              {currentPageFields.map((field) => {
+              {pageFields.map((field) => {
                 const color = getSignerColor(field.assigned_to_email)
                 const label = getSignerLabel(field.assigned_to_email)
                 const name = getSignerName(field.assigned_to_email)
@@ -315,7 +381,7 @@ export default function DocumentPreviewPage() {
                   if (ft === 'checkbox' || val === 'checkbox:checked' || val === 'checked') {
                     return (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-[70%] h-[70%] text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        <svg className="w-[70%] h-[70%] text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </div>
                     )
                   }
@@ -351,7 +417,8 @@ export default function DocumentPreviewPage() {
                 )
               })}
             </>
-          }
+            )
+          }}
         />
       </div>
 
