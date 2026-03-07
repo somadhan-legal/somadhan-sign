@@ -323,7 +323,7 @@ export default function SigningPage() {
                   <img src={initialsData} alt="Your initials" className="max-h-12 mx-auto" />
                 </div>
                 {myUnsignedInitialsFields.length === 0 ? (
-                  <p className="text-xs text-green-600 text-center">All initials fields filled</p>
+                  <p className="text-xs text-[hsl(var(--success))] text-center">All initials fields filled</p>
                 ) : (
                   <Button variant="outline" size="sm" className="w-full" onClick={() => setShowInitialsModal(true)}>
                     Change Initials
@@ -346,7 +346,7 @@ export default function SigningPage() {
           </h3>
           <div className="w-full h-2 bg-[hsl(var(--muted))] rounded-full mb-3">
             <div
-              className="h-full bg-green-500 rounded-full transition-all"
+              className="h-full bg-[hsl(var(--success))] rounded-full transition-all"
               style={{
                 width: `${myFields.length > 0 ? (mySignedFields.length / myFields.length) * 100 : 0}%`,
               }}
@@ -361,7 +361,7 @@ export default function SigningPage() {
                   key={field.id}
                   className={`flex items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-colors cursor-pointer ${
                     isSigned
-                      ? 'bg-green-50 text-green-700'
+                      ? 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]'
                       : currentField?.id === field.id
                       ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
                       : 'hover:bg-[hsl(var(--muted))]'
@@ -374,7 +374,7 @@ export default function SigningPage() {
                   }}
                 >
                   {isSigned ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-[hsl(var(--border))] shrink-0" />
                   )}
@@ -422,15 +422,15 @@ export default function SigningPage() {
           )}
 
           {!signatureData && myUnsignedSigFields.length > 0 && (
-            <p className="text-xs text-center text-amber-600">
+            <p className="text-xs text-center text-[hsl(var(--warning))]">
               Create your signature first to start signing
             </p>
           )}
 
           {allMyUnsigned.length === 0 && myFields.length > 0 && (
             <div className="text-center">
-              <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-2" />
-              <p className="text-sm font-medium text-green-700 mb-3">
+              <CheckCircle2 className="w-10 h-10 mx-auto text-[hsl(var(--success))] mb-2" />
+              <p className="text-sm font-medium text-[hsl(var(--success))] mb-3">
                 All your fields are signed!
               </p>
               <Button className="w-full" onClick={handleFinishSigning}>
@@ -448,7 +448,7 @@ export default function SigningPage() {
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-gray-50 p-6 flex justify-center">
+      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           renderPageOverlay={(pageNumber) => {
@@ -559,7 +559,7 @@ export default function SigningPage() {
                           onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
                           placeholder="Type here..."
-                          className="w-full h-full text-[11px] font-medium text-gray-800 bg-transparent border-b border-[hsl(var(--primary))] outline-none px-1"
+                          className="w-full h-full text-[11px] font-medium text-[hsl(var(--foreground))] bg-transparent border-b border-[hsl(var(--primary))] outline-none px-1"
                         />
                       </div>
 
@@ -569,17 +569,17 @@ export default function SigningPage() {
                         className={`w-full h-full rounded flex items-center justify-center text-xs font-medium transition-all ${
                           isCheckbox
                             ? isMine
-                              ? 'border border-gray-400 bg-[hsl(var(--card))] cursor-pointer hover:border-blue-500'
-                              : 'border border-gray-300 bg-gray-50'
+                              ? 'border border-[hsl(var(--border))] bg-[hsl(var(--card))] cursor-pointer hover:border-[hsl(var(--primary))]'
+                              : 'border border-[hsl(var(--border))] bg-[hsl(var(--muted))]'
                             : isDate || isText
                             ? isMine
-                              ? 'border-b border-dashed border-gray-400 cursor-pointer hover:border-blue-500'
-                              : 'border-b border-dashed border-gray-300'
+                              ? 'border-b border-dashed border-[hsl(var(--border))] cursor-pointer hover:border-[hsl(var(--primary))]'
+                              : 'border-b border-dashed border-[hsl(var(--border))]'
                             : isCurrentNav && isMine
                             ? 'border-2 border-dashed border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/20 ring-4 ring-[hsl(var(--primary))]/30 animate-pulse cursor-pointer'
                             : isMine
-                            ? 'border-2 border-dashed border-amber-400 bg-amber-50/80 hover:bg-amber-100 cursor-pointer'
-                            : 'border-2 border-dashed border-gray-300 bg-gray-50/80'
+                            ? 'border-2 border-dashed border-[hsl(var(--accent-coral))] bg-[hsl(var(--accent-coral))]/10 hover:bg-[hsl(var(--accent-coral))]/20 cursor-pointer'
+                            : 'border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/80'
                         }`}
                         style={
                           !isMine && isSignatureType
@@ -609,11 +609,11 @@ export default function SigningPage() {
                       >
                         {isMine ? (
                           isCheckbox ? (
-                            <div className="w-3.5 h-3.5 border border-gray-400 rounded-sm" />
+                            <div className="w-3.5 h-3.5 border border-[hsl(var(--border))] rounded-sm" />
                           ) : isDate ? (
-                            <span className="text-[10px] text-gray-400">{isCurrentNav ? 'Tap to add date' : 'Date'}</span>
+                            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{isCurrentNav ? 'Tap to add date' : 'Date'}</span>
                           ) : isText ? (
-                            <span className="text-[10px] text-gray-400">{isCurrentNav ? 'Tap to enter text' : 'Text'}</span>
+                            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{isCurrentNav ? 'Tap to enter text' : 'Text'}</span>
                           ) : (
                             <>
                               {fieldTypeIcons[field.field_type]}

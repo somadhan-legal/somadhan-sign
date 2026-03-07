@@ -15,9 +15,9 @@ export default function Badge({ children, variant = 'default', className, style 
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
         {
           'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]': variant === 'default',
-          'bg-green-100 text-green-700': variant === 'success',
-          'bg-amber-100 text-amber-700': variant === 'warning',
-          'bg-red-100 text-red-700': variant === 'destructive',
+          'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]': variant === 'success',
+          'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]': variant === 'warning',
+          'bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))]': variant === 'destructive',
           'border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]': variant === 'outline',
         },
         className

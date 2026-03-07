@@ -95,7 +95,7 @@ export default function LoginPage() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[hsl(var(--primary))] to-teal-900 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#075056] to-[#043a3d] p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
           <div className="w-[600px] h-[600px] rounded-full border border-white" />
           <div className="absolute w-[450px] h-[450px] rounded-full border border-white" />
@@ -147,7 +147,7 @@ export default function LoginPage() {
           {/* Forgot Password Screen */}
           {mode === 'forgot-password' ? (
             <div>
-              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-[hsl(var(--primary))]" />
               </div>
               <h2 className="text-2xl font-bold mb-1 text-center">{t('login.resetPassword')}</h2>
@@ -156,12 +156,12 @@ export default function LoginPage() {
               </p>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -196,7 +196,7 @@ export default function LoginPage() {
             </div>
           ) : mode === 'verify-otp' ? (
             <div>
-              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-[hsl(var(--primary))]" />
               </div>
               <h2 className="text-2xl font-bold mb-1 text-center">{t('login.verifyEmail')}</h2>
@@ -205,12 +205,12 @@ export default function LoginPage() {
               </p>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -331,12 +331,12 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
+                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -448,8 +448,8 @@ export default function LoginPage() {
       {showVerifiedPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-9 h-9 text-green-600" />
+            <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
             </div>
             <h3 className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">

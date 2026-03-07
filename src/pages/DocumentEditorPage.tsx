@@ -432,7 +432,7 @@ export default function DocumentEditorPage() {
         <div className="p-3 border-b border-[hsl(var(--border))]">
           <h2 className="font-semibold text-sm truncate">{currentDocument.title}</h2>
           {isLocked && (
-            <p className="text-[10px] text-amber-600 mt-1">🔒 Document sent - editing locked</p>
+            <p className="text-[10px] text-[hsl(var(--warning))] mt-1">🔒 Document sent - editing locked</p>
           )}
         </div>
 
@@ -485,7 +485,7 @@ export default function DocumentEditorPage() {
                       <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 absolute right-2 bg-[hsl(var(--card))]/90 px-1 rounded transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
-                          className="p-1 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 cursor-pointer"
+                          className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
                           title="Edit Signer"
                         >
                           <PenTool className="w-3.5 h-3.5" />
@@ -497,7 +497,7 @@ export default function DocumentEditorPage() {
                               await removeSigner(signer.id)
                             }
                           }}
-                          className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50 cursor-pointer"
+                          className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
                           title="Remove Signer"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -572,7 +572,7 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
+      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           onPageClick={handlePageClick}
@@ -856,7 +856,7 @@ export default function DocumentEditorPage() {
 
       {/* Saved Toast */}
       {savedToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[hsl(var(--success))] text-white px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
           <CheckCircle2 className="w-4 h-4" />
           Document saved successfully
         </div>
@@ -867,7 +867,7 @@ export default function DocumentEditorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
             <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mb-4">
                 <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
               </div>
               <h3 className="text-xl font-bold mb-2">Sending Document...</h3>
@@ -884,8 +884,8 @@ export default function DocumentEditorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
             <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-9 h-9 text-green-600" />
+              <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
               </div>
               <h3 className="text-xl font-bold mb-2">Document Sent!</h3>
               <p className="text-[hsl(var(--muted-foreground))] mb-3">

@@ -16,18 +16,18 @@ interface AuditTrailModalProps {
 }
 
 const actionConfig: Record<string, { icon: React.ReactNode; color: string }> = {
-  'Document Created': { icon: <FileText className="w-4 h-4" />, color: 'text-blue-600 bg-blue-100' },
-  'Document Sent': { icon: <Send className="w-4 h-4" />, color: 'text-teal-600 bg-teal-100' },
-  'Document Viewed': { icon: <Eye className="w-4 h-4" />, color: 'text-amber-600 bg-amber-100' },
-  'Document Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-green-600 bg-green-100' },
-  'Field Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-green-600 bg-green-100' },
-  'All Fields Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-green-600 bg-green-100' },
-  'Signature Applied': { icon: <PenTool className="w-4 h-4" />, color: 'text-green-600 bg-green-100' },
-  'Initials Added': { icon: <PenTool className="w-4 h-4" />, color: 'text-teal-600 bg-teal-100' },
-  'Date Filled': { icon: <Clock className="w-4 h-4" />, color: 'text-amber-600 bg-amber-100' },
-  'Checkbox Checked': { icon: <FileText className="w-4 h-4" />, color: 'text-blue-600 bg-blue-100' },
-  'Text Entered': { icon: <FileText className="w-4 h-4" />, color: 'text-blue-600 bg-blue-100' },
-  'Document Completed': { icon: <FileText className="w-4 h-4" />, color: 'text-green-700 bg-green-100' },
+  'Document Created': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Document Sent': { icon: <Send className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Document Viewed': { icon: <Eye className="w-4 h-4" />, color: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10' },
+  'Document Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Field Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'All Fields Signed': { icon: <PenTool className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Signature Applied': { icon: <PenTool className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Initials Added': { icon: <PenTool className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Date Filled': { icon: <Clock className="w-4 h-4" />, color: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10' },
+  'Checkbox Checked': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Text Entered': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Document Completed': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
 }
 
 function formatDateTime(dateStr: string) {
@@ -65,7 +65,7 @@ export default function AuditTrailModal({ isOpen, onClose, documentId }: AuditTr
         ) : (
           <div className="divide-y divide-[hsl(var(--border))]">
             {auditTrail.map((entry) => {
-              const config = actionConfig[entry.action] || { icon: <Clock className="w-4 h-4" />, color: 'text-gray-600 bg-gray-100' }
+              const config = actionConfig[entry.action] || { icon: <Clock className="w-4 h-4" />, color: 'text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]' }
               const { date, time } = formatDateTime(entry.created_at)
 
               return (

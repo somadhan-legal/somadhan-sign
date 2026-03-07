@@ -76,8 +76,8 @@ export default function ResetPasswordPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
         <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full text-center shadow-xl">
-          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-9 h-9 text-green-600" />
+          <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
           </div>
           <h3 className="text-xl font-bold mb-2">{t('reset.passwordUpdated')}</h3>
           <p className="text-[hsl(var(--muted-foreground))] mb-6">
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
         </div>
 
-        <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+        <div className="w-14 h-14 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-7 h-7 text-[hsl(var(--primary))]" />
         </div>
         <h2 className="text-2xl font-bold mb-1 text-center">{t('reset.setNewPassword')}</h2>
@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
         </p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
             {error}
             {error.includes('expired') || error.includes('invalid') ? (
               <div className="mt-3">

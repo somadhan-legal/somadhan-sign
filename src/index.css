@@ -3,52 +3,54 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 174 79% 24%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 166 30% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 166 30% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 174 79% 24%;
-    --accent-coral: 4 79% 57%;
+    /* Light Mode — Somadhan Brand Colors */
+    --background: 0 0% 100%;           /* #FFFFFF Absolute White */
+    --foreground: 0 0% 14%;            /* #232323 Charcoal */
+    --card: 190 30% 92%;               /* #E4EEF0 Mist White */
+    --card-foreground: 0 0% 14%;       /* #232323 Charcoal */
+    --popover: 0 0% 100%;              /* #FFFFFF Absolute White */
+    --popover-foreground: 0 0% 14%;    /* #232323 Charcoal */
+    --primary: 184 85% 18%;            /* #075056 Deep Teal */
+    --primary-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
+    --secondary: 190 30% 92%;          /* #E4EEF0 Mist White */
+    --secondary-foreground: 0 0% 14%;  /* #232323 Charcoal */
+    --muted: 190 30% 92%;              /* #E4EEF0 Mist White */
+    --muted-foreground: 0 0% 40%;      /* gray for muted text */
+    --accent: 190 30% 92%;             /* #E4EEF0 Mist White */
+    --accent-foreground: 0 0% 14%;     /* #232323 Charcoal */
+    --destructive: 5 95% 62%;          /* #F95943 Coral Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 190 20% 85%;             /* light border from Mist White */
+    --input: 190 20% 85%;
+    --ring: 184 85% 18%;               /* #075056 Deep Teal */
+    --accent-coral: 5 95% 62%;         /* #F95943 Coral Red */
     --radius: 0.5rem;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
   }
 
   .dark {
-    --background: 0 0% 5%;
-    --foreground: 210 40% 92%;
-    --card: 0 0% 12%;
-    --card-foreground: 210 40% 92%;
-    --popover: 0 0% 12%;
-    --popover-foreground: 210 40% 92%;
-    --primary: 174 79% 30%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 210 40% 92%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 210 40% 92%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 174 79% 30%;
-    --accent-coral: 4 79% 57%;
+    /* Dark Mode — Somadhan Brand Colors */
+    --background: 0 0% 0%;             /* #000000 Absolute Black */
+    --foreground: 0 0% 100%;           /* #FFFFFF Absolute White */
+    --card: 0 0% 14%;                  /* #232323 Charcoal */
+    --card-foreground: 0 0% 100%;      /* #FFFFFF Absolute White */
+    --popover: 0 0% 14%;               /* #232323 Charcoal */
+    --popover-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
+    --primary: 5 95% 62%;              /* #F95943 Coral Red (dark mode) */
+    --primary-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
+    --secondary: 0 0% 14%;             /* #232323 Charcoal */
+    --secondary-foreground: 0 0% 100%; /* #FFFFFF Absolute White */
+    --muted: 0 0% 14%;                 /* #232323 Charcoal */
+    --muted-foreground: 0 0% 55%;      /* gray for muted text */
+    --accent: 0 0% 14%;                /* #232323 Charcoal */
+    --accent-foreground: 0 0% 100%;    /* #FFFFFF Absolute White */
+    --destructive: 5 95% 62%;          /* #F95943 Coral Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;                /* subtle border */
+    --input: 0 0% 20%;
+    --ring: 5 95% 62%;                 /* #F95943 Coral Red (dark mode) */
+    --accent-coral: 5 95% 62%;         /* #F95943 Coral Red */
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
   }

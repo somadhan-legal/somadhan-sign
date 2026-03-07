@@ -46,6 +46,8 @@ export default function DashboardPage() {
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   useEffect(() => {
     fetchDocuments()
@@ -54,6 +56,11 @@ export default function DashboardPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || !user) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit. Please upload a smaller PDF.')
+      return
+    }
 
     setUploading(true)
     const doc = await createDocument(
@@ -75,6 +82,16 @@ export default function DashboardPage() {
     const matchesFilter = filterStatus === 'all' || doc.status === filterStatus
     return matchesSearch && matchesFilter
   })
+
+  const totalPages = Math.ceil(filteredDocs.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedDocs = filteredDocs.slice(startIndex, endIndex)
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, filterStatus])
 
   const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
     draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },
@@ -109,10 +126,10 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { labelKey: 'dashboard.total', value: stats.total, color: 'bg-blue-50 text-blue-700' },
-          { labelKey: 'dashboard.drafts', value: stats.draft, color: 'bg-gray-50 text-gray-700' },
-          { labelKey: 'dashboard.pending', value: stats.pending, color: 'bg-amber-50 text-amber-700' },
-          { labelKey: 'dashboard.completed', value: stats.completed, color: 'bg-green-50 text-green-700' },
+          { labelKey: 'dashboard.total', value: stats.total, color: 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]' },
+          { labelKey: 'dashboard.drafts', value: stats.draft, color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]' },
+          { labelKey: 'dashboard.pending', value: stats.pending, color: 'bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]' },
+          { labelKey: 'dashboard.completed', value: stats.completed, color: 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]' },
         ].map((stat) => (
           <div
             key={stat.labelKey}
@@ -163,7 +180,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : filteredDocs.length === 0 ? (
+      ) : paginatedDocs.length === 0 && filteredDocs.length === 0 ? (
         <div className="text-center py-20">
           <FileText className="w-16 h-16 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-4" />
           <h3 className="text-lg font-medium mb-2">{t('dashboard.noDocuments')}</h3>
@@ -176,8 +193,9 @@ export default function DashboardPage() {
           </Button>
         </div>
       ) : (
+        <>
         <div className="grid gap-3">
-          {filteredDocs.map((doc: Document) => {
+          {paginatedDocs.map((doc: Document) => {
             const config = statusConfig[doc.status]
             return (
               <div
@@ -380,7 +398,7 @@ export default function DashboardPage() {
                             {t('dashboard.auditTrail')}
                           </button>
                           <button
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-50 text-red-600 w-full text-left cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
                             onClick={async () => {
                               setMenuOpen(null)
                               if (window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) {
@@ -406,7 +424,7 @@ export default function DashboardPage() {
                         {signers.map((signer) => (
                           <div key={signer.id} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">
+                              <div className="w-6 h-6 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center text-xs font-bold">
                                 {signer.signer_email[0].toUpperCase()}
                               </div>
                               <div>
@@ -427,6 +445,49 @@ export default function DashboardPage() {
             )
           })}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 px-4">
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredDocs.length)} of {filteredDocs.length} documents
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
+                        : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Audit Trail Modal */}
@@ -472,7 +533,7 @@ export default function DashboardPage() {
                   <>
                     <p className="text-sm font-medium">Click to upload PDF</p>
                     <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                      PDF files up to 20MB
+                      PDF files up to 5MB
                     </p>
                   </>
                 )}

@@ -162,7 +162,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
                   <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
                     PNG, JPG up to 2MB
                   </p>
-                  <p className="text-xs text-blue-600 font-medium">
+                  <p className="text-xs text-[hsl(var(--primary))] font-medium">
                     💡 Upload PNG/JPG with transparent background for better appearance
                   </p>
                 </>

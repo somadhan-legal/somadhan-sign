@@ -19,15 +19,16 @@ export default function LandingPage() {
     if (lang === 'bn') {
       return (
         <>
-          {t('landing.heroTitle1')}{' '}
-          <span>{t('landing.heroTitle2')}</span>
+          <span style={{ whiteSpace: 'pre-wrap' }}>{t('landing.heroTitle1')}</span>
+          <br />
+          <span style={{ whiteSpace: 'pre-wrap' }}>সমাধান  <span className="text-[hsl(var(--accent-coral))]">সাইন</span>  দিয়ে</span>
         </>
       )
     }
     return (
       <>
         {t('landing.heroTitle1')}{' '}
-        <span>Somadhan<span className="text-[hsl(var(--accent-coral))]">Sign</span></span>
+        <span>Somadhan <span className="text-[hsl(var(--accent-coral))]">Sign</span></span>
       </>
     )
   }
@@ -156,7 +157,7 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-br from-[hsl(var(--primary))] to-teal-800 rounded-3xl p-12 text-center text-white">
+          <div className="bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary))]/80 to-[hsl(var(--primary))]/60 rounded-3xl p-12 text-center text-white">
             <h2 className="text-3xl font-bold mb-4">{t('landing.ctaTitle')}</h2>
             <p className="text-white/70 mb-8 max-w-xl mx-auto">
               {t('landing.ctaDesc')}

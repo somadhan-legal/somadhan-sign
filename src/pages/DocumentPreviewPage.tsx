@@ -224,7 +224,7 @@ export default function DocumentPreviewPage() {
               )}
             </Badge>
             {allSigned && (
-              <span className="text-xs text-green-600 font-medium">All signers done</span>
+              <span className="text-xs text-[hsl(var(--success))] font-medium">All signers done</span>
             )}
           </div>
         </div>
@@ -271,17 +271,17 @@ export default function DocumentPreviewPage() {
                     </div>
                     <div className="shrink-0">
                       {signer.status === 'signed' ? (
-                        <div className="flex items-center gap-1 text-green-600">
+                        <div className="flex items-center gap-1 text-[hsl(var(--success))]">
                           <CheckCircle2 className="w-4 h-4" />
                           <span className="text-[10px] font-medium">Signed</span>
                         </div>
                       ) : signer.status === 'viewed' ? (
-                        <div className="flex items-center gap-1 text-amber-500">
+                        <div className="flex items-center gap-1 text-[hsl(var(--warning))]">
                           <Eye className="w-4 h-4" />
                           <span className="text-[10px] font-medium">Viewed</span>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 text-gray-400">
+                        <div className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
                           <Clock className="w-4 h-4" />
                           <span className="text-[10px] font-medium">Pending</span>
                         </div>
@@ -290,7 +290,7 @@ export default function DocumentPreviewPage() {
                   </div>
                   {signerFields.length > 0 && (
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -326,7 +326,7 @@ export default function DocumentPreviewPage() {
       </div>
 
       {/* PDF Viewer with field overlays */}
-      <div className="flex-1 overflow-auto bg-gray-100 p-6 flex justify-center">
+      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           renderPageOverlay={(pageNumber) => {
