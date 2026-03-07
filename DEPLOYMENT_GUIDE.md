@@ -17,23 +17,63 @@ git commit -m "Production ready"
 git push origin main
 ```
 
+**Repository URL:** `https://github.com/somadhan-legal/somadhan-sign.git`
+
 ### Step 2: Deploy to Vercel
-1. Go to [https://vercel.com](https://vercel.com) and sign in with GitHub
-2. Click **"Add New Project"**
-3. Import your `somadhan_sign` repository
-4. Configure:
-   - **Framework Preset**: Vite
-   - **Root Directory**: `./` (leave as default)
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-5. Add Environment Variables:
-   ```
-   VITE_SUPABASE_URL=https://your-project.supabase.co
-   VITE_SUPABASE_ANON_KEY=your-anon-key-here
-   ```
-6. Click **"Deploy"**
-7. Wait for deployment to complete (usually 2-3 minutes)
-8. You'll get a URL like: `https://somadhan-sign.vercel.app`
+
+1. **Go to Vercel**
+   - Visit [https://vercel.com](https://vercel.com)
+   - Sign in with your GitHub account
+
+2. **Create New Project**
+   - Click **"Add New Project"** or **"Import Project"**
+   - You'll see a list of your GitHub repositories
+
+3. **Import Repository**
+   - Find and select **`somadhan-legal/somadhan-sign`**
+   - Click **"Import"**
+
+4. **Configure Project Settings**
+   
+   **Vercel Team:** Select your team or personal account
+   
+   **Project Name:** `somadhan-sign` (or any name you prefer)
+   
+   **Framework Preset:** Select **Vite** (should auto-detect)
+   
+   **Root Directory:** `./` (leave as default)
+
+5. **Build and Output Settings** (Expand this section)
+   - **Build Command:** `npm run build` (should be auto-filled)
+   - **Output Directory:** `dist` (should be auto-filled)
+   - **Install Command:** `npm install` (should be auto-filled)
+
+6. **Environment Variables** (Expand this section)
+   
+   Click **"Add"** and enter these variables:
+   
+   | Key | Value |
+   |-----|-------|
+   | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | `your-anon-key-here` |
+   
+   ⚠️ **Important:** Get these values from your Supabase dashboard:
+   - Go to **Settings** → **API**
+   - Copy **Project URL** and **anon/public** key
+
+7. **Accept Terms and Deploy**
+   - **Scroll down to the bottom** of the page
+   - Check the box to accept Vercel's terms
+   - Click **"Deploy"** button (it will now be enabled)
+
+8. **Wait for Deployment**
+   - Deployment typically takes 2-3 minutes
+   - You'll see build logs in real-time
+   - Once complete, you'll get a URL like: `https://somadhan-sign.vercel.app`
+
+9. **Verify Deployment**
+   - Click **"Visit"** to open your deployed app
+   - Test login and basic functionality
 
 ---
 
@@ -84,7 +124,7 @@ git push origin main
 2. Enter: `somadhan.com` (your root domain)
 3. Resend will show DNS records to add
 
-### Step 3: Add DNS Records in Namecheap
+### Step 3: Add DNS Records in Namecheap (Follow resend guidline)
 Go back to Namecheap → **Advanced DNS** and add these records:
 
 **SPF Record:**
@@ -233,7 +273,35 @@ WHERE document_id NOT IN (SELECT id FROM public.documents);
 
 ---
 
-## 📝 Post-Deployment Tasks
+## � Part 6: Post-Deployment Configuration
+
+**⚠️ CRITICAL: After deploying to Vercel and setting up your custom domain, you MUST update redirect URLs in:**
+
+1. **Google OAuth Console** - For Google Sign-In to work
+2. **Supabase Authentication** - For email confirmations and password resets
+3. **Resend** (optional) - For custom sender domain
+
+**📖 Complete step-by-step instructions:** See `POST_DEPLOYMENT_CONFIG.md`
+
+### Quick Summary:
+
+**Google Console:**
+- Add `https://sign.somadhan.com` to Authorized JavaScript Origins
+- Add `https://YOUR-PROJECT.supabase.co/auth/v1/callback` to Redirect URIs
+
+**Supabase:**
+- Change Site URL to `https://sign.somadhan.com`
+- Add production URLs to Redirect URLs list
+- Update email templates to use production domain
+
+**Without these updates:**
+- ❌ Google OAuth will fail with "redirect_uri_mismatch" error
+- ❌ Email confirmation links will redirect to localhost
+- ❌ Password reset links won't work
+
+---
+
+## �📝 Additional Post-Deployment Tasks
 
 1. **Update README**: Add your production URL
 2. **Set up monitoring**: Consider adding Sentry or LogRocket
@@ -250,6 +318,8 @@ Your SomadhanSign app is now live at:
 - **Emails from**: noreply@somadhan.com
 - **Database**: Supabase (with RLS enabled)
 - **Storage**: Supabase Storage (documents bucket)
+
+**Next Step:** Follow `POST_DEPLOYMENT_CONFIG.md` to configure OAuth and authentication redirects!
 
 ---
 

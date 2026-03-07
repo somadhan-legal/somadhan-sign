@@ -19,14 +19,17 @@ const translations: Record<string, Record<Language, string>> = {
 
   // ─── Landing Page ───
   'landing.heroTitle1': { en: 'Sign documents with', bn: 'ডকুমেন্ট সাইন করুন' },
-  'landing.heroTitle2': { en: 'SomadhanSign', bn: 'সমাধান সাইন দিয়ে' },
+  'landing.heroTitle2': { 
+    en: 'SomadhanSign', 
+    bn: 'সমাধান সাইন দিয়ে'
+  },
   'landing.heroDesc': {
     en: 'Upload documents, define signature fields, invite multiple signers, and get everything signed — all in one beautiful platform.',
     bn: 'ডকুমেন্ট আপলোড করুন, স্বাক্ষর ক্ষেত্র নির্ধারণ করুন, একাধিক স্বাক্ষরকারী আমন্ত্রণ করুন এবং সবকিছু স্বাক্ষরিত করুন — সবকিছু এক প্ল্যাটফর্মে।',
   },
   'landing.getStartedFree': { en: 'Get Started Free', bn: 'বিনামূল্যে শুরু করুন' },
   'landing.signIn': { en: 'Sign In', bn: 'সাইন ইন' },
-  'landing.howItWorks': { en: 'How it works', bn: 'কিভাবে কাজ করে' },
+  'landing.howItWorks': { en: 'How it works', bn: 'কিভাবে কাজ করে?' },
   'landing.howItWorksDesc': {
     en: 'Get documents signed in four simple steps',
     bn: 'চারটি সহজ ধাপে ডকুমেন্ট স্বাক্ষর করুন',
@@ -81,7 +84,7 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'landing.createFreeAccount': { en: 'Create Free Account', bn: 'বিনামূল্যে অ্যাকাউন্ট তৈরি করুন' },
   'landing.freeToStart': { en: 'Free to start', bn: 'বিনামূল্যে শুরু' },
-  'landing.noCreditCard': { en: 'No credit card', bn: 'ক্রেডিট কার্ড নেই' },
+  'landing.noCreditCard': { en: 'No credit need', bn: 'ক্রেডিট দরকার নেই' },
   'landing.unlimitedDocs': { en: 'Unlimited documents', bn: 'সীমাহীন ডকুমেন্ট' },
   'landing.footer': { en: 'Somadhan. All rights reserved.', bn: 'সমাধান। সর্বস্বত্ব সংরক্ষিত।' },
 

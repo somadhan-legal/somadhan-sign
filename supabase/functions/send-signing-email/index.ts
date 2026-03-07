@@ -78,7 +78,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'SomadhanSign <onboarding@resend.dev>', // Resend test email - update with verified domain for production
+        from: 'SomadhanSign <noreply@somadhan.com>', // Resend test email - update with verified domain for production
         to: recipients,
         subject: `${senderName} has requested your signature on "${documentTitle}"`,
         html: emailHtml,

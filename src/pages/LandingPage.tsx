@@ -13,7 +13,25 @@ import Button from '@/components/ui/Button'
 import { useLanguageStore } from '@/stores/languageStore'
 
 export default function LandingPage() {
-  const { t } = useLanguageStore()
+  const { t, lang } = useLanguageStore()
+  
+  const renderHeroTitle = () => {
+    if (lang === 'bn') {
+      return (
+        <>
+          ডকুমেন্ট <span className="text-[hsl(var(--accent-coral))]">সাইন</span> করুন{' '}
+          <span>সমাধান<span className="text-[hsl(var(--accent-coral))]">সাইন</span> দিয়ে</span>
+        </>
+      )
+    }
+    return (
+      <>
+        {t('landing.heroTitle1')}{' '}
+        <span>Somadhan<span className="text-[hsl(var(--accent-coral))]">Sign</span></span>
+      </>
+    )
+  }
+  
   const features = [
     {
       icon: <Upload className="w-6 h-6" />,
@@ -62,8 +80,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 relative">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-              {t('landing.heroTitle1')}{' '}
-              <span>Somadhan<span className="text-[hsl(var(--accent-coral))]">Sign</span></span>
+              {renderHeroTitle()}
             </h1>
             <p className="text-lg text-[hsl(var(--muted-foreground))] mb-8 max-w-2xl mx-auto">
               {t('landing.heroDesc')}
