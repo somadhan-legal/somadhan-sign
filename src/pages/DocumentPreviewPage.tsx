@@ -147,7 +147,6 @@ export default function DocumentPreviewPage() {
 
       // Client-side safety filter
       const filteredAudit = (auditData || []).filter(e => e.document_id === id)
-      console.log('[AuditTrail] doc_id:', id, 'title:', docTitle, 'total from DB:', auditData?.length, 'after filter:', filteredAudit.length)
 
       // Generate audit trail PDF
       const blob = await generateAuditPdf(

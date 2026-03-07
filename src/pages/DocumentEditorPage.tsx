@@ -257,16 +257,12 @@ export default function DocumentEditorPage() {
 
     try {
       if (editingSignerId) {
-        console.log('[DocumentEditor] Updating signer:', editingSignerId, { email: signerEmail, name: fullName })
         await updateSigner(editingSignerId, {
           signer_email: signerEmail,
           signer_name: fullName || undefined,
         })
-        console.log('[DocumentEditor] Signer updated successfully')
       } else {
-        console.log('[DocumentEditor] Adding new signer:', { email: signerEmail, name: fullName })
         await addSigner(id, signerEmail, fullName || undefined)
-        console.log('[DocumentEditor] Signer added successfully')
       }
 
       // Refetch signers and fields to ensure UI is in sync

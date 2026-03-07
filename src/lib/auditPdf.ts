@@ -18,21 +18,14 @@ export async function generateAuditPdf(
   auditEntries: AuditEntry[],
   documentTitle: string,
 ): Promise<Blob> {
-  console.log('[generateAuditPdf] Called with:', { documentTitle, entryCount: auditEntries.length, url: originalPdfUrl.substring(0, 50) })
-  console.log('[generateAuditPdf] Audit entries:', auditEntries.map(e => ({ action: e.action, user: e.user_email })))
-  
   // Fetch the original PDF
   const response = await fetch(originalPdfUrl)
   if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
   const originalBytes = await response.arrayBuffer()
   const pdfDoc = await PDFDocument.load(originalBytes, { ignoreEncryption: true })
   
-  const existingPageCount = pdfDoc.getPageCount()
-  console.log('[generateAuditPdf] Original PDF has', existingPageCount, 'pages')
-  
   // If no audit entries, just return the original PDF
   if (!auditEntries || auditEntries.length === 0) {
-    console.log('[generateAuditPdf] No audit entries, returning original PDF')
     const pdfBytes = await pdfDoc.save()
     return new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
   }

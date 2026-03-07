@@ -371,7 +371,6 @@ export default function DashboardPage() {
 
                                 // Client-side safety filter
                                 const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
-                                console.log('[Dashboard] doc_id:', doc.id, 'total from DB:', auditData?.length, 'after filter:', filteredAudit.length)
 
                                 // Append audit trail
                                 const finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)

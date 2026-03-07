@@ -379,7 +379,6 @@ export default function InviteSigningPage() {
     }
 
     // Step 2: Fetch audit trail for THIS document ONLY using the exact document ID
-    console.log('[InviteSigningPage] Fetching audit trail for doc_id:', docId, 'title:', title)
     const { data: auditData, error: auditErr } = await supabase
       .from('audit_trail')
       .select('*')
@@ -387,22 +386,9 @@ export default function InviteSigningPage() {
       .order('created_at', { ascending: true })
 
     if (auditErr) console.error('[InviteSigningPage] Audit trail error:', auditErr)
-    console.log('[InviteSigningPage] Audit entries returned:', auditData?.length,
-      'doc_ids in result:', [...new Set(auditData?.map(e => e.document_id) || [])])
-    console.log('[InviteSigningPage] Full audit data:', JSON.stringify(auditData?.map(e => ({ 
-      action: e.action, 
-      doc_id: e.document_id, 
-      user: e.user_email 
-    })), null, 2))
 
     // EXTRA SAFETY: Filter client-side in case Supabase RLS returns extra rows
     const filteredAudit = (auditData || []).filter(e => e.document_id === docId)
-    console.log('[InviteSigningPage] After client-side filter:', filteredAudit.length)
-    console.log('[InviteSigningPage] Filtered audit data:', JSON.stringify(filteredAudit.map(e => ({ 
-      action: e.action, 
-      doc_id: e.document_id, 
-      user: e.user_email 
-    })), null, 2))
 
     // Step 3: Append audit trail pages to the signed PDF
     const finalBlob = await generateAuditPdf(basePdfUrl, filteredAudit, title)

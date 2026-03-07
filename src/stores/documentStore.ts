@@ -130,7 +130,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const { data: urlData } = supabase.storage
         .from('documents')
         .getPublicUrl(fileName)
-      console.log('PDF public URL:', urlData.publicUrl)
 
       const { data, error } = await supabase
         .from('documents')
@@ -170,12 +169,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (doc?.original_pdf_url) {
       const filePath = extractStoragePath(doc.original_pdf_url)
       if (filePath) {
-        console.log('[deleteDocument] Deleting original PDF from storage:', filePath)
         const { error: storageError } = await supabase.storage
           .from('documents')
           .remove([filePath])
         if (storageError) console.error('[deleteDocument] Storage delete error:', storageError)
-        else console.log('[deleteDocument] Original PDF deleted from storage')
       } else {
         console.warn('[deleteDocument] Could not parse file path from URL:', doc.original_pdf_url)
       }
@@ -185,7 +182,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (doc && (doc as Record<string, unknown>).final_pdf_url) {
       const finalPath = extractStoragePath((doc as Record<string, unknown>).final_pdf_url as string)
       if (finalPath) {
-        console.log('[deleteDocument] Deleting final PDF from storage:', finalPath)
         await supabase.storage.from('documents').remove([finalPath])
       }
     }
@@ -217,14 +213,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           
           // If folder is empty, remove it
           if (files && files.length === 0) {
-            console.log('[deleteDocument] User folder is empty, removing:', userFolder)
             await supabase.storage.from('documents').remove([userFolder])
           }
         }
       }
     }
     
-    console.log('[deleteDocument] Document and all related data deleted:', id)
     set((state) => ({
       documents: state.documents.filter((d) => d.id !== id),
       currentDocument: state.currentDocument?.id === id ? null : state.currentDocument,
@@ -459,7 +453,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return
     }
     
-    console.log(`Fetched ${data?.length || 0} audit entries for document ${documentId}`)
     set({ auditTrail: (data as AuditTrailEntry[]) || [] })
   },
 
@@ -508,9 +501,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       try {
         const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
         
-        console.log('Sending email to:', signer.signer_email)
 
-        const { data, error } = await supabase.functions.invoke('send-signing-email', {
+        const { error } = await supabase.functions.invoke('send-signing-email', {
           body: {
             to: signer.signer_email,
             documentTitle: doc.title,
@@ -523,8 +515,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
         if (error) {
           console.error(`Failed to send email to ${signer.signer_email}:`, error)
-        } else {
-          console.log(`Email sent successfully to ${signer.signer_email}:`, data)
         }
       } catch (error) {
         console.error(`Error sending email to ${signer.signer_email}:`, error)
