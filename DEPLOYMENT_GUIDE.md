@@ -1,4 +1,4 @@
-# RocketSign Deployment Guide
+# SomadhanSign Deployment Guide
 
 ## Complete Setup Instructions
 
@@ -24,7 +24,7 @@ supabase secrets set RESEND_API_KEY=re_your_api_key_here
 #### Step 3: Update Email Domain (Production Only)
 In `supabase/functions/send-signing-email/index.ts`, line 75:
 ```typescript
-from: 'RocketSign <noreply@yourdomain.com>', // Update with your verified domain
+from: 'SomadhanSign <noreply@yourdomain.com>', // Update with your verified domain
 ```
 
 #### Step 4: Verify Domain in Resend (Production)

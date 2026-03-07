@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@100;200;300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -8,7 +9,7 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 170 91% 32%;
+    --primary: 174 79% 24%;
     --primary-foreground: 210 40% 98%;
     --secondary: 166 30% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -20,8 +21,34 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 170 91% 32%;
+    --ring: 174 79% 24%;
+    --accent-coral: 4 79% 57%;
     --radius: 0.5rem;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 92%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 92%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 92%;
+    --primary: 174 79% 30%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 174 20% 16%;
+    --secondary-foreground: 210 40% 92%;
+    --muted: 222 30% 16%;
+    --muted-foreground: 215 16% 60%;
+    --accent: 174 20% 16%;
+    --accent-foreground: 210 40% 92%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 30% 20%;
+    --input: 222 30% 20%;
+    --ring: 174 79% 30%;
+    --accent-coral: 4 79% 57%;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
   }
@@ -33,7 +60,7 @@
   }
   body {
     @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))] antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Anek Bangla', system-ui, -apple-system, sans-serif;
     margin: 0;
   }
 }

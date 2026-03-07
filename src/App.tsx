@@ -29,10 +29,10 @@ export default function App() {
       <Routes>
         {/* Public signing route — no auth required */}
         <Route path="/sign/:token" element={<InviteSigningPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         <Route element={<Layout />}>
           <Route path="/" element={<HomeRedirect />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/dashboard"

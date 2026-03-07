@@ -30,7 +30,7 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
         className={cn(
-          'relative bg-white rounded-2xl shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto',
+          'relative bg-[hsl(var(--card))] rounded-2xl shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto',
           {
             'w-full max-w-sm': size === 'sm',
             'w-full max-w-md': size === 'md',

@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, ArrowLeft, Mail, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import SomadhanLogo from '@/assets/somadhan-logo.svg'
+import { useLanguageStore } from '@/stores/languageStore'
+import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
 type AuthMode = 'login' | 'signup' | 'verify-otp' | 'forgot-password'
 
 export default function LoginPage() {
+  const { t, lang, toggle: toggleLang } = useLanguageStore()
   const [searchParams] = useSearchParams()
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login'
   const [mode, setMode] = useState<AuthMode>(initialMode)
@@ -91,44 +93,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[hsl(var(--primary))] to-teal-900 p-12 flex-col justify-between">
-        <div className="flex items-center gap-3">
-          <img src={SomadhanLogo} alt="RocketSign" className="w-12 h-12 rounded-2xl" />
-          <span className="text-2xl font-bold text-white">RocketSign</span>
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[hsl(var(--primary))] to-teal-900 p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
+          <div className="w-[600px] h-[600px] rounded-full border border-white" />
+          <div className="absolute w-[450px] h-[450px] rounded-full border border-white" />
         </div>
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Sign documents with RocketSign
+
+        <div className="relative z-10 flex items-center justify-between">
+          <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-14" />
+          <button onClick={toggleLang} className="text-white/60 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title={lang === 'en' ? 'বাংলা' : 'English'}>
+            {lang === 'en' ? 'বাং' : 'EN'}
+          </button>
+        </div>
+
+        <div className="relative z-10 text-center flex flex-col items-center">
+          <h1 className="text-4xl font-bold text-white mb-2">
+            {t('login.brandingTitle')}
           </h1>
-          <p className="text-lg text-white/70">
-            Upload, define signature fields, invite signers, and get documents signed — all in one place.
+          <h1 className="text-4xl font-bold mb-4">
+            <span className="text-white">Somadhan</span><span className="text-[hsl(var(--accent-coral))]">Sign</span>
+          </h1>
+          <p className="text-base text-white/60 max-w-md mb-10">
+            {t('login.brandingDesc')}
           </p>
+
+          <div className="flex gap-4">
+            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
+              <div className="text-2xl font-bold text-white">10k+</div>
+              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statDocuments')}</div>
+            </div>
+            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
+              <div className="text-2xl font-bold text-white">5k+</div>
+              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statUsers')}</div>
+            </div>
+            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
+              <div className="text-2xl font-bold text-white">99.9%</div>
+              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statUptime')}</div>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-8 text-white/60 text-sm">
-          <div>
-            <div className="text-3xl font-bold text-white">10k+</div>
-            Documents signed
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-white">5k+</div>
-            Happy users
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-white">99.9%</div>
-            Uptime
-          </div>
+
+        <div className="relative z-10 text-center text-white/40 text-xs">
+          &copy; {new Date().getFullYear()} {t('login.copyright')}
         </div>
       </div>
 
       {/* Right - Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
         <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2 mb-8">
-            <img src={SomadhanLogo} alt="RocketSign" className="w-9 h-9 rounded-xl" />
-            <span className="text-xl font-bold">RocketSign</span>
-          </div>
 
           {/* Forgot Password Screen */}
           {mode === 'forgot-password' ? (
@@ -136,9 +150,9 @@ export default function LoginPage() {
               <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-[hsl(var(--primary))]" />
               </div>
-              <h2 className="text-2xl font-bold mb-1 text-center">Reset your password</h2>
+              <h2 className="text-2xl font-bold mb-1 text-center">{t('login.resetPassword')}</h2>
               <p className="text-[hsl(var(--muted-foreground))] mb-6 text-center">
-                Enter your email and we'll send you a password reset link
+                {t('login.resetPasswordDesc')}
               </p>
 
               {error && (
@@ -154,7 +168,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
-                  label="Email"
+                  label={t('login.email')}
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -166,7 +180,7 @@ export default function LoginPage() {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    'Send Reset Link'
+                    t('login.sendResetLink')
                   )}
                 </Button>
               </form>
@@ -176,7 +190,7 @@ export default function LoginPage() {
                   onClick={() => { setMode('login'); setError(''); setMessage('') }}
                   className="text-xs text-[hsl(var(--muted-foreground))] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <ArrowLeft className="w-3 h-3" /> Back to login
+                  <ArrowLeft className="w-3 h-3" /> {t('login.backToSignIn')}
                 </button>
               </div>
             </div>
@@ -185,9 +199,9 @@ export default function LoginPage() {
               <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
                 <Mail className="w-7 h-7 text-[hsl(var(--primary))]" />
               </div>
-              <h2 className="text-2xl font-bold mb-1 text-center">Enter OTP to confirm your email</h2>
+              <h2 className="text-2xl font-bold mb-1 text-center">{t('login.verifyEmail')}</h2>
               <p className="text-[hsl(var(--muted-foreground))] mb-6 text-center">
-                We sent a 6-digit code to <strong>{email}</strong>
+                {t('login.verifyEmailDesc')} <strong>{email}</strong>
               </p>
 
               {error && (
@@ -217,7 +231,7 @@ export default function LoginPage() {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    'Verify & Continue'
+                    t('login.verifyCode')
                   )}
                 </Button>
               </form>
@@ -281,12 +295,12 @@ export default function LoginPage() {
           ) : (
             <>
               <h2 className="text-2xl font-bold mb-1">
-                {mode === 'login' ? 'Welcome back' : 'Create an account'}
+                {mode === 'login' ? t('login.welcomeBack') : t('login.createAccount')}
               </h2>
               <p className="text-[hsl(var(--muted-foreground))] mb-6">
                 {mode === 'login'
-                  ? 'Sign in to your account to continue'
-                  : 'Get started with RocketSign today'}
+                  ? t('login.signInToContinue')
+                  : t('login.createAccountDesc')}
               </p>
 
               {/* Google Sign In */}
@@ -302,7 +316,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Continue with Google
+                {t('login.continueWithGoogle')}
               </Button>
 
               <div className="relative mb-6">
@@ -310,8 +324,8 @@ export default function LoginPage() {
                   <div className="w-full border-t border-[hsl(var(--border))]" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-[hsl(var(--muted-foreground))]">
-                    Or continue with email
+                  <span className="bg-[hsl(var(--background))] px-2 text-[hsl(var(--muted-foreground))]">
+                    {t('login.orContinueWithEmail')}
                   </span>
                 </div>
               </div>
@@ -330,7 +344,7 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <Input
-                    label="Full Name"
+                    label={t('login.fullName')}
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -339,7 +353,7 @@ export default function LoginPage() {
                 )}
 
                 <Input
-                  label="Email"
+                  label={t('login.email')}
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -350,7 +364,7 @@ export default function LoginPage() {
                 {mode === 'login' && (
                   <div className="relative">
                     <Input
-                      label="Password"
+                      label={t('login.password')}
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
@@ -369,7 +383,7 @@ export default function LoginPage() {
                 )}
                 {mode === 'signup' && (
                   <Input
-                    label="Password"
+                    label={t('login.password')}
                     type="password"
                     placeholder="••••••••"
                     value={password}
@@ -386,7 +400,7 @@ export default function LoginPage() {
                       onClick={() => { setMode('forgot-password'); setError(''); setMessage('') }}
                       className="text-xs text-[hsl(var(--primary))] hover:underline cursor-pointer"
                     >
-                      Forgot password?
+                      {t('login.forgotPassword')}
                     </button>
                   </div>
                 )}
@@ -395,9 +409,9 @@ export default function LoginPage() {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : mode === 'login' ? (
-                    'Sign In'
+                    t('login.signIn')
                   ) : (
-                    'Create Account'
+                    t('login.signUp')
                   )}
                 </Button>
               </form>
@@ -405,22 +419,22 @@ export default function LoginPage() {
               <div className="mt-6 text-center text-sm">
                 {mode === 'login' ? (
                   <p>
-                    Don&apos;t have an account?{' '}
+                    {t('login.noAccount')}{' '}
                     <button
                       onClick={() => { setMode('signup'); setError(''); setMessage('') }}
                       className="text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
                     >
-                      Sign up
+                      {t('login.signUpLink')}
                     </button>
                   </p>
                 ) : (
                   <p>
-                    Already have an account?{' '}
+                    {t('login.hasAccount')}{' '}
                     <button
                       onClick={() => { setMode('login'); setError(''); setMessage('') }}
                       className="text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
                     >
-                      Sign in
+                      {t('login.signInLink')}
                     </button>
                   </p>
                 )}
@@ -433,13 +447,13 @@ export default function LoginPage() {
       {/* Account Verified Popup */}
       {showVerifiedPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+          <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-9 h-9 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Account Verified!</h3>
+            <h3 className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">
-              Your email has been confirmed. You can now use RocketSign.
+              {t('login.accountVerifiedDesc')}
             </p>
             <Button
               className="w-full h-11"
@@ -448,7 +462,7 @@ export default function LoginPage() {
                 navigate('/dashboard')
               }}
             >
-              OK, Let&apos;s Go!
+              {t('login.letsGo')}
             </Button>
           </div>
         </div>

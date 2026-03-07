@@ -92,7 +92,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
               activeTab === tab.id
-                ? 'bg-white shadow-sm text-[hsl(var(--foreground))]'
+                ? 'bg-[hsl(var(--card))] shadow-sm text-[hsl(var(--foreground))]'
                 : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
             }`}
           >
@@ -110,7 +110,7 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
           />
           <button
             onClick={handleClear}
-            className="absolute top-2 right-2 p-1.5 rounded-md bg-white/80 hover:bg-white shadow-sm cursor-pointer"
+            className="absolute top-2 right-2 p-1.5 rounded-md bg-[hsl(var(--card))]/80 hover:bg-[hsl(var(--card))] shadow-sm cursor-pointer"
             title="Clear"
           >
             <RotateCcw className="w-4 h-4" />

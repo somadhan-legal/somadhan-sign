@@ -27,7 +27,7 @@ serve(async (req) => {
 
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
           <h1 style="color: white; margin: 0; font-size: 28px;">Document Signature Request</h1>
         </div>
         
@@ -38,7 +38,7 @@ serve(async (req) => {
             <strong>${senderName}</strong> has sent you a document to sign:
           </p>
           
-          <div style="background: #f9fafb; border-left: 4px solid #0d9488; padding: 16px; margin: 24px 0; border-radius: 4px;">
+          <div style="background: #f9fafb; border-left: 4px solid #0e6e6e; padding: 16px; margin: 24px 0; border-radius: 4px;">
             <p style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">
               ${documentTitle}
             </p>
@@ -52,20 +52,19 @@ serve(async (req) => {
           
           <div style="text-align: center; margin: 40px 0;">
             <a href="${signingLink}" 
-               style="background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+               style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
               Review and Sign Document →
             </a>
           </div>
           
           <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px;">
-            This link will take you to a secure signing page where you can review and electronically sign the document. 
-            All signatures are legally binding and timestamped for your protection.
+            Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.
           </p>
           
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           
           <p style="color: #9ca3af; font-size: 12px; line-height: 1.5;">
-            This email was sent by <strong>RocketSign</strong>, a secure electronic signature platform. 
+            This email was sent by <strong>SomadhanSign</strong>, a secure electronic signature platform. 
             If you believe you received this in error, please ignore it or contact the sender directly.
           </p>
         </div>
@@ -79,7 +78,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'RocketSign <onboarding@resend.dev>', // Resend test email - only sends to rocketsign00@gmail.com until domain verified
+        from: 'SomadhanSign <onboarding@resend.dev>', // Resend test email - update with verified domain for production
         to: recipients,
         subject: `${senderName} has requested your signature on "${documentTitle}"`,
         html: emailHtml,

@@ -193,7 +193,8 @@ export default function DocumentPreviewPage() {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Left Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-white overflow-y-auto flex flex-col">
+      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
+        <div className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <button
@@ -309,8 +310,10 @@ export default function DocumentPreviewPage() {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="p-4 mt-auto sticky bottom-0 bg-white border-t border-[hsl(var(--border))] space-y-2">
+        </div>
+
+        {/* Actions - always visible at bottom */}
+        <div className="p-4 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-2">
           <Button variant="outline" className="w-full" onClick={() => setShowAuditTrail(true)}>
             <History className="w-4 h-4 mr-2" />
             View Audit Trail

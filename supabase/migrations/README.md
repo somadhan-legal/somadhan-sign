@@ -1,4 +1,4 @@
-# 🚀 RocketSign — Document Signing Platform
+# 🚀 SomadhanSign — Document Signing Platform
 
 A modern multi-party document signing platform built with React, TypeScript, and Supabase. Upload PDFs, place signature fields, invite signers, and get documents signed.
 

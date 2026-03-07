@@ -1,5 +1,5 @@
 -- ============================================
--- RocketSign Database Schema
+-- SomadhanSign Database Schema
 -- Run this in Supabase SQL Editor
 -- ============================================
 

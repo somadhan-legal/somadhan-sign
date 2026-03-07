@@ -47,7 +47,7 @@ serve(async (req) => {
       'Authorization': `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: 'RocketSign <noreply@yourdomain.com>',
+      from: 'SomadhanSign <noreply@yourdomain.com>',
       to: [to],
       subject: `${senderName} has requested your signature on "${documentTitle}"`,
       html: `
@@ -67,7 +67,7 @@ serve(async (req) => {
           </p>
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
           <p style="color: #999; font-size: 12px;">
-            This email was sent by RocketSign. If you believe you received this in error, please ignore it.
+            This email was sent by SomadhanSign. If you believe you received this in error, please ignore it.
           </p>
         </div>
       `,

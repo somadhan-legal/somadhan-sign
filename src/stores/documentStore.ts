@@ -148,47 +148,55 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   deleteDocument: async (id: string) => {
     const doc = get().documents.find((d) => d.id === id)
     
-    // Delete PDF from storage
-    if (doc?.original_pdf_url) {
+    // Helper: extract storage file path from any Supabase storage URL format
+    const extractStoragePath = (rawUrl: string): string | null => {
       try {
-        // Extract file path from URL
-        // URL format: https://[project].supabase.co/storage/v1/object/public/documents/[filename]
-        const url = new URL(doc.original_pdf_url)
-        const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/documents\/(.+)/)
-        
-        if (pathMatch && pathMatch[1]) {
-          const filePath = decodeURIComponent(pathMatch[1])
-          console.log('Deleting file from storage:', filePath)
-          const { error: storageError } = await supabase.storage
-            .from('documents')
-            .remove([filePath])
-          
-          if (storageError) {
-            console.error('Error deleting file from storage:', storageError)
-          } else {
-            console.log('File deleted successfully from storage')
-          }
-        } else {
-          console.warn('Could not parse file path from URL:', doc.original_pdf_url)
-        }
-      } catch (err) {
-        console.error('Error parsing storage URL:', err)
+        const url = new URL(rawUrl)
+        // Handles: /storage/v1/object/public/documents/... AND /storage/v1/object/sign/documents/...
+        const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/documents\/(.+)/)
+        if (match?.[1]) return decodeURIComponent(match[1])
+        return null
+      } catch { return null }
+    }
+
+    // Delete original PDF from storage
+    if (doc?.original_pdf_url) {
+      const filePath = extractStoragePath(doc.original_pdf_url)
+      if (filePath) {
+        console.log('[deleteDocument] Deleting original PDF from storage:', filePath)
+        const { error: storageError } = await supabase.storage
+          .from('documents')
+          .remove([filePath])
+        if (storageError) console.error('[deleteDocument] Storage delete error:', storageError)
+        else console.log('[deleteDocument] Original PDF deleted from storage')
+      } else {
+        console.warn('[deleteDocument] Could not parse file path from URL:', doc.original_pdf_url)
+      }
+    }
+
+    // Delete final signed PDF from storage if it exists
+    if (doc && (doc as Record<string, unknown>).final_pdf_url) {
+      const finalPath = extractStoragePath((doc as Record<string, unknown>).final_pdf_url as string)
+      if (finalPath) {
+        console.log('[deleteDocument] Deleting final PDF from storage:', finalPath)
+        await supabase.storage.from('documents').remove([finalPath])
       }
     }
     
-    // Delete related records (cascade should handle most, but explicit for safety)
+    // Delete related records explicitly (cascade should handle, but be thorough)
     await supabase.from('signature_placements').delete().eq('document_id', id)
     await supabase.from('signature_fields').delete().eq('document_id', id)
     await supabase.from('audit_trail').delete().eq('document_id', id)
     await supabase.from('document_signers').delete().eq('document_id', id)
     
-    // Delete document record
+    // Delete document record (this also cascades all FK references)
     const { error } = await supabase.from('documents').delete().eq('id', id)
     if (error) {
-      console.error('Error deleting document:', error)
+      console.error('[deleteDocument] Error deleting document:', error)
       return
     }
     
+    console.log('[deleteDocument] Document and all related data deleted:', id)
     set((state) => ({
       documents: state.documents.filter((d) => d.id !== id),
       currentDocument: state.currentDocument?.id === id ? null : state.currentDocument,
@@ -297,6 +305,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   updateSigner: async (signerId: string, updates: Partial<{ signer_email: string; signer_name: string }>) => {
+    // First, get the current signer to know their old email
+    const currentSigner = get().signers.find(s => s.id === signerId)
+    if (!currentSigner) {
+      console.error('Signer not found')
+      return
+    }
+
+    const oldEmail = currentSigner.signer_email
+    const newEmail = updates.signer_email
+
+    // Update the signer
     const { data, error } = await supabase
       .from('document_signers')
       .update(updates)
@@ -307,6 +326,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (error) {
       console.error('Error updating signer:', error)
       return
+    }
+
+    // If email changed, update all signature fields assigned to the old email
+    if (newEmail && newEmail !== oldEmail) {
+      const { error: fieldsError } = await supabase
+        .from('signature_fields')
+        .update({ assigned_to_email: newEmail })
+        .eq('document_id', currentSigner.document_id)
+        .eq('assigned_to_email', oldEmail)
+
+      if (fieldsError) {
+        console.error('Error updating signature fields:', fieldsError)
+      }
     }
     
     set((state) => ({

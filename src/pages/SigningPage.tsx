@@ -262,7 +262,7 @@ export default function SigningPage() {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-white overflow-y-auto flex flex-col">
+      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-y-auto flex flex-col">
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg truncate">{currentDocument.title}</h2>
@@ -389,7 +389,7 @@ export default function SigningPage() {
         </div>
 
         {/* Navigation & Signing Actions */}
-        <div className="p-4 mt-auto sticky bottom-0 bg-white border-t border-[hsl(var(--border))] space-y-2">
+        <div className="p-4 mt-auto sticky bottom-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-2">
           {signatureData && allMyUnsigned.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -500,7 +500,7 @@ export default function SigningPage() {
 
                     ) : isTapped && isSignatureType && sigData ? (
                       /* === TAPPED SIGNATURE/INITIALS === */
-                      <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-white flex flex-col items-center justify-center gap-1 shadow-lg">
+                      <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--card))] flex flex-col items-center justify-center gap-1 shadow-lg">
                         <img src={sigData} alt="Preview" className="max-w-[80%] max-h-[50%] object-contain opacity-60" />
                         {isInitials && myUnsignedInitialsFields.length > 1 ? (
                           <div className="flex gap-1">
@@ -569,7 +569,7 @@ export default function SigningPage() {
                         className={`w-full h-full rounded flex items-center justify-center text-xs font-medium transition-all ${
                           isCheckbox
                             ? isMine
-                              ? 'border border-gray-400 bg-white cursor-pointer hover:border-blue-500'
+                              ? 'border border-gray-400 bg-[hsl(var(--card))] cursor-pointer hover:border-blue-500'
                               : 'border border-gray-300 bg-gray-50'
                             : isDate || isText
                             ? isMine

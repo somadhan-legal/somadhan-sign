@@ -12,9 +12,11 @@ import {
   Calendar,
   SquareCheck,
   CheckCircle2,
+  HelpCircle,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import PdfViewer from '@/components/PdfViewer'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -63,6 +65,7 @@ export default function DocumentEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { t } = useLanguageStore()
   const {
     currentDocument,
     signatureFields,
@@ -73,6 +76,7 @@ export default function DocumentEditorPage() {
     updateSignatureField,
     removeSignatureField,
     saveSignatureFields,
+    fetchSignatureFields,
     addSigner,
     updateSigner,
     removeSigner,
@@ -95,7 +99,8 @@ export default function DocumentEditorPage() {
   const [sentToast, setSentToast] = useState(false)
   const [ccEmails, setCcEmails] = useState('')
   const [showSendConfirm, setShowSendConfirm] = useState(false)
-  const [sendMessage, setSendMessage] = useState('We kindly request your review and signature on the attached document. Please complete this at your earliest convenience. Should you have any questions or require clarification, feel free to reach out. Thank you for your prompt attention to this matter.')
+  const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
+  const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -264,8 +269,9 @@ export default function DocumentEditorPage() {
         console.log('[DocumentEditor] Signer added successfully')
       }
 
-      // Refetch signers to ensure UI is in sync
+      // Refetch signers and fields to ensure UI is in sync
       await fetchSigners(id)
+      await fetchSignatureFields(id)
       
       setSignerFirstName('')
       setSignerLastName('')
@@ -359,9 +365,22 @@ export default function DocumentEditorPage() {
     setSaving(false)
     setShowSendConfirm(false)
     
-    // Show success toast
+    // Show success toast with countdown
     setSentToast(true)
-    setTimeout(() => setSentToast(false), 5000)
+    setCountdown(5)
+    
+    // Countdown timer
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          setSentToast(false)
+          navigate('/dashboard')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
     
     // Navigate after showing the toast
     setTimeout(() => navigate('/dashboard'), 5000)
@@ -408,7 +427,8 @@ export default function DocumentEditorPage() {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Left Sidebar */}
-      <div className="w-56 border-r border-[hsl(var(--border))] bg-white overflow-y-auto flex flex-col">
+      <div className="w-56 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
+        <div className="flex-1 overflow-y-auto">
         <div className="p-3 border-b border-[hsl(var(--border))]">
           <h2 className="font-semibold text-sm truncate">{currentDocument.title}</h2>
           {isLocked && (
@@ -419,7 +439,7 @@ export default function DocumentEditorPage() {
         {/* Signers */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Signers</h3>
+            <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.signers')}</h3>
             {!isLocked && (
               <button onClick={openAddSignerModal} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                 <UserPlus className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
@@ -432,7 +452,7 @@ export default function DocumentEditorPage() {
               className="w-full py-2.5 border border-[hsl(var(--border))] rounded-lg text-xs font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              Add Signer
+              {t('editor.addSigner')}
             </button>
           ) : (
             <div className="space-y-1">
@@ -462,7 +482,7 @@ export default function DocumentEditorPage() {
                       </p>
                     </div>
                     {!isLocked && (
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 absolute right-2 bg-white/90 px-1 rounded transition-opacity">
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 absolute right-2 bg-[hsl(var(--card))]/90 px-1 rounded transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
                           className="p-1 text-gray-400 hover:text-blue-500 rounded hover:bg-blue-50 cursor-pointer"
@@ -494,7 +514,7 @@ export default function DocumentEditorPage() {
         {/* Field Types */}
         {!isLocked && (
           <div className="p-3 border-b border-[hsl(var(--border))]">
-            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">Fields</h3>
+            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">{t('editor.fields')}</h3>
             <div className="space-y-0.5">
               {fieldTypeOptions.map((opt) => (
                 <button
@@ -507,24 +527,43 @@ export default function DocumentEditorPage() {
                   }`}
                 >
                   {fieldTypeIcons[opt.type]}
-                  {opt.label}
+                  {t(`editor.${opt.type}`)}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="p-3 mt-auto sticky bottom-0 bg-white border-t border-[hsl(var(--border))] space-y-1.5">
+        {/* Help Guide */}
+        {!isLocked && (
+          <div className="p-3 border-b border-[hsl(var(--border))]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <HelpCircle className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+              <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.helpTitle')}</h3>
+            </div>
+            <ol className="space-y-1.5 text-[11px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+              <li>{t('editor.help1')}</li>
+              <li>{t('editor.help2')}</li>
+              <li>{t('editor.help3')}</li>
+              <li>{t('editor.help4')}</li>
+              <li>{t('editor.help5')}</li>
+            </ol>
+          </div>
+        )}
+
+        </div>
+
+        {/* Actions - always visible at bottom */}
+        <div className="p-3 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-1.5">
           {!isLocked && (
             <>
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleSave} disabled={saving}>
                 <Save className="w-3.5 h-3.5 mr-1.5" />
-                {saving ? 'Saving...' : 'Save Draft'}
+                {saving ? t('editor.saving') : t('editor.saveDraft')}
               </Button>
               <Button size="sm" className="w-full text-xs" onClick={handlePreSend} disabled={saving}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />
-                Send for Signing
+                {t('editor.sendForSigning')}
                 <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
               </Button>
             </>
@@ -623,10 +662,10 @@ export default function DocumentEditorPage() {
                     )}
                     {isSelected && (
                       <>
-                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-2 bg-white cursor-nw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'nw', e)} />
-                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-2 bg-white cursor-ne-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'ne', e)} />
-                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-2 bg-white cursor-sw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'sw', e)} />
-                        <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-2 bg-white cursor-se-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'se', e)} />
+                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-nw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'nw', e)} />
+                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-ne-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'ne', e)} />
+                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-sw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'sw', e)} />
+                        <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-se-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'se', e)} />
                       </>
                     )}
                   </DraggableField>
@@ -639,7 +678,7 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-60 border-l border-[hsl(var(--border))] bg-white overflow-y-auto flex flex-col">
+      <div className="w-60 border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-y-auto flex flex-col">
         {selectedField && (() => {
           const field = signatureFields.find((f) => f.id === selectedField)
           if (!field) return null
@@ -705,7 +744,7 @@ export default function DocumentEditorPage() {
       {/* Add/Edit Signer Modal */}
       {showSignerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
               <h3 className="font-semibold">{editingSignerId ? 'Edit Signer' : 'Add Signer'}</h3>
               <button
@@ -760,7 +799,7 @@ export default function DocumentEditorPage() {
       {/* Send Confirmation Dialog */}
       {showSendConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
               <h3 className="font-semibold">Send for Signing</h3>
               <button onClick={() => setShowSendConfirm(false)} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
@@ -826,7 +865,7 @@ export default function DocumentEditorPage() {
       {/* Loading Overlay - While Sending */}
       {saving && !sentToast && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4">
                 <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
@@ -843,14 +882,17 @@ export default function DocumentEditorPage() {
       {/* Sent Toast - Centered Card */}
       {sentToast && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
+          <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl animate-[fadeIn_0.3s_ease-out]">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-9 h-9 text-green-600" />
               </div>
               <h3 className="text-xl font-bold mb-2">Document Sent!</h3>
-              <p className="text-[hsl(var(--muted-foreground))]">
+              <p className="text-[hsl(var(--muted-foreground))] mb-3">
                 Signers will receive emails shortly.
+              </p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                Redirecting to dashboard in <span className="font-bold text-[hsl(var(--primary))]">{countdown}</span>s...
               </p>
             </div>
           </div>

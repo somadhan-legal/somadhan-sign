@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import { supabase } from '@/lib/supabase'
 import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
 import { generateAuditPdf } from '@/lib/auditPdf'
@@ -32,6 +33,7 @@ import type { Document } from '@/types/database'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
+  const { t } = useLanguageStore()
   const { documents, fetchDocuments, createDocument, deleteDocument, fetchSigners, signers, sendReminder, addAuditEntry, loading } = useDocumentStore()
   const navigate = useNavigate()
 
@@ -75,9 +77,9 @@ export default function DashboardPage() {
   })
 
   const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
-    draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: 'Draft' },
-    pending: { icon: <Clock className="w-3 h-3" />, variant: 'warning', label: 'Pending' },
-    completed: { icon: <CheckCircle2 className="w-3 h-3" />, variant: 'success', label: 'Completed' },
+    draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },
+    pending: { icon: <Clock className="w-3 h-3" />, variant: 'warning', label: t('dashboard.pending') },
+    completed: { icon: <CheckCircle2 className="w-3 h-3" />, variant: 'success', label: t('dashboard.completed') },
     cancelled: { icon: <XCircle className="w-3 h-3" />, variant: 'destructive', label: 'Cancelled' },
   }
 
@@ -93,14 +95,14 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Documents</h1>
+          <h1 className="text-2xl font-bold">{t('dashboard.myDocuments')}</h1>
           <p className="text-[hsl(var(--muted-foreground))]">
-            Manage and track your documents
+            {t('dashboard.searchDocs').replace('...', '')}
           </p>
         </div>
         <Button onClick={() => setShowUploadModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          New Document
+          {t('dashboard.newDocument')}
         </Button>
       </div>
 
@@ -114,7 +116,7 @@ export default function DashboardPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            className="bg-white rounded-xl border border-[hsl(var(--border))] p-4"
+            className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4"
           >
             <p className="text-sm text-[hsl(var(--muted-foreground))]">{stat.label}</p>
             <p className="text-2xl font-bold mt-1">{stat.value}</p>
@@ -128,10 +130,10 @@ export default function DashboardPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
           <input
             type="text"
-            placeholder="Search documents..."
+            placeholder={t('dashboard.searchDocs')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+            className="w-full h-10 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
           />
         </div>
         <div className="flex gap-2">
@@ -159,13 +161,13 @@ export default function DashboardPage() {
       ) : filteredDocs.length === 0 ? (
         <div className="text-center py-20">
           <FileText className="w-16 h-16 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No documents yet</h3>
+          <h3 className="text-lg font-medium mb-2">{t('dashboard.noDocuments')}</h3>
           <p className="text-[hsl(var(--muted-foreground))] mb-4">
-            Upload your first document to get started
+            {t('dashboard.uploadFirst')}
           </p>
           <Button onClick={() => setShowUploadModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Upload Document
+            {t('dashboard.uploadPdf')}
           </Button>
         </div>
       ) : (
@@ -175,7 +177,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={doc.id}
-                className="bg-white rounded-xl border border-[hsl(var(--border))] p-4 hover:shadow-md transition-shadow"
+                className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -224,14 +226,14 @@ export default function DashboardPage() {
                         <MoreVertical className="w-4 h-4" />
                       </button>
                       {menuOpen === doc.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
                           <Link
                             to={`/document/${doc.id}/edit`}
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
                             onClick={() => setMenuOpen(null)}
                           >
                             <FileText className="w-4 h-4" />
-                            Edit Fields
+                            {t('dashboard.edit')}
                           </Link>
                           {doc.status === 'draft' && (
                             <button
@@ -242,7 +244,7 @@ export default function DashboardPage() {
                               }}
                             >
                               <Send className="w-4 h-4" />
-                              Send for Signing
+                              {t('editor.sendForSigning')}
                             </button>
                           )}
                           {doc.status === 'pending' && (
@@ -263,7 +265,7 @@ export default function DashboardPage() {
                               }}
                             >
                               <Bell className="w-4 h-4" />
-                              Send Reminder
+                              {t('dashboard.sendReminder')}
                             </button>
                           )}
                           <Link
@@ -272,7 +274,7 @@ export default function DashboardPage() {
                             onClick={() => setMenuOpen(null)}
                           >
                             <Eye className="w-4 h-4" />
-                            Preview
+                            {t('dashboard.view')}
                           </Link>
                           <button
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
@@ -382,7 +384,7 @@ export default function DashboardPage() {
                             }}
                           >
                             <Trash2 className="w-4 h-4" />
-                            Delete
+                            {t('dashboard.delete')}
                           </button>
                         </div>
                       )}

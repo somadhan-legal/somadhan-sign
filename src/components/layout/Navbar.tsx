@@ -1,12 +1,19 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, User, FileText } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { LogOut, User, FileText, Moon, Sun } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useThemeStore } from '@/stores/themeStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import Button from '@/components/ui/Button'
-import SomadhanLogo from '@/assets/somadhan-logo.svg'
+import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
+import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 
 export default function Navbar() {
   const { user, signOut } = useAuthStore()
+  const { isDark, toggle } = useThemeStore()
+  const { lang, toggle: toggleLang, t } = useLanguageStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isLoginPage = location.pathname === '/login'
 
   const handleSignOut = async () => {
     await signOut()
@@ -14,44 +21,52 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-[hsl(var(--border))]">
+    <nav className="sticky top-0 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-md border-b border-[hsl(var(--border))]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline">
-            <img src={SomadhanLogo} alt="RocketSign" className="w-9 h-9 rounded-xl" />
-            <span className="text-xl font-bold text-[hsl(var(--foreground))]">
-              RocketSign
-            </span>
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
           </Link>
 
-          {user ? (
-            <div className="flex items-center gap-3">
-              <Link to="/dashboard">
-                <Button variant="ghost" size="sm">
-                  <FileText className="w-4 h-4 mr-2" />
-                  Documents
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
+              <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Link to="/dashboard">
+                  <Button variant="ghost" size="sm">
+                    <FileText className="w-4 h-4 mr-2" />
+                    {t('nav.documents')}
+                  </Button>
+                </Link>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))]">
+                  <User className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                  <span className="text-sm font-medium truncate max-w-[150px]">
+                    {user.user_metadata?.full_name || user.email}
+                  </span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4" />
                 </Button>
-              </Link>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))]">
-                <User className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
-                <span className="text-sm font-medium truncate max-w-[150px]">
-                  {user.user_metadata?.full_name || user.email}
-                </span>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/login">
-                <Button variant="ghost" size="sm">Sign In</Button>
-              </Link>
-              <Link to="/login">
-                <Button size="sm">Get Started</Button>
-              </Link>
-            </div>
-          )}
+            ) : (
+              !isLoginPage && (
+                <div className="flex items-center gap-2">
+                  <Link to="/login">
+                    <Button variant="ghost" size="sm">{t('nav.signIn')}</Button>
+                  </Link>
+                  <Link to="/login?mode=signup">
+                    <Button size="sm">{t('nav.getStarted')}</Button>
+                  </Link>
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
     </nav>

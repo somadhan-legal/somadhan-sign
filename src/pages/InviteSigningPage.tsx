@@ -22,6 +22,11 @@ import { generateColor } from '@/lib/utils'
 import { generateAuditPdf } from '@/lib/auditPdf'
 import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
+import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
+import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
+import { useThemeStore } from '@/stores/themeStore'
+import { useLanguageStore } from '@/stores/languageStore'
+import { Moon, Sun, HelpCircle } from 'lucide-react'
 
 const fieldTypeIcons: Record<string, React.ReactNode> = {
   signature: <PenTool className="w-3 h-3" />,
@@ -46,6 +51,7 @@ interface SignerData {
 
 export default function InviteSigningPage() {
   const { token } = useParams<{ token: string }>()
+  const { lang, toggle: toggleLang, t } = useLanguageStore()
   const {
     signatureFields,
     placements,
@@ -79,6 +85,7 @@ export default function InviteSigningPage() {
   const [auditPdfUrl, setAuditPdfUrl] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const hasLoggedView = useRef(false)
+  const { isDark, toggle } = useThemeStore()
 
   useEffect(() => {
     if (!token) return
@@ -86,7 +93,7 @@ export default function InviteSigningPage() {
       setPageLoading(true)
       const data = await fetchSignerByToken(token)
       if (!data) {
-        setError('Invalid or expired signing link.')
+        setError('The document you\'re looking for was not found. It may have been deleted or the link is invalid.')
         setPageLoading(false)
         return
       }
@@ -284,10 +291,11 @@ export default function InviteSigningPage() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+        <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6" />
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[hsl(var(--muted-foreground))]">Loading document...</p>
+          <p className="text-[hsl(var(--muted-foreground))]">{t('signee.loadingDoc')}</p>
         </div>
       </div>
     )
@@ -295,14 +303,15 @@ export default function InviteSigningPage() {
 
   if (error || !signerData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+        <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6" />
         <div className="text-center max-w-md">
           <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
           </div>
-          <h2 className="text-xl font-bold mb-2">Invalid Link</h2>
+          <h2 className="text-xl font-bold mb-2">{t('signee.docNotFound')}</h2>
           <p className="text-[hsl(var(--muted-foreground))]">
-            {error || 'This signing link is invalid or has expired.'}
+            {error || t('signee.docNotFoundDesc')}
           </p>
         </div>
       </div>
@@ -441,19 +450,21 @@ export default function InviteSigningPage() {
 
   if (finished && showPreview && auditPdfUrl) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-[hsl(var(--border))] shadow-sm">
+      <div className="flex flex-col h-screen bg-[hsl(var(--background))]">
+        <div className="flex items-center justify-between px-6 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm">
           <div className="flex items-center gap-3">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+            <div className="w-px h-6 bg-[hsl(var(--border))]" />
             <CheckCircle2 className="w-5 h-5 text-green-500" />
             <h2 className="font-semibold">{signerData?.documents.title} — Signed</h2>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
               <Download className="w-4 h-4 mr-1" />
-              Download PDF
+              {t('signee.downloadPdf')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
-              Close
+              {t('signee.close')}
             </Button>
           </div>
         </div>
@@ -468,35 +479,48 @@ export default function InviteSigningPage() {
 
   if (finished) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-white">
-        <div className="text-center max-w-md p-8">
-          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-12 h-12 text-green-500" />
+      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
+          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
+              <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
           </div>
-          <h2 className="text-2xl font-bold mb-3">Signing Complete!</h2>
-          <p className="text-[hsl(var(--muted-foreground))] mb-6">
-            Thank you, <strong>{userName || userEmail}</strong>. All your fields have been signed successfully.
-          </p>
-          <div className="space-y-3">
-            <Button className="w-full" onClick={handleDownloadPdf} disabled={generatingPdf}>
-              {generatingPdf ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Signed Document
-                </>
-              )}
-            </Button>
-            <Button variant="outline" className="w-full" onClick={handleViewDocument} disabled={generatingPdf}>
-              View Signed Document
-            </Button>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">
-              Download includes signatures and audit trail certificate
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md p-8">
+            <div className="w-20 h-20 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-12 h-12 text-[hsl(var(--primary))]" />
+            </div>
+            <h2 className="text-2xl font-bold text-[hsl(var(--primary))] mb-3">{t('signee.signingComplete')}</h2>
+            <p className="text-[hsl(var(--muted-foreground))] mb-8">
+              {t('signee.thankYou')} <strong className="text-[hsl(var(--foreground))]">{userName || userEmail}</strong>. {t('signee.allFieldsSigned')}
             </p>
+            <div className="space-y-3">
+              <Button className="w-full" onClick={handleDownloadPdf} disabled={generatingPdf}>
+                {generatingPdf ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    {t('signee.generatingPdf')}
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    {t('signee.downloadSigned')}
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleViewDocument} disabled={generatingPdf}>
+                {t('signee.viewSigned')}
+              </Button>
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                {t('signee.downloadIncludesAudit')}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -506,7 +530,18 @@ export default function InviteSigningPage() {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-white overflow-y-auto flex flex-col">
+      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-y-auto flex flex-col">
+        <div className="p-3 border-b border-[hsl(var(--border))] flex items-center justify-between">
+          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
+              <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
+            </Button>
+            <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg truncate">{signerData.documents.title}</h2>
@@ -519,27 +554,27 @@ export default function InviteSigningPage() {
             </button>
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <Badge variant="warning">Signing as</Badge>
+            <Badge variant="warning">{t('signee.signingAs')}</Badge>
             <span className="text-sm text-[hsl(var(--muted-foreground))] truncate">{userEmail}</span>
           </div>
         </div>
 
         {/* Signature Setup */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
-          <h3 className="font-medium text-sm mb-3">Your Signature</h3>
+          <h3 className="font-medium text-sm mb-3">{t('signee.yourSignature')}</h3>
           {signatureData ? (
             <div className="space-y-2">
               <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-[hsl(var(--muted))]">
                 <img src={signatureData} alt="Your signature" className="max-h-16 mx-auto" />
               </div>
               <Button variant="outline" size="sm" className="w-full" onClick={() => setShowSignatureModal(true)}>
-                Change Signature
+                {t('signee.changeSignature')}
               </Button>
             </div>
           ) : (
             <Button className="w-full" onClick={() => setShowSignatureModal(true)}>
               <PenTool className="w-4 h-4 mr-2" />
-              Create Signature
+              {t('signee.createSignature')}
             </Button>
           )}
         </div>
@@ -548,9 +583,9 @@ export default function InviteSigningPage() {
         {myInitialsFields.length > 0 && (
           <div className="p-4 border-b border-[hsl(var(--border))]">
             <h3 className="font-medium text-sm mb-3">
-              Your Initials
+              {t('signee.yourInitials')}
               <span className="text-xs text-[hsl(var(--muted-foreground))] ml-1">
-                ({myInitialsFields.length} places)
+                ({myInitialsFields.length} {t('signee.places')})
               </span>
             </h3>
             {initialsData ? (
@@ -559,14 +594,14 @@ export default function InviteSigningPage() {
                   <img src={initialsData} alt="Your initials" className="max-h-12 mx-auto" />
                 </div>
                 {myUnsignedInitialsFields.length === 0 ? (
-                  <p className="text-xs text-green-600 text-center">All initials fields filled</p>
+                  <p className="text-xs text-green-600 text-center">{t('signee.allInitialsFilled')}</p>
                 ) : (
                   <div className="space-y-1.5">
                     <Button size="sm" className="w-full" onClick={() => handleAutoFillInitials(initialsData)}>
-                      Apply to All Initials ({myUnsignedInitialsFields.length})
+                      {t('signee.applyToAll')} ({myUnsignedInitialsFields.length})
                     </Button>
                     <Button variant="outline" size="sm" className="w-full" onClick={() => setShowInitialsModal(true)}>
-                      Change Initials
+                      {t('signee.changeInitials')}
                     </Button>
                   </div>
                 )}
@@ -574,7 +609,7 @@ export default function InviteSigningPage() {
             ) : (
               <Button variant="secondary" className="w-full" onClick={() => setShowInitialsModal(true)}>
                 <Type className="w-4 h-4 mr-2" />
-                Add Initials ({myUnsignedInitialsFields.length} places)
+                {t('signee.addInitials')} ({myUnsignedInitialsFields.length} {t('signee.places')})
               </Button>
             )}
           </div>
@@ -583,7 +618,7 @@ export default function InviteSigningPage() {
         {/* Fields Progress */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <h3 className="font-medium text-sm mb-3">
-            Your Fields ({mySignedFields.length}/{myFields.length} signed)
+            {t('signee.yourFields')} ({mySignedFields.length}/{myFields.length} {t('signee.signed')})
           </h3>
           <div className="w-full h-2 bg-[hsl(var(--muted))] rounded-full mb-3">
             <div
@@ -629,8 +664,23 @@ export default function InviteSigningPage() {
           </div>
         </div>
 
+        {/* Help Guide */}
+        <div className="p-4 border-b border-[hsl(var(--border))]">
+          <div className="flex items-center gap-1.5 mb-2">
+            <HelpCircle className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('signee.helpTitle')}</h3>
+          </div>
+          <ol className="space-y-1.5 text-[11px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+            <li>{t('signee.help1')}</li>
+            <li>{t('signee.help2')}</li>
+            <li>{t('signee.help3')}</li>
+            <li>{t('signee.help4')}</li>
+            <li>{t('signee.help5')}</li>
+          </ol>
+        </div>
+
         {/* Navigation */}
-        <div className="p-4 mt-auto sticky bottom-0 bg-white border-t border-[hsl(var(--border))] space-y-2">
+        <div className="p-4 mt-auto sticky bottom-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-2">
           {allMyUnsigned.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -644,7 +694,7 @@ export default function InviteSigningPage() {
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <span className="text-sm font-medium flex-1 text-center">
-                  Field {currentFieldIndex + 1} of {allMyUnsigned.length}
+                  {currentFieldIndex + 1} / {allMyUnsigned.length}
                 </span>
                 <Button
                   variant="outline"
@@ -657,7 +707,7 @@ export default function InviteSigningPage() {
                 </Button>
               </div>
               <p className="text-xs text-center text-[hsl(var(--muted-foreground))]">
-                Tap any field on the PDF to fill it
+                {lang === 'bn' ? 'পূরণ করতে PDF-এ যেকোনো ক্ষেত্রে ট্যাপ করুন' : 'Tap any field on the PDF to fill it'}
               </p>
             </div>
           )}
@@ -666,7 +716,7 @@ export default function InviteSigningPage() {
             <div className="text-center">
               <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-2" />
               <p className="text-sm font-medium text-green-700">
-                All your fields are signed!
+                {lang === 'bn' ? 'আপনার সব ক্ষেত্র স্বাক্ষরিত হয়েছে!' : 'All your fields are signed!'}
               </p>
             </div>
           )}
@@ -726,7 +776,7 @@ export default function InviteSigningPage() {
 
                     ) : isTapped && isSignatureType && sigData ? (
                       /* === TAPPED SIGNATURE/INITIALS — confirm buttons === */
-                      <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-white flex flex-col items-center justify-center gap-1 shadow-lg">
+                      <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--card))] flex flex-col items-center justify-center gap-1 shadow-lg">
                         <img src={sigData} alt="Preview" className="max-w-[80%] max-h-[50%] object-contain opacity-60" />
                         {isInitials && myUnsignedInitialsFields.length > 1 ? (
                           <div className="flex gap-1">
@@ -795,7 +845,7 @@ export default function InviteSigningPage() {
                         className={`w-full h-full rounded flex items-center justify-center text-xs font-medium transition-all ${
                           isCheckbox
                             ? isMine
-                              ? 'border border-gray-400 bg-white cursor-pointer hover:border-blue-500'
+                              ? 'border border-gray-400 bg-[hsl(var(--card))] cursor-pointer hover:border-blue-500'
                               : 'border border-gray-300 bg-gray-50'
                             : isDate || isText
                             ? isMine

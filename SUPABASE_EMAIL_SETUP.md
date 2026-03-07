@@ -17,7 +17,7 @@ Replace the default template with:
 
 <p>Hi there,</p>
 
-<p>We received a request to reset your password for your RocketSign account.</p>
+<p>We received a request to reset your password for your SomadhanSign account.</p>
 
 <p>Click the button below to create a new password:</p>
 
@@ -35,7 +35,7 @@ Replace the default template with:
 
 <p>If you didn't request a password reset, you can safely ignore this email.</p>
 
-<p>Thanks,<br>The RocketSign Team</p>
+<p>Thanks,<br>The SomadhanSign Team</p>
 ```
 
 ### 3. Configure Site URL
@@ -68,7 +68,7 @@ For production, configure custom SMTP:
 
 Example for SendGrid:
 - **Sender email**: `noreply@yourdomain.com`
-- **Sender name**: `RocketSign`
+- **Sender name**: `SomadhanSign`
 - **Host**: `smtp.sendgrid.net`
 - **Port**: `587`
 - **Username**: `apikey`

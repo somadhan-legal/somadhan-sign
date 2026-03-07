@@ -87,7 +87,7 @@ export default function PdfViewer({
   return (
     <div className="flex flex-col items-center w-full">
       {/* Zoom Controls */}
-      <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-white rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
+      <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
         <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
           {totalPages} {totalPages === 1 ? 'page' : 'pages'}
         </span>

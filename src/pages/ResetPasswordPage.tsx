@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import SomadhanLogo from '@/assets/somadhan-logo.svg'
+import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
+import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
+import { useThemeStore } from '@/stores/themeStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 
@@ -16,6 +18,7 @@ export default function ResetPasswordPage() {
 
   const { updatePassword, isRecovery, user } = useAuthStore()
   const navigate = useNavigate()
+  const { isDark } = useThemeStore()
 
   useEffect(() => {
     // Check URL for error parameters
@@ -69,8 +72,8 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
+        <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full text-center shadow-xl">
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-9 h-9 text-green-600" />
           </div>
@@ -90,11 +93,10 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
+      <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-md w-full shadow-xl">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <img src={SomadhanLogo} alt="RocketSign" className="w-9 h-9 rounded-xl" />
-          <span className="text-xl font-bold">RocketSign</span>
+          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
         </div>
 
         <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
