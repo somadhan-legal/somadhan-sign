@@ -12,8 +12,21 @@ import InviteSigningPage from '@/pages/InviteSigningPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 
 function HomeRedirect() {
-  const user = useAuthStore((s) => s.user)
+  const { user, initialized, loading } = useAuthStore()
+  
+  // Show loading while checking auth state
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+  
+  // Redirect to dashboard if user is authenticated
   if (user) return <Navigate to="/dashboard" replace />
+  
+  // Show landing page for non-authenticated users
   return <LandingPage />
 }
 
