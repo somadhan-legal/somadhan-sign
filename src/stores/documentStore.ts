@@ -504,51 +504,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     
     if (!doc) return
     
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    
     for (const signer of signers) {
       try {
         const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
         
         console.log('Sending email to:', signer.signer_email)
-        console.log('Signing link:', signingLink)
-        console.log('Signing token:', signer.signing_token)
-        console.log('Supabase URL:', supabaseUrl)
-        
-        const functionUrl = `${supabaseUrl}/functions/v1/send-signing-email`
-        console.log('Calling Edge Function:', functionUrl)
 
-        const response = await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify({
+        const { data, error } = await supabase.functions.invoke('send-signing-email', {
+          body: {
             to: signer.signer_email,
             documentTitle: doc.title,
             signingLink,
             senderName: senderName || 'A user',
             message: message || '',
             ccEmails: ccEmails || [],
-          }),
+          },
         })
-        
-        console.log('Edge Function Response Status:', response.status)
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`Failed to send email to ${signer.signer_email}. Status: ${response.status}. Response:`, errorText)
-          try {
-            const errorData = JSON.parse(errorText)
-            console.error('Parsed error data:', errorData)
-          } catch (e) {
-            console.error('Could not parse error response as JSON')
-          }
+        if (error) {
+          console.error(`Failed to send email to ${signer.signer_email}:`, error)
         } else {
-          const successData = await response.json()
-          console.log(`Email sent successfully to ${signer.signer_email}:`, successData)
+          console.log(`Email sent successfully to ${signer.signer_email}:`, data)
         }
       } catch (error) {
         console.error(`Error sending email to ${signer.signer_email}:`, error)
@@ -575,9 +551,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     if (!doc) return { sent: 0, failed: 0 }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
     let sent = 0
     let failed = 0
 
@@ -585,26 +558,21 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       try {
         const signingLink = `${window.location.origin}/sign/${signer.signing_token}`
 
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-signing-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-          },
-          body: JSON.stringify({
+        const { error } = await supabase.functions.invoke('send-signing-email', {
+          body: {
             to: signer.signer_email,
             documentTitle: doc.title,
             signingLink,
             senderName: senderName || 'A user',
             message: 'This is a friendly reminder to sign the document. Please review and sign at your earliest convenience.',
             ccEmails: [],
-          }),
+          },
         })
 
-        if (response.ok) {
-          sent++
-        } else {
+        if (error) {
           failed++
+        } else {
+          sent++
         }
       } catch {
         failed++
