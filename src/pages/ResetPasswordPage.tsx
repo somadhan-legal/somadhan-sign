@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useLanguageStore } from '@/stores/languageStore'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
@@ -19,6 +20,7 @@ export default function ResetPasswordPage() {
   const { updatePassword, isRecovery, user } = useAuthStore()
   const navigate = useNavigate()
   const { isDark } = useThemeStore()
+  const { t } = useLanguageStore()
 
   useEffect(() => {
     // Check URL for error parameters
@@ -28,9 +30,9 @@ export default function ResetPasswordPage() {
     
     if (errorParam) {
       if (errorParam === 'access_denied' || errorDesc?.includes('expired') || errorDesc?.includes('invalid')) {
-        setError('This password reset link has expired or is invalid. Please request a new one.')
+        setError(t('reset.linkExpired'))
       } else {
-        setError(errorDesc || 'An error occurred. Please try again.')
+        setError(errorDesc || t('reset.errorOccurred'))
       }
     }
 
@@ -50,12 +52,12 @@ export default function ResetPasswordPage() {
     setError('')
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
+      setError(t('reset.passwordTooShort'))
       return
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError(t('reset.passwordsDoNotMatch'))
       return
     }
 
@@ -64,7 +66,7 @@ export default function ResetPasswordPage() {
       await updatePassword(password)
       setSuccess(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update password')
+      setError(err instanceof Error ? err.message : t('reset.failedToUpdate'))
     } finally {
       setSubmitting(false)
     }
@@ -77,15 +79,15 @@ export default function ResetPasswordPage() {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-9 h-9 text-green-600" />
           </div>
-          <h3 className="text-xl font-bold mb-2">Password Updated!</h3>
+          <h3 className="text-xl font-bold mb-2">{t('reset.passwordUpdated')}</h3>
           <p className="text-[hsl(var(--muted-foreground))] mb-6">
-            Your password has been successfully reset. You can now sign in with your new password.
+            {t('reset.passwordUpdatedDesc')}
           </p>
           <Button
             className="w-full h-11"
             onClick={() => navigate('/login')}
           >
-            Go to Login
+            {t('reset.goToLogin')}
           </Button>
         </div>
       </div>
@@ -102,9 +104,9 @@ export default function ResetPasswordPage() {
         <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
           <Lock className="w-7 h-7 text-[hsl(var(--primary))]" />
         </div>
-        <h2 className="text-2xl font-bold mb-1 text-center">Set New Password</h2>
+        <h2 className="text-2xl font-bold mb-1 text-center">{t('reset.setNewPassword')}</h2>
         <p className="text-[hsl(var(--muted-foreground))] mb-6 text-center">
-          Enter your new password below
+          {t('reset.enterNewPassword')}
         </p>
 
         {error && (
@@ -118,7 +120,7 @@ export default function ResetPasswordPage() {
                   className="w-full"
                   onClick={() => navigate('/login')}
                 >
-                  Back to Login
+                  {t('reset.backToLogin')}
                 </Button>
               </div>
             ) : null}
@@ -128,7 +130,7 @@ export default function ResetPasswordPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input
-              label="New Password"
+              label={t('reset.newPassword')}
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
@@ -146,7 +148,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <Input
-            label="Confirm Password"
+            label={t('reset.confirmPassword')}
             type="password"
             placeholder="••••••••"
             value={confirmPassword}
@@ -159,7 +161,7 @@ export default function ResetPasswordPage() {
             {submitting ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              'Update Password'
+              t('reset.updatePassword')
             )}
           </Button>
         </form>

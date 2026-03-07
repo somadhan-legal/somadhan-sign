@@ -131,6 +131,28 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'login.letsGo': { en: "OK, Let's Go!", bn: 'চলুন শুরু করি!' },
 
+  // ─── Password Reset ───
+  'reset.setNewPassword': { en: 'Set New Password', bn: 'নতুন পাসওয়ার্ড সেট করুন' },
+  'reset.enterNewPassword': { en: 'Enter your new password below', bn: 'নিচে আপনার নতুন পাসওয়ার্ড দিন' },
+  'reset.newPassword': { en: 'New Password', bn: 'নতুন পাসওয়ার্ড' },
+  'reset.confirmPassword': { en: 'Confirm Password', bn: 'পাসওয়ার্ড নিশ্চিত করুন' },
+  'reset.updatePassword': { en: 'Update Password', bn: 'পাসওয়ার্ড আপডেট করুন' },
+  'reset.passwordUpdated': { en: 'Password Updated!', bn: 'পাসওয়ার্ড আপডেট হয়েছে!' },
+  'reset.passwordUpdatedDesc': {
+    en: 'Your password has been successfully reset. You can now sign in with your new password.',
+    bn: 'আপনার পাসওয়ার্ড সফলভাবে রিসেট হয়েছে। এখন আপনি নতুন পাসওয়ার্ড দিয়ে সাইন ইন করতে পারেন।',
+  },
+  'reset.goToLogin': { en: 'Go to Login', bn: 'লগইন পেজে যান' },
+  'reset.backToLogin': { en: 'Back to Login', bn: 'লগইনে ফিরে যান' },
+  'reset.passwordTooShort': { en: 'Password must be at least 6 characters.', bn: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।' },
+  'reset.passwordsDoNotMatch': { en: 'Passwords do not match.', bn: 'পাসওয়ার্ড মিলছে না।' },
+  'reset.linkExpired': {
+    en: 'This password reset link has expired or is invalid. Please request a new one.',
+    bn: 'এই পাসওয়ার্ড রিসেট লিঙ্কটি মেয়াদ শেষ হয়েছে বা অবৈধ। অনুগ্রহ করে নতুন একটি অনুরোধ করুন।',
+  },
+  'reset.errorOccurred': { en: 'An error occurred. Please try again.', bn: 'একটি ত্রুটি ঘটেছে। আবার চেষ্টা করুন।' },
+  'reset.failedToUpdate': { en: 'Failed to update password', bn: 'পাসওয়ার্ড আপডেট করতে ব্যর্থ' },
+
   // ─── Dashboard ───
   'dashboard.myDocuments': { en: 'My Documents', bn: 'আমার ডকুমেন্টস' },
   'dashboard.newDocument': { en: 'New Document', bn: 'নতুন ডকুমেন্ট' },

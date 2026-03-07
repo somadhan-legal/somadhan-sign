@@ -109,16 +109,16 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total', value: stats.total, color: 'bg-blue-50 text-blue-700' },
-          { label: 'Drafts', value: stats.draft, color: 'bg-gray-50 text-gray-700' },
-          { label: 'Pending', value: stats.pending, color: 'bg-amber-50 text-amber-700' },
-          { label: 'Completed', value: stats.completed, color: 'bg-green-50 text-green-700' },
+          { labelKey: 'dashboard.total', value: stats.total, color: 'bg-blue-50 text-blue-700' },
+          { labelKey: 'dashboard.drafts', value: stats.draft, color: 'bg-gray-50 text-gray-700' },
+          { labelKey: 'dashboard.pending', value: stats.pending, color: 'bg-amber-50 text-amber-700' },
+          { labelKey: 'dashboard.completed', value: stats.completed, color: 'bg-green-50 text-green-700' },
         ].map((stat) => (
           <div
-            key={stat.label}
+            key={stat.labelKey}
             className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4"
           >
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">{stat.label}</p>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">{t(stat.labelKey)}</p>
             <p className="text-2xl font-bold mt-1">{stat.value}</p>
           </div>
         ))}
@@ -137,17 +137,22 @@ export default function DashboardPage() {
           />
         </div>
         <div className="flex gap-2">
-          {['all', 'draft', 'pending', 'completed'].map((status) => (
+          {[
+            { status: 'all', labelKey: 'dashboard.all' },
+            { status: 'draft', labelKey: 'dashboard.draft' },
+            { status: 'pending', labelKey: 'dashboard.pending' },
+            { status: 'completed', labelKey: 'dashboard.completed' },
+          ].map((item) => (
             <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
+              key={item.status}
+              onClick={() => setFilterStatus(item.status)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                filterStatus === status
+                filterStatus === item.status
                   ? 'bg-[hsl(var(--primary))] text-white'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]'
               }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {t(item.labelKey)}
             </button>
           ))}
         </div>
@@ -362,7 +367,7 @@ export default function DashboardPage() {
                             }}
                           >
                             <Download className="w-4 h-4" />
-                            Download
+                            {t('dashboard.download')}
                           </button>
                           <button
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
@@ -372,7 +377,7 @@ export default function DashboardPage() {
                             }}
                           >
                             <History className="w-4 h-4" />
-                            Audit Trail
+                            {t('dashboard.auditTrail')}
                           </button>
                           <button
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-50 text-red-600 w-full text-left cursor-pointer"
