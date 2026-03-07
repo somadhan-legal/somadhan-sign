@@ -148,6 +148,11 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.edit': { en: 'Edit', bn: 'সম্পাদনা' },
   'dashboard.view': { en: 'View', bn: 'দেখুন' },
   'dashboard.sendReminder': { en: 'Send Reminder', bn: 'রিমাইন্ডার পাঠান' },
+  'dashboard.total': { en: 'Total', bn: 'মোট' },
+  'dashboard.drafts': { en: 'Drafts', bn: 'খসড়া' },
+  'dashboard.all': { en: 'All', bn: 'সব' },
+  'dashboard.download': { en: 'Download', bn: 'ডাউনলোড' },
+  'dashboard.auditTrail': { en: 'Audit Trail', bn: 'অডিট ট্রেইল' },
 
   // ─── Document Editor ───
   'editor.signers': { en: 'Signers', bn: 'স্বাক্ষরকারী' },
