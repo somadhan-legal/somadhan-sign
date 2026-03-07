@@ -472,7 +472,7 @@ export default function DashboardPage() {
                   <>
                     <p className="text-sm font-medium">Click to upload PDF</p>
                     <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                      PDF files up to 10MB
+                      PDF files up to 20MB
                     </p>
                   </>
                 )}

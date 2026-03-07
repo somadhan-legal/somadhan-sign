@@ -19,8 +19,8 @@ export default function LandingPage() {
     if (lang === 'bn') {
       return (
         <>
-          ডকুমেন্ট <span className="text-[hsl(var(--accent-coral))]">সাইন</span> করুন{' '}
-          <span>সমাধান<span className="text-[hsl(var(--accent-coral))]">সাইন</span> দিয়ে</span>
+          {t('landing.heroTitle1')}{' '}
+          <span>{t('landing.heroTitle2')}</span>
         </>
       )
     }

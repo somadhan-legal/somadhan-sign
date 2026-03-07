@@ -18,10 +18,10 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
 
   // ─── Landing Page ───
-  'landing.heroTitle1': { en: 'Sign documents with', bn: 'ডকুমেন্ট সাইন করুন' },
+  'landing.heroTitle1': { en: 'Sign documents with', bn: 'ডকুমেন্ট  সাইন  করুন' },
   'landing.heroTitle2': { 
     en: 'SomadhanSign', 
-    bn: 'সমাধান সাইন দিয়ে'
+    bn: 'সমাধান  সাইন  দিয়ে'
   },
   'landing.heroDesc': {
     en: 'Upload documents, define signature fields, invite multiple signers, and get everything signed — all in one beautiful platform.',
