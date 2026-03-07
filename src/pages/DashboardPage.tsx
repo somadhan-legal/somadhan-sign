@@ -49,6 +49,15 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
+  // Reset upload form state
+  const resetUploadForm = () => {
+    setTitle('')
+    setFile(null)
+    // Reset file input element
+    const fileInput = document.getElementById('pdf-upload') as HTMLInputElement
+    if (fileInput) fileInput.value = ''
+  }
+
   useEffect(() => {
     fetchDocuments()
   }, [fetchDocuments])
@@ -71,8 +80,7 @@ export default function DashboardPage() {
 
     if (doc) {
       setShowUploadModal(false)
-      setTitle('')
-      setFile(null)
+      resetUploadForm()
       navigate(`/document/${doc.id}/edit`)
     }
   }
@@ -502,7 +510,10 @@ export default function DashboardPage() {
       {/* Upload Modal */}
       <Modal
         isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
+        onClose={() => {
+          setShowUploadModal(false)
+          resetUploadForm()
+        }}
         title="Upload Document"
         size="md"
       >
@@ -545,7 +556,10 @@ export default function DashboardPage() {
               type="button"
               variant="outline"
               className="flex-1"
-              onClick={() => setShowUploadModal(false)}
+              onClick={() => {
+                setShowUploadModal(false)
+                resetUploadForm()
+              }}
             >
               Cancel
             </Button>
