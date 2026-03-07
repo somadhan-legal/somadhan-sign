@@ -114,9 +114,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   createDocument: async (doc: DocumentInsert, file: File) => {
     set({ loading: true })
     try {
+      // Get current user ID for folder organization (required by RLS policy)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
       // Sanitize filename: remove special characters that cause storage issues
       const sanitizedName = file.name.replace(/[|<>:"/\\?*]/g, '_')
-      const fileName = `${Date.now()}_${sanitizedName}`
+      // Organize files by user ID folder to match RLS deletion policy
+      const fileName = `${user.id}/${Date.now()}_${sanitizedName}`
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
@@ -196,6 +201,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (error) {
       console.error('[deleteDocument] Error deleting document:', error)
       return
+    }
+    
+    // Check if user folder is empty and delete it
+    if (doc?.original_pdf_url) {
+      const filePath = extractStoragePath(doc.original_pdf_url)
+      if (filePath) {
+        // Extract user folder from path (e.g., "userId/timestamp_file.pdf" -> "userId")
+        const userFolder = filePath.split('/')[0]
+        if (userFolder) {
+          // List all files in user's folder
+          const { data: files } = await supabase.storage
+            .from('documents')
+            .list(userFolder)
+          
+          // If folder is empty, remove it
+          if (files && files.length === 0) {
+            console.log('[deleteDocument] User folder is empty, removing:', userFolder)
+            await supabase.storage.from('documents').remove([userFolder])
+          }
+        }
+      }
     }
     
     console.log('[deleteDocument] Document and all related data deleted:', id)
