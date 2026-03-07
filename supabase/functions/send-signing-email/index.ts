@@ -20,11 +20,6 @@ serve(async (req) => {
 
     const { to, documentTitle, signingLink, senderName, message, ccEmails } = await req.json()
 
-    const recipients = [to]
-    if (ccEmails && ccEmails.length > 0) {
-      recipients.push(...ccEmails)
-    }
-
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
@@ -71,18 +66,25 @@ serve(async (req) => {
       </div>
     `
 
+    const emailPayload: any = {
+      from: 'SomadhanSign <noreply@somadhan.com>',
+      to: [to],
+      subject: `${senderName} has requested your signature on "${documentTitle}"`,
+      html: emailHtml,
+    }
+
+    // Add CC emails if provided
+    if (ccEmails && ccEmails.length > 0) {
+      emailPayload.cc = ccEmails
+    }
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
-      body: JSON.stringify({
-        from: 'SomadhanSign <noreply@somadhan.com>', // Resend test email - update with verified domain for production
-        to: recipients,
-        subject: `${senderName} has requested your signature on "${documentTitle}"`,
-        html: emailHtml,
-      }),
+      body: JSON.stringify(emailPayload),
     })
 
     const data = await res.json()

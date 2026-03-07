@@ -114,7 +114,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   createDocument: async (doc: DocumentInsert, file: File) => {
     set({ loading: true })
     try {
-      const fileName = `${Date.now()}_${file.name}`
+      // Sanitize filename: remove special characters that cause storage issues
+      const sanitizedName = file.name.replace(/[|<>:"/\\?*]/g, '_')
+      const fileName = `${Date.now()}_${sanitizedName}`
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
