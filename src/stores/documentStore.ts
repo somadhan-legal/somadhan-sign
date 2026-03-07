@@ -514,8 +514,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         console.log('Sending email to:', signer.signer_email)
         console.log('Signing link:', signingLink)
         console.log('Signing token:', signer.signing_token)
+        console.log('Supabase URL:', supabaseUrl)
         
-        const response = await fetch(`${supabaseUrl}/functions/v1/send-signing-email`, {
+        const functionUrl = `${supabaseUrl}/functions/v1/send-signing-email`
+        console.log('Calling Edge Function:', functionUrl)
+
+        const response = await fetch(functionUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -531,9 +535,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           }),
         })
         
+        console.log('Edge Function Response Status:', response.status)
+
         if (!response.ok) {
-          const errorData = await response.json()
-          console.error(`Failed to send email to ${signer.signer_email}:`, errorData)
+          const errorText = await response.text()
+          console.error(`Failed to send email to ${signer.signer_email}. Status: ${response.status}. Response:`, errorText)
+          try {
+            const errorData = JSON.parse(errorText)
+            console.error('Parsed error data:', errorData)
+          } catch (e) {
+            console.error('Could not parse error response as JSON')
+          }
         } else {
           const successData = await response.json()
           console.log(`Email sent successfully to ${signer.signer_email}:`, successData)

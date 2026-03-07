@@ -78,6 +78,8 @@ serve(async (req) => {
       emailPayload.cc = ccEmails
     }
 
+    console.log('Sending email with payload:', JSON.stringify(emailPayload))
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -88,8 +90,10 @@ serve(async (req) => {
     })
 
     const data = await res.json()
+    console.log('Resend API response:', JSON.stringify(data))
     
     if (!res.ok) {
+      console.error('Resend API Error:', data)
       throw new Error(data.message || 'Failed to send email')
     }
 
