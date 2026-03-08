@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import somadhanLogo from '@/assets/somadhan.png'
 
 export interface AuditEntry {
   action: string
@@ -36,7 +37,7 @@ export async function generateAuditPdf(
   // Fetch and embed PNG logo
   let logoImage = null
   try {
-    const logoResponse = await fetch('/src/assets/somadhan.png')
+    const logoResponse = await fetch(somadhanLogo)
     if (logoResponse.ok) {
       const logoBytes = await logoResponse.arrayBuffer()
       logoImage = await pdfDoc.embedPng(logoBytes)
