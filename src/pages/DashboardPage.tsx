@@ -64,6 +64,19 @@ export default function DashboardPage() {
     fetchDocuments()
   }, [fetchDocuments])
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-menu-container]')) {
+        setMenuOpen(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [menuOpen])
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || !user) return
@@ -251,7 +264,7 @@ export default function DashboardPage() {
                         {config.label}
                       </span>
                     </Badge>
-                    <div className="relative">
+                    <div className="relative" data-menu-container>
                       <button
                         onClick={() => setMenuOpen(menuOpen === doc.id ? null : doc.id)}
                         className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
