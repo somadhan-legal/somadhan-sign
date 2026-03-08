@@ -4,6 +4,7 @@ import { Pen, Type, Upload, RotateCcw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { useLanguageStore } from '@/stores/languageStore'
+import { useThemeStore } from '@/stores/themeStore'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
@@ -22,6 +23,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const { t } = useLanguageStore()
+  const { isDark } = useThemeStore()
 
   useEffect(() => {
     if (canvasRef.current && activeTab === 'draw') {
@@ -33,7 +35,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
 
       padRef.current = new SignaturePadLib(canvas, {
         backgroundColor: 'rgba(255, 255, 255, 0)',
-        penColor: '#1e293b',
+        penColor: isDark ? '#ffffff' : '#1e293b',
         minWidth: 1.5,
         maxWidth: 3,
       })
@@ -42,7 +44,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
     return () => {
       padRef.current?.off()
     }
-  }, [activeTab])
+  }, [activeTab, isDark])
 
   const handleClear = () => {
     padRef.current?.clear()
@@ -63,7 +65,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
         ctx.fillStyle = 'transparent'
         ctx.fillRect(0, 0, 600, 200)
         ctx.font = 'italic 64px "Georgia", serif'
-        ctx.fillStyle = '#1e293b'
+        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(typedName, 300, 100)
@@ -96,7 +98,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
         ctx.fillStyle = 'transparent'
         ctx.fillRect(0, 0, 600, 200)
         ctx.font = 'italic 64px "Georgia", serif'
-        ctx.fillStyle = '#1e293b'
+        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(typedName, 300, 100)

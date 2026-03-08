@@ -18,7 +18,7 @@ import AuditTrailModal from '@/components/AuditTrailModal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
-import { generateColor } from '@/lib/utils'
+// import { generateColor } from '@/lib/utils'
 import { generateAuditPdf } from '@/lib/auditPdf'
 import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
@@ -60,7 +60,6 @@ export default function InviteSigningPage() {
     fetchSignerByToken,
     updateSignerStatus,
     updateDocumentStatus,
-    fetchSigners,
     addPlacement,
     addAuditEntry,
   } = useDocumentStore()
@@ -138,13 +137,25 @@ export default function InviteSigningPage() {
   const allMyUnsigned = myFields.filter((f) => !signedFieldIds.has(f.id))
   const currentField = allMyUnsigned[currentFieldIndex] || null
 
+  const scrollToField = useCallback((field: { id: string; page_number: number }) => {
+    // Scroll the PDF viewer to the page containing this field
+    const pageEl = document.querySelector(`[data-page-number="${field.page_number}"]`)
+    if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // Then try to scroll the specific field element into view
+    setTimeout(() => {
+      const fieldEl = document.querySelector(`[data-field-id="${field.id}"]`)
+      if (fieldEl) fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }, [])
+
   const navigateToField = useCallback(
     (index: number) => {
       if (index >= 0 && index < allMyUnsigned.length) {
         setCurrentFieldIndex(index)
+        scrollToField(allMyUnsigned[index])
       }
     },
-    [allMyUnsigned]
+    [allMyUnsigned, scrollToField]
   )
 
   const handleSaveSignature = (dataUrl: string) => {
@@ -295,16 +306,68 @@ export default function InviteSigningPage() {
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
-      // Check if ALL signers have signed, then update document status
-      // Small delay to ensure DB has committed the signer status update
-      await new Promise(r => setTimeout(r, 500))
-      await fetchSigners(documentId)
-      const allSigners = useDocumentStore.getState().signers
-      // Current signer is already signed (we just updated), so treat them as signed regardless of fetched status
-      const allDone = allSigners.length > 0 && allSigners.every(s => s.status === 'signed' || s.id === signerData.id)
+      // Check if ALL signers have signed by querying DB directly to avoid stale data
+      await new Promise(r => setTimeout(r, 800))
+      const { data: freshSigners } = await supabase
+        .from('document_signers')
+        .select('id, status')
+        .eq('document_id', documentId)
+      
+      const allDone = freshSigners && freshSigners.length > 0 && freshSigners.every(
+        (s: any) => s.status === 'signed' || s.id === signerData.id
+      )
       if (allDone) {
         await updateDocumentStatus(documentId, 'completed')
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
+        
+        // Send completion emails to all signers and document owner
+        try {
+          const { data: allSignersData } = await supabase
+            .from('document_signers')
+            .select('signer_email, signer_name')
+            .eq('document_id', documentId)
+          
+          const { data: docData } = await supabase
+            .from('documents')
+            .select('title, created_by')
+            .eq('id', documentId)
+            .single()
+          
+          if (allSignersData && docData) {
+            const allRecipients = allSignersData.map((s: any) => s.signer_email)
+            // Try to get document owner's email from audit trail
+            const { data: auditData } = await supabase
+              .from('audit_trail')
+              .select('user_email')
+              .eq('document_id', documentId)
+              .eq('action', 'Document Sent')
+              .limit(1)
+            if (auditData && auditData.length > 0 && auditData[0].user_email) {
+              allRecipients.push(auditData[0].user_email)
+            }
+            const uniqueRecipients = [...new Set(allRecipients)]
+            
+            for (const email of uniqueRecipients) {
+              try {
+                await supabase.functions.invoke('send-signing-email', {
+                  body: {
+                    to: email,
+                    documentTitle: docData.title,
+                    signingLink: '',
+                    senderName: 'SomadhanSign',
+                    message: `All parties have signed "${docData.title}". The document is now complete. You can download the signed document from your SomadhanSign dashboard.`,
+                    type: 'completion',
+                  },
+                })
+              } catch (emailErr) {
+                console.error('Error sending completion email to', email, emailErr)
+              }
+            }
+            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients`)
+          }
+        } catch (completionErr) {
+          console.error('Error sending completion emails:', completionErr)
+        }
       }
       
       setFinished(true)
@@ -635,6 +698,7 @@ export default function InviteSigningPage() {
           <div className="space-y-2 max-h-60 overflow-y-auto">
             {myFields.map((field, index) => {
               const isSigned = signedFieldIds.has(field.id)
+              const isSelected = currentField?.id === field.id
               const icon = fieldTypeIcons[field.field_type] || fieldTypeIcons.signature
               return (
                 <button
@@ -642,8 +706,8 @@ export default function InviteSigningPage() {
                   className={`flex items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-all cursor-pointer ${
                     isSigned
                       ? 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]'
-                      : currentField?.id === field.id
-                      ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/40 font-bold'
+                      : isSelected
+                      ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))] font-bold animate-field-pulse'
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
                   onClick={() => {
@@ -651,13 +715,13 @@ export default function InviteSigningPage() {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
                     }
-                    // Scroll PDF to the field's page
-                    const pageEl = document.querySelector(`[data-page-number="${field.page_number}"]`)
-                    if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    scrollToField(field)
                   }}
                 >
                   {isSigned ? (
                     <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
+                  ) : isSelected ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/20 shrink-0 animate-pulse" />
                   ) : (
                     <div className="w-4 h-4 rounded-full border-2 border-[hsl(var(--border))] shrink-0" />
                   )}
@@ -764,6 +828,7 @@ export default function InviteSigningPage() {
                 return (
                   <div
                     key={field.id}
+                    data-field-id={field.id}
                     className={`absolute transition-all ${isCurrentNav ? 'z-20' : 'z-10'}`}
                     style={{
                       left: `${field.x}%`,
@@ -791,10 +856,10 @@ export default function InviteSigningPage() {
                       </div>
 
                     ) : isTapped && isSignatureType && sigData ? (
-                      /* === TAPPED SIGNATURE/INITIALS — confirm buttons === */
+                      /* === TAPPED SIGNATURE/INITIALS — Add to this / Add to all === */
                       <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--card))] flex flex-col items-center justify-center gap-1 shadow-lg">
                         <img src={sigData} alt="Preview" className="max-w-[80%] max-h-[50%] object-contain opacity-60" />
-                        {isInitials && myUnsignedInitialsFields.length > 1 ? (
+                        {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) ? (
                           <div className="flex gap-1">
                             <button
                               onClick={() => { handleTapToSign(field.id); }}
@@ -804,11 +869,11 @@ export default function InviteSigningPage() {
                               {submitting ? '...' : 'ADD THIS'}
                             </button>
                             <button
-                              onClick={() => handleAutoFillInitials(initialsData!)}
+                              onClick={() => isInitials ? handleAutoFillInitials(initialsData!) : handleAutoFillSignatures(signatureData!)}
                               disabled={submitting}
                               className="px-2.5 py-1 bg-[hsl(var(--primary))] text-white text-[9px] rounded-md font-semibold hover:opacity-90 cursor-pointer"
                             >
-                              {submitting ? '...' : 'ADD EVERYWHERE'}
+                              {submitting ? '...' : 'ADD TO ALL'}
                             </button>
                           </div>
                         ) : (
@@ -817,7 +882,7 @@ export default function InviteSigningPage() {
                             disabled={submitting}
                             className="px-3 py-1 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-medium hover:opacity-90 cursor-pointer"
                           >
-                            {submitting ? '...' : 'Confirm Sign'}
+                            {submitting ? '...' : 'ADD THIS'}
                           </button>
                         )}
                       </div>
@@ -862,22 +927,18 @@ export default function InviteSigningPage() {
                           isCheckbox
                             ? isMine
                               ? 'border border-[hsl(var(--border))] bg-[hsl(var(--card))] cursor-pointer hover:border-[hsl(var(--primary))]'
-                              : 'border border-[hsl(var(--border))] bg-[hsl(var(--muted))]'
+                              : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 opacity-50'
                             : isDate || isText
                             ? isMine
                               ? 'border-b border-dashed border-[hsl(var(--border))] cursor-pointer hover:border-[hsl(var(--primary))]'
-                              : 'border-b border-dashed border-[hsl(var(--border))]'
+                              : 'border-b border-dashed border-gray-300 dark:border-gray-600 opacity-50'
                             : isCurrentNav && isMine
-                            ? 'border-2 border-dashed border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/20 ring-4 ring-[hsl(var(--primary))]/30 animate-pulse cursor-pointer'
+                            ? 'border-2 border-dashed border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/20 ring-4 ring-[hsl(var(--primary))]/30 animate-field-pulse cursor-pointer'
                             : isMine
                             ? 'border-2 border-dashed border-[hsl(var(--accent-coral))] bg-[hsl(var(--accent-coral))]/10 hover:bg-[hsl(var(--accent-coral))]/20 cursor-pointer'
-                            : 'border-2 border-dashed border-[hsl(var(--border))] bg-[hsl(var(--muted))]/80'
+                            : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100/60 dark:bg-gray-800/30 opacity-40'
                         }`}
-                        style={
-                          !isMine && isSignatureType
-                            ? { borderColor: generateColor(field.assigned_to_email), backgroundColor: `${generateColor(field.assigned_to_email)}15` }
-                            : undefined
-                        }
+                        style={undefined}
                         onClick={() => {
                           if (!isMine || isSigned || submitting) return
                           if (isCheckbox) {
@@ -916,7 +977,7 @@ export default function InviteSigningPage() {
                             </>
                           )
                         ) : (
-                          <span className="text-[10px] opacity-60" style={{ color: generateColor(field.assigned_to_email) }}>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">
                             {field.assigned_to_email.split('@')[0]}
                           </span>
                         )}

@@ -178,6 +178,9 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.all': { en: 'All', bn: 'সব' },
   'dashboard.download': { en: 'Download', bn: 'ডাউনলোড' },
   'dashboard.auditTrail': { en: 'Audit Trail', bn: 'অডিট ট্রেইল' },
+  'dashboard.deleteDocument': { en: 'Delete Document', bn: 'ডকুমেন্ট মুছুন' },
+  'dashboard.deleteConfirmMessage': { en: 'Delete', bn: 'মুছুন' },
+  'dashboard.cannotUndo': { en: 'This cannot be undone.', bn: 'এটি পূর্বাবস্থায় ফেরানো যাবে না।' },
 
   // ─── Document Editor ───
   'editor.signers': { en: 'Signers', bn: 'স্বাক্ষরকারী' },

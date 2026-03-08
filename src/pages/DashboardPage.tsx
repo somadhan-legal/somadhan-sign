@@ -28,6 +28,7 @@ import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import AuditTrailModal from '@/components/AuditTrailModal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatDate } from '@/lib/utils'
 import type { Document } from '@/types/database'
 
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
 
   // Reset upload form state
   const resetUploadForm = () => {
@@ -171,7 +173,7 @@ export default function DashboardPage() {
             <button
               key={item.status}
               onClick={() => setFilterStatus(item.status)}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 filterStatus === item.status
                   ? 'bg-[hsl(var(--primary))] text-white'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]'
@@ -406,11 +408,9 @@ export default function DashboardPage() {
                           </button>
                           <button
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
-                            onClick={async () => {
+                            onClick={() => {
                               setMenuOpen(null)
-                              if (window.confirm(`Delete "${doc.title}"? This cannot be undone.`)) {
-                                await deleteDocument(doc.id)
-                              }
+                              setDeleteConfirm({ docId: doc.id, title: doc.title })
                             }}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -572,6 +572,22 @@ export default function DashboardPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={async () => {
+          if (deleteConfirm) {
+            await deleteDocument(deleteConfirm.docId)
+          }
+        }}
+        title={t('dashboard.deleteDocument')}
+        message={`${t('dashboard.deleteConfirmMessage')} "${deleteConfirm?.title}"? ${t('dashboard.cannotUndo')}`}
+        variant="danger"
+        confirmText="OK"
+        cancelText="Cancel"
+      />
     </div>
   )
 }

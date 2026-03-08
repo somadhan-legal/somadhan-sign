@@ -94,3 +94,22 @@
     background-color: hsl(var(--muted-foreground) / 0.55);
   }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fieldPulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+}
+
+@keyframes fieldBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.animate-field-pulse {
+  animation: fieldPulse 1.5s ease-in-out infinite, fieldBounce 1.5s ease-in-out infinite;
+}
