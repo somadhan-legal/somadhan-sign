@@ -12,11 +12,12 @@ interface SignaturePadProps {
   onApplyToAll?: (dataUrl: string) => void
   showApplyAll?: boolean
   applyAllLabel?: string
+  saveLabel?: string
 }
 
 type TabType = 'draw' | 'type' | 'upload'
 
-export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel }: SignaturePadProps) {
+export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel, saveLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('upload')
@@ -215,7 +216,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
 
       <div className="flex gap-3 pt-2">
         <Button variant="outline" className="flex-1" onClick={handleSave}>
-          {t('signee.saveSignature') || 'Save'}
+          {saveLabel || t('signee.saveSignature') || 'Save'}
         </Button>
         {showApplyAll && onApplyToAll && (
           <Button className="flex-1" onClick={handleApplyToAll}>

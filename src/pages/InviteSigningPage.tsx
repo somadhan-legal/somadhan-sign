@@ -892,9 +892,9 @@ export default function InviteSigningPage() {
                       </div>
 
                     ) : isTapped && isSignatureType && sigData ? (
-                      /* === TAPPED SIGNATURE/INITIALS — Apply / Apply to All popover === */
+                      /* === TAPPED SIGNATURE/INITIALS — Apply to this / Apply to All popover === */
                       <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
-                        {/* Field highlight */}
+                        {/* Field highlight with signature preview */}
                         <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
                           <img src={sigData} alt="Preview" className="max-w-full max-h-full object-contain opacity-40" />
                         </div>
@@ -905,7 +905,7 @@ export default function InviteSigningPage() {
                             disabled={submitting}
                             className="px-3 py-1.5 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--card))] text-[10px] rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer shadow-lg"
                           >
-                            {submitting ? '...' : 'Apply'}
+                            {submitting ? '...' : 'Apply to this'}
                           </button>
                           {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) && (
                             <button
@@ -1034,9 +1034,10 @@ export default function InviteSigningPage() {
         <SignaturePad
           onSave={handleSaveSignature}
           onCancel={() => setShowSignatureModal(false)}
-          showApplyAll={myUnsignedSignatureFields.length > 1}
+          saveLabel="Save Signature"
+          showApplyAll={myUnsignedSignatureFields.length > 0}
           onApplyToAll={handleAutoFillSignatures}
-          applyAllLabel={`${t('signee.applyToAllSignatures')} (${myUnsignedSignatureFields.length})`}
+          applyAllLabel={`Apply to All (${myUnsignedSignatureFields.length})`}
         />
       </Modal>
 
@@ -1048,9 +1049,10 @@ export default function InviteSigningPage() {
         <SignaturePad
           onSave={handleSaveInitials}
           onCancel={() => setShowInitialsModal(false)}
-          showApplyAll={myUnsignedInitialsFields.length > 1}
+          saveLabel="Save Initials"
+          showApplyAll={myUnsignedInitialsFields.length > 0}
           onApplyToAll={(data) => { setInitialsData(data); setShowInitialsModal(false); handleAutoFillInitials(data) }}
-          applyAllLabel={`${t('signee.applyToAllInitials')} (${myUnsignedInitialsFields.length})`}
+          applyAllLabel={`Apply to All (${myUnsignedInitialsFields.length})`}
         />
       </Modal>
 
