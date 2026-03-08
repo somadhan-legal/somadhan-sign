@@ -6,7 +6,7 @@
     /* Light Mode — Somadhan Brand Colors */
     --background: 0 0% 100%;           /* #FFFFFF Absolute White */
     --foreground: 0 0% 14%;            /* #232323 Charcoal */
-    --card: 190 30% 92%;               /* #E4EEF0 Mist White */
+    --card: 190 30% 88%;               /* Darker Mist for better contrast */
     --card-foreground: 0 0% 14%;       /* #232323 Charcoal */
     --popover: 0 0% 100%;              /* #FFFFFF Absolute White */
     --popover-foreground: 0 0% 14%;    /* #232323 Charcoal */

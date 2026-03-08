@@ -22,6 +22,8 @@ import { useLanguageStore } from '@/stores/languageStore'
 import PdfViewer from '@/components/PdfViewer'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import InlineConfirm from '@/components/ui/InlineConfirm'
 
 type FieldType = 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
 
@@ -106,6 +108,18 @@ export default function DocumentEditorPage() {
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const signerListRef = useRef<HTMLDivElement>(null)
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+    variant?: 'danger' | 'warning' | 'info'
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'warning' })
+  
+  // Inline confirmation for signer deletion
+  const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -221,7 +235,13 @@ export default function DocumentEditorPage() {
       if (!id || !user || isInteracting.current) return
       if (currentDocument?.status !== 'draft') return // Locked
       if (signers.length === 0) {
-        alert(t('editor.addSignerFirst'))
+        setConfirmDialog({
+          isOpen: true,
+          title: t('editor.addSignerFirst'),
+          message: t('editor.addSignerFirstDesc'),
+          onConfirm: () => {},
+          variant: 'info'
+        })
         return
       }
 
@@ -293,7 +313,13 @@ export default function DocumentEditorPage() {
       setShowSignerModal(false)
     } catch (err) {
       console.error('[DocumentEditor] Error saving signer:', err)
-      alert(t('editor.failedSaveSigner'))
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.error'),
+        message: t('editor.failedSaveSigner'),
+        onConfirm: () => {},
+        variant: 'danger'
+      })
     }
   }
 
@@ -327,15 +353,33 @@ export default function DocumentEditorPage() {
     if (!id || !user) return
     const unassigned = docFields.filter((f) => !f.assigned_to_email)
     if (unassigned.length > 0) {
-      alert(t('editor.assignAllFields'))
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.validation'),
+        message: t('editor.assignAllFields'),
+        onConfirm: () => {},
+        variant: 'warning'
+      })
       return
     }
     if (signers.length === 0) {
-      alert(t('editor.addSignerRequired'))
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.validation'),
+        message: t('editor.addSignerRequired'),
+        onConfirm: () => {},
+        variant: 'warning'
+      })
       return
     }
     if (docFields.length === 0) {
-      alert(t('editor.addFieldRequired'))
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.validation'),
+        message: t('editor.addFieldRequired'),
+        onConfirm: () => {},
+        variant: 'warning'
+      })
       return
     }
 
@@ -345,7 +389,13 @@ export default function DocumentEditorPage() {
         f.field_type === 'signature'
       )
       if (!hasSignatureField) {
-        alert(`${t('editor.signatureFieldRequired')} ${signer.signer_name || signer.signer_email}. ${t('editor.everySignerMustHaveSignature')}`)
+        setConfirmDialog({
+          isOpen: true,
+          title: t('editor.validation'),
+          message: `${t('editor.signatureFieldRequired')} ${signer.signer_name || signer.signer_email}. ${t('editor.everySignerMustHaveSignature')}`,
+          onConfirm: () => {},
+          variant: 'warning'
+        })
         return
       }
     }
@@ -508,7 +558,7 @@ export default function DocumentEditorPage() {
                       </p>
                     </div>
                     {!isLocked && (
-                      <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity relative">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
                           className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
@@ -517,17 +567,25 @@ export default function DocumentEditorPage() {
                           <PenTool className="w-3 h-3" />
                         </button>
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation()
-                            if (window.confirm(t('editor.removeSignerConfirm'))) {
-                              await removeSigner(signer.id)
-                            }
+                            setDeleteSignerId(signer.id)
                           }}
                           className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
                           title="Remove Signer"
                         >
                           <X className="w-3 h-3" />
                         </button>
+                        <InlineConfirm
+                          isOpen={deleteSignerId === signer.id}
+                          onClose={() => setDeleteSignerId(null)}
+                          onConfirm={async () => {
+                            await removeSigner(signer.id)
+                          }}
+                          message={t('editor.removeSignerConfirm')}
+                          confirmText="OK"
+                          cancelText="Cancel"
+                        />
                       </div>
                     )}
                   </div>
@@ -557,7 +615,7 @@ export default function DocumentEditorPage() {
                   onClick={() => setSelectedFieldType(opt.type)}
                   className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     selectedFieldType === opt.type
-                      ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] ring-1 ring-[hsl(var(--primary))]/30'
+                      ? 'bg-[hsl(var(--primary))] text-white shadow-md ring-2 ring-[hsl(var(--primary))]/50 ring-offset-1'
                       : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
                   }`}
                 >
@@ -711,7 +769,13 @@ export default function DocumentEditorPage() {
                           e.stopPropagation()
                           const hasPlacements = placements.some(p => p.field_id === field.id)
                           if (hasPlacements) {
-                            alert(t('editor.cannotDeleteSigned'))
+                            setConfirmDialog({
+                              isOpen: true,
+                              title: t('editor.error'),
+                              message: t('editor.cannotDeleteSigned'),
+                              onConfirm: () => {},
+                              variant: 'danger'
+                            })
                             return
                           }
                           removeSignatureField(field.id)
@@ -987,6 +1051,16 @@ export default function DocumentEditorPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+      />
     </div>
   )
 }
