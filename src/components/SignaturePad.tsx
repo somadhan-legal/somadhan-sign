@@ -3,20 +3,25 @@ import SignaturePadLib from 'signature_pad'
 import { Pen, Type, Upload, RotateCcw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
   onCancel: () => void
+  onApplyToAll?: (dataUrl: string) => void
+  showApplyAll?: boolean
+  applyAllLabel?: string
 }
 
 type TabType = 'draw' | 'type' | 'upload'
 
-export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
+export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApplyAll, applyAllLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('upload')
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const { t } = useLanguageStore()
 
   useEffect(() => {
     if (canvasRef.current && activeTab === 'draw') {
@@ -77,10 +82,43 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
     reader.readAsDataURL(file)
   }
 
+  const getDataUrl = (): string | null => {
+    if (activeTab === 'draw') {
+      if (padRef.current?.isEmpty()) return null
+      return padRef.current?.toDataURL('image/png') || null
+    } else if (activeTab === 'type') {
+      if (!typedName.trim()) return null
+      const canvas = document.createElement('canvas')
+      canvas.width = 600
+      canvas.height = 200
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = 'transparent'
+        ctx.fillRect(0, 0, 600, 200)
+        ctx.font = 'italic 64px "Georgia", serif'
+        ctx.fillStyle = '#1e293b'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(typedName, 300, 100)
+      }
+      return canvas.toDataURL('image/png')
+    } else if (activeTab === 'upload' && uploadedImage) {
+      return uploadedImage
+    }
+    return null
+  }
+
+  const handleApplyToAll = () => {
+    const dataUrl = getDataUrl()
+    if (dataUrl && onApplyToAll) {
+      onApplyToAll(dataUrl)
+    }
+  }
+
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'upload', label: 'Upload', icon: <Upload className="w-4 h-4" /> },
-    { id: 'draw', label: 'Draw', icon: <Pen className="w-4 h-4" /> },
-    { id: 'type', label: 'Type', icon: <Type className="w-4 h-4" /> },
+    { id: 'upload', label: t('signee.tabUpload') || 'Upload', icon: <Upload className="w-4 h-4" /> },
+    { id: 'draw', label: t('signee.tabDraw') || 'Draw', icon: <Pen className="w-4 h-4" /> },
+    { id: 'type', label: t('signee.tabType') || 'Type', icon: <Type className="w-4 h-4" /> },
   ]
 
   return (
@@ -172,13 +210,20 @@ export default function SignaturePad({ onSave, onCancel }: SignaturePadProps) {
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="flex-1" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button className="flex-1" onClick={handleSave}>
-          Save Signature
-        </Button>
+      <div className="flex flex-col gap-2 pt-2">
+        {showApplyAll && onApplyToAll && (
+          <Button className="w-full" variant="secondary" onClick={handleApplyToAll}>
+            {applyAllLabel || t('signee.applyToAll')}
+          </Button>
+        )}
+        <div className="flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onCancel}>
+            {t('editor.cancel')}
+          </Button>
+          <Button className="flex-1" onClick={handleSave}>
+            {t('signee.saveSignature') || 'Save Signature'}
+          </Button>
+        </div>
       </div>
     </div>
   )

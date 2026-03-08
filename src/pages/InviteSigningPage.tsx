@@ -159,6 +159,28 @@ export default function InviteSigningPage() {
     // If drawing from sidebar (no tappedFieldId), also just set data and let user choose
   }
 
+  const mySignatureFields = myFields.filter((f) => f.field_type === 'signature')
+  const myUnsignedSignatureFields = mySignatureFields.filter((f) => !signedFieldIds.has(f.id))
+
+  const handleAutoFillSignatures = async (data: string) => {
+    if (!documentId || !signerData) return
+    setSubmitting(true)
+    setShowSignatureModal(false)
+    for (const field of myUnsignedSignatureFields) {
+      await addPlacement({
+        document_id: documentId,
+        field_id: field.id,
+        signer_id: null,
+        signer_email: userEmail,
+        signature_id: data,
+      })
+    }
+    setSignatureData(data)
+    await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`)
+    setSubmitting(false)
+    await checkCompletion()
+  }
+
   const handleAutoFillInitials = async (data: string) => {
     if (!documentId || !signerData) return
     setSubmitting(true)
@@ -274,11 +296,15 @@ export default function InviteSigningPage() {
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
       // Check if ALL signers have signed, then update document status
+      // Small delay to ensure DB has committed the signer status update
+      await new Promise(r => setTimeout(r, 500))
       await fetchSigners(documentId)
       const allSigners = useDocumentStore.getState().signers
+      // Current signer is already signed (we just updated), so treat them as signed regardless of fetched status
       const allDone = allSigners.length > 0 && allSigners.every(s => s.status === 'signed' || s.id === signerData.id)
       if (allDone) {
         await updateDocumentStatus(documentId, 'completed')
+        await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
       }
       
       setFinished(true)
@@ -516,17 +542,9 @@ export default function InviteSigningPage() {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-y-auto flex flex-col">
-        <div className="p-3 border-b border-[hsl(var(--border))] flex items-center justify-between">
+      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
+        <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
-              <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-          </div>
         </div>
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center justify-between">
@@ -621,11 +639,11 @@ export default function InviteSigningPage() {
               return (
                 <button
                   key={field.id}
-                  className={`flex items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-colors cursor-pointer ${
+                  className={`flex items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-all cursor-pointer ${
                     isSigned
                       ? 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]'
                       : currentField?.id === field.id
-                      ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+                      ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))]/40 font-bold'
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
                   onClick={() => {
@@ -633,6 +651,9 @@ export default function InviteSigningPage() {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
                     }
+                    // Scroll PDF to the field's page
+                    const pageEl = document.querySelector(`[data-page-number="${field.page_number}"]`)
+                    if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
                   }}
                 >
                   {isSigned ? (
@@ -710,7 +731,16 @@ export default function InviteSigningPage() {
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
+      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative">
+        {/* Language & Theme toggles - top right */}
+        <div className="fixed top-3 right-4 z-40 flex items-center gap-1 bg-[hsl(var(--card))]/90 backdrop-blur rounded-lg border border-[hsl(var(--border))] px-1 py-0.5 shadow-sm">
+          <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-8 w-8">
+            <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-8 w-8">
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+        </div>
         <PdfViewer
           fileUrl={signerData.documents.original_pdf_url}
           renderPageOverlay={(pageNumber) => {
@@ -902,16 +932,28 @@ export default function InviteSigningPage() {
       </div>
 
       {/* Signature Modal */}
-      <Modal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} title="Create Your Signature" size="md">
-        <SignaturePad onSave={handleSaveSignature} onCancel={() => setShowSignatureModal(false)} />
+      <Modal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} title={t('signee.createYourSignature')} size="md">
+        <SignaturePad
+          onSave={handleSaveSignature}
+          onCancel={() => setShowSignatureModal(false)}
+          showApplyAll={myUnsignedSignatureFields.length > 1}
+          onApplyToAll={handleAutoFillSignatures}
+          applyAllLabel={`${t('signee.applyToAllSignatures')} (${myUnsignedSignatureFields.length})`}
+        />
       </Modal>
 
       {/* Initials Modal */}
-      <Modal isOpen={showInitialsModal} onClose={() => setShowInitialsModal(false)} title="Add Your Initials" size="md">
+      <Modal isOpen={showInitialsModal} onClose={() => setShowInitialsModal(false)} title={t('signee.addYourInitials')} size="md">
         <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
-          Draw your initials below. You can apply to individual fields or all at once.
+          {t('signee.drawInitialsHint')}
         </p>
-        <SignaturePad onSave={handleSaveInitials} onCancel={() => setShowInitialsModal(false)} />
+        <SignaturePad
+          onSave={handleSaveInitials}
+          onCancel={() => setShowInitialsModal(false)}
+          showApplyAll={myUnsignedInitialsFields.length > 1}
+          onApplyToAll={(data) => { setInitialsData(data); setShowInitialsModal(false); handleAutoFillInitials(data) }}
+          applyAllLabel={`${t('signee.applyToAllInitials')} (${myUnsignedInitialsFields.length})`}
+        />
       </Modal>
 
       {/* Audit Trail */}

@@ -14,6 +14,8 @@ interface PdfViewerProps {
   onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
   renderPageOverlay?: (pageNumber: number) => React.ReactNode
   scale?: number
+  onPageMouseMove?: (e: React.MouseEvent) => void
+  onPageMouseLeave?: () => void
 }
 
 function PageWithOverlay({
@@ -21,11 +23,15 @@ function PageWithOverlay({
   scale,
   onPageClick,
   renderPageOverlay,
+  onPageMouseMove,
+  onPageMouseLeave,
 }: {
   pageNumber: number
   scale: number
   onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
   renderPageOverlay?: (pageNumber: number) => React.ReactNode
+  onPageMouseMove?: (e: React.MouseEvent) => void
+  onPageMouseLeave?: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -45,6 +51,8 @@ function PageWithOverlay({
       ref={ref}
       className="relative cursor-crosshair"
       onClick={handleClick}
+      onMouseMove={onPageMouseMove}
+      onMouseLeave={onPageMouseLeave}
       style={{ userSelect: 'none' }}
     >
       <Page
@@ -70,6 +78,8 @@ export default function PdfViewer({
   onPageClick,
   renderPageOverlay,
   scale: externalScale,
+  onPageMouseMove,
+  onPageMouseLeave,
 }: PdfViewerProps) {
   const [totalPages, setTotalPages] = useState(0)
   const [internalScale, setInternalScale] = useState(1.0)
@@ -130,12 +140,14 @@ export default function PdfViewer({
       >
         <div className="flex flex-col items-center gap-4">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-            <div key={pageNum} className="shadow-md">
+            <div key={pageNum} className="shadow-md" data-page-number={pageNum}>
               <PageWithOverlay
                 pageNumber={pageNum}
                 scale={scale}
                 onPageClick={onPageClick}
                 renderPageOverlay={renderPageOverlay}
+                onPageMouseMove={onPageMouseMove}
+                onPageMouseLeave={onPageMouseLeave}
               />
             </div>
           ))}

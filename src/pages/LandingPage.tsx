@@ -78,7 +78,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[hsl(var(--primary))]/8 via-[hsl(var(--background))] to-[hsl(var(--background))]">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_70%)]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 relative">
+        <div className="px-4 sm:px-6 lg:px-10 py-20 lg:py-32 relative">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
               {renderHeroTitle()}
@@ -105,7 +105,7 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section className="py-20 bg-[hsl(var(--card))]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-10">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">{t('landing.howItWorks')}</h2>
             <p className="text-[hsl(var(--muted-foreground))] max-w-xl mx-auto">
@@ -128,7 +128,7 @@ export default function LandingPage() {
 
       {/* Features */}
       <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-10">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold mb-4">{t('landing.everything')}</h2>
             <p className="text-[hsl(var(--muted-foreground))] max-w-xl mx-auto">
@@ -156,7 +156,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-10">
           <div className="bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary))]/80 to-[hsl(var(--primary))]/60 rounded-3xl p-12 text-center text-white">
             <h2 className="text-3xl font-bold mb-4">{t('landing.ctaTitle')}</h2>
             <p className="text-white/70 mb-8 max-w-xl mx-auto">
@@ -188,7 +188,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-[hsl(var(--border))] py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="px-4 sm:px-6 lg:px-10 flex items-center justify-center">
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             &copy; {new Date().getFullYear()} {t('landing.footer')}
           </p>

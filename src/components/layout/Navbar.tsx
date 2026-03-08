@@ -22,7 +22,7 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-md border-b border-[hsl(var(--border))]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-10">
         <div className="flex items-center justify-between h-20">
           <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />

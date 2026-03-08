@@ -31,44 +31,65 @@ serve(async (req) => {
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Document Signature Request</h1>
+          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+            <tr>
+              <td style="padding-right: 4px; vertical-align: middle;">
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
+                  <tr><td style="height: 3px;"></td></tr>
+                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px;"></td></tr>
+                  <tr><td style="height: 3px;"></td></tr>
+                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px; margin-left: 14px;"></td></tr>
+                  <tr><td style="height: 3px;"></td></tr>
+                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
+                </table>
+              </td>
+              <td style="vertical-align: middle;">
+                <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
+              </td>
+            </tr>
+          </table>
+          <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
+            <strong>${senderName}</strong> sent you a document to review and sign
+          </p>
         </div>
         
-        <div style="background: white; padding: 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">Hello,</p>
-          
-          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
-            <strong>${senderName}</strong> has sent you a document to sign:
-          </p>
-          
-          <div style="background: #f9fafb; border-left: 4px solid #0e6e6e; padding: 16px; margin: 24px 0; border-radius: 4px;">
-            <p style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">
-              ${documentTitle}
-            </p>
-          </div>
-          
-          ${message ? `
-            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 4px;">
-              <p style="margin: 0; font-size: 14px; color: #78350f; white-space: pre-wrap;">${message}</p>
-            </div>
-          ` : ''}
-          
-          <div style="text-align: center; margin: 40px 0;">
+        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+          <div style="text-align: center; margin-bottom: 28px;">
             <a href="${signingLink}" 
-               style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-              Review and Sign Document →
+               style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
+              REVIEW AND SIGN
             </a>
           </div>
           
-          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 30px;">
-            Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          
+          <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
+          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">
+            ${documentTitle}
           </p>
           
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+          ${message ? `
+            <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
+            <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+          ` : ''}
           
-          <p style="color: #9ca3af; font-size: 12px; line-height: 1.5;">
-            This email was sent by <strong>SomadhanSign</strong>, a secure electronic signature platform. 
-            If you believe you received this in error, please ignore it or contact the sender directly.
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">
+            Best,<br>
+            The <strong>SomadhanSign</strong> Team
+          </p>
+          
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          
+          <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
+            Disclaimer: This email contains a unique signature link intended solely for the recipient. Please do not forward or share this email. SomadhanSign is not liable for signatures executed by anyone other than the intended recipient.
+          </p>
+        </div>
+        
+        <div style="text-align: center; padding: 20px;">
+          <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
+          <p style="color: #9ca3af; font-size: 11px; margin: 6px 0 0;">
+            Somadhan Legal &middot; Dhaka, Bangladesh
           </p>
         </div>
       </div>

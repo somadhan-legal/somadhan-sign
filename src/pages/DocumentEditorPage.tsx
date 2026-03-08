@@ -6,6 +6,8 @@ import {
   Send,
   UserPlus,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   X,
   PenTool,
   Type,
@@ -101,6 +103,9 @@ export default function DocumentEditorPage() {
   const [showSendConfirm, setShowSendConfirm] = useState(false)
   const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
   const [countdown, setCountdown] = useState(5)
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
+  const pdfContainerRef = useRef<HTMLDivElement>(null)
+  const signerListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -216,7 +221,7 @@ export default function DocumentEditorPage() {
       if (!id || !user || isInteracting.current) return
       if (currentDocument?.status !== 'draft') return // Locked
       if (signers.length === 0) {
-        alert('Please add at least one signer first.')
+        alert(t('editor.addSignerFirst'))
         return
       }
 
@@ -246,6 +251,8 @@ export default function DocumentEditorPage() {
         label: null,
         isNew: true,
       })
+      // Auto-select the newly placed field in the right panel
+      setSelectedField(fieldId)
     },
     [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx]
   )
@@ -269,6 +276,16 @@ export default function DocumentEditorPage() {
       await fetchSigners(id)
       await fetchSignatureFields(id)
       
+      // Auto-scroll to newly added signer
+      if (!editingSignerId) {
+        setTimeout(() => {
+          if (signerListRef.current) {
+            signerListRef.current.scrollTop = signerListRef.current.scrollHeight
+          }
+          setSelectedSignerIdx(signers.length) // select the new one (will be at end)
+        }, 100)
+      }
+
       setSignerFirstName('')
       setSignerLastName('')
       setSignerEmail('')
@@ -276,7 +293,7 @@ export default function DocumentEditorPage() {
       setShowSignerModal(false)
     } catch (err) {
       console.error('[DocumentEditor] Error saving signer:', err)
-      alert('Failed to save signer. Please try again.')
+      alert(t('editor.failedSaveSigner'))
     }
   }
 
@@ -310,15 +327,15 @@ export default function DocumentEditorPage() {
     if (!id || !user) return
     const unassigned = docFields.filter((f) => !f.assigned_to_email)
     if (unassigned.length > 0) {
-      alert('Please assign all fields to a signer before sending.')
+      alert(t('editor.assignAllFields'))
       return
     }
     if (signers.length === 0) {
-      alert('Please add at least one signer.')
+      alert(t('editor.addSignerRequired'))
       return
     }
     if (docFields.length === 0) {
-      alert('Please add at least one field to the document.')
+      alert(t('editor.addFieldRequired'))
       return
     }
 
@@ -328,7 +345,7 @@ export default function DocumentEditorPage() {
         f.field_type === 'signature'
       )
       if (!hasSignatureField) {
-        alert(`Please add at least one Signature field for ${signer.signer_name || signer.signer_email}. Every signer must have a signature field.`)
+        alert(`${t('editor.signatureFieldRequired')} ${signer.signer_name || signer.signer_email}. ${t('editor.everySignerMustHaveSignature')}`)
         return
       }
     }
@@ -421,11 +438,12 @@ export default function DocumentEditorPage() {
   const isLocked = currentDocument.status !== 'draft'
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-full">
       {/* Left Sidebar */}
-      <div className="w-56 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
-        <div className="flex-1 overflow-y-auto">
-        <div className="p-3 border-b border-[hsl(var(--border))]">
+      <div className="w-56 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col overflow-hidden">
+        {/* Scrollable sidebar content */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
           <h2 className="font-semibold text-sm truncate">{currentDocument.title}</h2>
           {isLocked && (
             <p className="text-[10px] text-[hsl(var(--warning))] mt-1">🔒 Document sent - editing locked</p>
@@ -433,8 +451,8 @@ export default function DocumentEditorPage() {
         </div>
 
         {/* Signers */}
-        <div className="p-4 border-b border-[hsl(var(--border))]">
-          <div className="flex items-center justify-between mb-3">
+        <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.signers')}</h3>
             {!isLocked && (
               <button onClick={openAddSignerModal} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
@@ -451,16 +469,28 @@ export default function DocumentEditorPage() {
               {t('editor.addSigner')}
             </button>
           ) : (
-            <div className="space-y-1">
+            <>
+              {signers.length > 3 && (
+                <button
+                  onClick={() => signerListRef.current?.scrollBy({ top: -60, behavior: 'smooth' })}
+                  className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <div
+                ref={signerListRef}
+                className={`space-y-1 ${signers.length > 3 ? 'max-h-[140px] scrollbar-always' : ''}`}
+              >
               {signers.map((signer, idx) => {
                 const color = SIGNER_COLORS[idx % SIGNER_COLORS.length]
                 const isActive = selectedSignerIdx === idx
                 return (
                   <div
                     key={signer.id}
-                    className="group relative flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all"
+                    className="group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all"
                     style={{
-                      backgroundColor: isActive ? `${color}15` : 'transparent',
+                      backgroundColor: isActive ? `${color}30` : 'transparent',
                       borderColor: isActive ? color : 'transparent',
                     }}
                     onClick={() => setSelectedSignerIdx(idx)}
@@ -478,39 +508,48 @@ export default function DocumentEditorPage() {
                       </p>
                     </div>
                     {!isLocked && (
-                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 absolute right-2 bg-[hsl(var(--card))]/90 px-1 rounded transition-opacity">
+                      <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
-                          className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
+                          className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
                           title="Edit Signer"
                         >
-                          <PenTool className="w-3.5 h-3.5" />
+                          <PenTool className="w-3 h-3" />
                         </button>
                         <button
                           onClick={async (e) => {
                             e.stopPropagation()
-                            if (window.confirm('Remove this signer and all their fields?')) {
+                            if (window.confirm(t('editor.removeSignerConfirm'))) {
                               await removeSigner(signer.id)
                             }
                           }}
-                          className="p-1 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
+                          className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
                           title="Remove Signer"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     )}
                   </div>
                 )
               })}
-            </div>
+              </div>
+              {signers.length > 3 && (
+                <button
+                  onClick={() => signerListRef.current?.scrollBy({ top: 60, behavior: 'smooth' })}
+                  className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
           )}
         </div>
 
         {/* Field Types */}
         {!isLocked && (
-          <div className="p-3 border-b border-[hsl(var(--border))]">
-            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">{t('editor.fields')}</h3>
+          <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
+            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-1.5">{t('editor.fields')}</h3>
             <div className="space-y-0.5">
               {fieldTypeOptions.map((opt) => (
                 <button
@@ -530,27 +569,27 @@ export default function DocumentEditorPage() {
           </div>
         )}
 
-        {/* Help Guide */}
+        {/* Help Guide - expanded by default */}
         {!isLocked && (
-          <div className="p-3 border-b border-[hsl(var(--border))]">
-            <div className="flex items-center gap-1.5 mb-2">
-              <HelpCircle className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+          <details open className="px-2.5 pt-2 pb-1 border-b border-[hsl(var(--border))]">
+            <summary className="flex items-center gap-1.5 cursor-pointer select-none">
+              <HelpCircle className="w-3 h-3 text-[hsl(var(--primary))]" />
               <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.helpTitle')}</h3>
-            </div>
-            <ol className="space-y-1.5 text-[11px] text-[hsl(var(--muted-foreground))] leading-relaxed">
+            </summary>
+            <ol className="space-y-0.5 text-[10px] text-[hsl(var(--muted-foreground))] leading-snug mt-1">
               <li>{t('editor.help1')}</li>
               <li>{t('editor.help2')}</li>
               <li>{t('editor.help3')}</li>
               <li>{t('editor.help4')}</li>
               <li>{t('editor.help5')}</li>
             </ol>
-          </div>
+          </details>
         )}
 
         </div>
 
         {/* Actions - always visible at bottom */}
-        <div className="p-3 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-1.5">
+        <div className="px-2.5 py-2 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-1">
           {!isLocked && (
             <>
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleSave} disabled={saving}>
@@ -568,10 +607,36 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
+      <div
+        ref={pdfContainerRef}
+        className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative"
+        onMouseLeave={() => setCursorPos(null)}
+      >
+        {/* Cursor stamp - only visible when hovering over PDF pages */}
+        {cursorPos && !isLocked && signers.length > 0 && (
+          <div
+            className="fixed z-50 pointer-events-none flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-lg border text-xs font-semibold"
+            style={{
+              left: cursorPos.x + 14,
+              top: cursorPos.y + 14,
+              backgroundColor: `${SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length]}18`,
+              borderColor: SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length],
+              color: SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length],
+            }}
+          >
+            {fieldTypeIcons[selectedFieldType]}
+            {t('editor.clickToAddField')}
+          </div>
+        )}
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           onPageClick={handlePageClick}
+          onPageMouseMove={(e) => {
+            if (!isLocked && signers.length > 0) {
+              setCursorPos({ x: e.clientX, y: e.clientY })
+            }
+          }}
+          onPageMouseLeave={() => setCursorPos(null)}
           renderPageOverlay={(pageNumber) => {
             const pageFields = getPageFields(pageNumber)
             return (
@@ -646,7 +711,7 @@ export default function DocumentEditorPage() {
                           e.stopPropagation()
                           const hasPlacements = placements.some(p => p.field_id === field.id)
                           if (hasPlacements) {
-                            alert('Cannot delete this field - it has already been signed by a signer.')
+                            alert(t('editor.cannotDeleteSigned'))
                             return
                           }
                           removeSignatureField(field.id)
@@ -697,7 +762,7 @@ export default function DocumentEditorPage() {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">Assigned to</h3>
+                <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">{t('editor.assignedTo')}</h3>
                 <div className="space-y-1">
                   {signers.map((signer, idx) => {
                     const color = SIGNER_COLORS[idx % SIGNER_COLORS.length]
@@ -705,7 +770,7 @@ export default function DocumentEditorPage() {
                     return (
                       <button
                         key={signer.id}
-                        onClick={() => updateSignatureField(field.id, { assigned_to_email: signer.signer_email })}
+                        onClick={() => { updateSignatureField(field.id, { assigned_to_email: signer.signer_email }); setSelectedSignerIdx(idx) }}
                         className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-left transition-all cursor-pointer ${
                           isAssigned ? 'shadow-sm' : 'hover:bg-[hsl(var(--muted))]/50'
                         }`}
@@ -716,7 +781,7 @@ export default function DocumentEditorPage() {
                       >
                         <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color }} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate" style={{ color: isAssigned ? color : undefined }}>Signee</p>
+                          <p className="text-xs font-medium truncate" style={{ color: isAssigned ? color : undefined }}>{t('editor.signee')}</p>
                           <p className="text-xs font-semibold truncate">{signer.signer_name || signer.signer_email.split('@')[0]}</p>
                         </div>
                       </button>
@@ -728,10 +793,36 @@ export default function DocumentEditorPage() {
           )
         })()}
 
-        {!selectedField && (
+        {!selectedField && signers.length > 0 && (
+          <div className="p-4">
+            <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-2">{t('editor.signers')}</h3>
+            <div className="space-y-1">
+              {signers.map((signer, idx) => {
+                const color = SIGNER_COLORS[idx % SIGNER_COLORS.length]
+                return (
+                  <div
+                    key={signer.id}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                  >
+                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate">{signer.signer_name || signer.signer_email.split('@')[0]}</p>
+                      <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">{signer.signer_email}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-[hsl(var(--muted-foreground))] text-center mt-3">
+              {t('editor.clickFieldHint')}
+            </p>
+          </div>
+        )}
+
+        {!selectedField && signers.length === 0 && (
           <div className="flex-1 flex items-center justify-center p-4">
             <p className="text-xs text-[hsl(var(--muted-foreground))] text-center">
-              Click a field on the PDF to see its details and change the assigned signer
+              {t('editor.clickFieldHint')}
             </p>
           </div>
         )}
@@ -742,7 +833,7 @@ export default function DocumentEditorPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
-              <h3 className="font-semibold">{editingSignerId ? 'Edit Signer' : 'Add Signer'}</h3>
+              <h3 className="font-semibold">{editingSignerId ? t('editor.editSigner') : t('editor.addSigner')}</h3>
               <button
                 onClick={() => { setShowSignerModal(false); setEditingSignerId(null); setSignerFirstName(''); setSignerLastName(''); setSignerEmail('') }}
                 className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer"
@@ -753,26 +844,28 @@ export default function DocumentEditorPage() {
             <form onSubmit={handleSaveSigner} className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="First Name"
+                  label={t('editor.firstName')}
                   placeholder="John"
                   value={signerFirstName}
                   onChange={(e) => setSignerFirstName(e.target.value)}
                   required
                 />
                 <Input
-                  label="Last Name"
+                  label={t('editor.lastName')}
                   placeholder="Doe"
                   value={signerLastName}
                   onChange={(e) => setSignerLastName(e.target.value)}
                 />
               </div>
               <Input
-                label="Email"
+                label={t('editor.email')}
                 type="email"
                 placeholder="signer@example.com"
                 value={signerEmail}
                 onChange={(e) => setSignerEmail(e.target.value)}
                 required
+                pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
+                title={t('editor.invalidEmail')}
               />
               <div className="flex gap-3">
                 <Button
@@ -781,10 +874,10 @@ export default function DocumentEditorPage() {
                   className="flex-1"
                   onClick={() => { setShowSignerModal(false); setEditingSignerId(null) }}
                 >
-                  Cancel
+                  {t('editor.cancel')}
                 </Button>
                 <Button type="submit" className="flex-1">
-                  {editingSignerId ? 'Save Changes' : 'Add Signer'}
+                  {editingSignerId ? t('editor.saveChanges') : t('editor.addSigner')}
                 </Button>
               </div>
             </form>
@@ -797,20 +890,20 @@ export default function DocumentEditorPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
-              <h3 className="font-semibold">Send for Signing</h3>
+              <h3 className="font-semibold">{t('editor.sendForSigningTitle')}</h3>
               <button onClick={() => setShowSendConfirm(false)} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                 <X className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Document Name</label>
+                <label className="block text-sm font-medium mb-1">{t('editor.documentName')}</label>
                 <div className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">
                   {currentDocument?.title}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Signers</label>
+                <label className="block text-sm font-medium mb-1">{t('editor.signers')}</label>
                 <div className="space-y-1">
                   {signers.map((signer, idx) => (
                     <div key={signer.id} className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(var(--muted))] rounded-lg text-sm">
@@ -822,13 +915,13 @@ export default function DocumentEditorPage() {
                 </div>
               </div>
               <Input
-                label="CC: Email a copy (optional)"
+                label={t('editor.ccEmail')}
                 placeholder="e.g., manager@company.com, legal@company.com"
                 value={ccEmails}
                 onChange={(e) => setCcEmails(e.target.value)}
               />
               <div>
-                <label className="block text-sm font-medium mb-1">Message for signees (optional)</label>
+                <label className="block text-sm font-medium mb-1">{t('editor.messageForSignees')}</label>
                 <textarea
                   className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/30 focus:border-[hsl(var(--primary))]"
                   value={sendMessage}
@@ -838,11 +931,11 @@ export default function DocumentEditorPage() {
               </div>
               <div className="flex gap-3">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setShowSendConfirm(false)}>
-                  Cancel
+                  {t('editor.cancel')}
                 </Button>
                 <Button className="flex-1" onClick={handleSendForSigning} disabled={saving}>
                   <Send className="w-4 h-4 mr-1.5" />
-                  {saving ? 'Sending...' : 'Send'}
+                  {saving ? t('editor.sending') : t('editor.send')}
                 </Button>
               </div>
             </div>
@@ -854,7 +947,7 @@ export default function DocumentEditorPage() {
       {savedToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[hsl(var(--success))] text-white px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
           <CheckCircle2 className="w-4 h-4" />
-          Document saved successfully
+          {t('editor.savedSuccess')}
         </div>
       )}
 
@@ -866,9 +959,9 @@ export default function DocumentEditorPage() {
               <div className="w-16 h-16 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mb-4">
                 <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
               </div>
-              <h3 className="text-xl font-bold mb-2">Sending Document...</h3>
+              <h3 className="text-xl font-bold mb-2">{t('editor.sendingDocument')}</h3>
               <p className="text-[hsl(var(--muted-foreground))]">
-                Please wait while we send emails to signers.
+                {t('editor.pleaseWait')}
               </p>
             </div>
           </div>
@@ -883,12 +976,12 @@ export default function DocumentEditorPage() {
               <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
               </div>
-              <h3 className="text-xl font-bold mb-2">Document Sent!</h3>
+              <h3 className="text-xl font-bold mb-2">{t('editor.documentSent')}</h3>
               <p className="text-[hsl(var(--muted-foreground))] mb-3">
-                Signers will receive emails shortly.
+                {t('editor.signersWillReceive')}
               </p>
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                Redirecting to dashboard in <span className="font-bold text-[hsl(var(--primary))]">{countdown}</span>s...
+                {t('editor.redirecting')} <span className="font-bold text-[hsl(var(--primary))]">{countdown}</span>s...
               </p>
             </div>
           </div>

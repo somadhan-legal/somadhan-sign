@@ -190,7 +190,7 @@ export default function DocumentPreviewPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-full">
       {/* Left Sidebar */}
       <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
         <div className="flex-1 overflow-y-auto">
