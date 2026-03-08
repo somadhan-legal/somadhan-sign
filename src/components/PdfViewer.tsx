@@ -62,8 +62,8 @@ function PageWithOverlay({
         renderAnnotationLayer={false}
       />
       {renderPageOverlay && (
-        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-          <div className="relative w-full h-full pointer-events-auto">
+        <div className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 10 }}>
+          <div className="relative w-full h-full pointer-events-auto overflow-visible">
             {renderPageOverlay(pageNumber)}
           </div>
         </div>

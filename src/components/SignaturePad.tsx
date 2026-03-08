@@ -8,7 +8,7 @@ import { useThemeStore } from '@/stores/themeStore'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
-  onCancel: () => void
+  onCancel?: () => void
   onApplyToAll?: (dataUrl: string) => void
   showApplyAll?: boolean
   applyAllLabel?: string
@@ -16,7 +16,7 @@ interface SignaturePadProps {
 
 type TabType = 'draw' | 'type' | 'upload'
 
-export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApplyAll, applyAllLabel }: SignaturePadProps) {
+export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('upload')
@@ -213,17 +213,12 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
         </div>
       )}
 
-      <div className="flex flex-col gap-2 pt-2">
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onCancel}>
-            {t('editor.cancel')}
-          </Button>
-          <Button className="flex-1" onClick={handleSave}>
-            {t('signee.saveSignature') || 'Save'}
-          </Button>
-        </div>
+      <div className="flex gap-3 pt-2">
+        <Button variant="outline" className="flex-1" onClick={handleSave}>
+          {t('signee.saveSignature') || 'Save'}
+        </Button>
         {showApplyAll && onApplyToAll && (
-          <Button className="w-full" variant="secondary" onClick={handleApplyToAll}>
+          <Button className="flex-1" onClick={handleApplyToAll}>
             {applyAllLabel || t('signee.applyToAll')}
           </Button>
         )}

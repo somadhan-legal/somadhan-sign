@@ -177,6 +177,7 @@ export default function InviteSigningPage() {
     if (!documentId || !signerData) return
     setSubmitting(true)
     setShowSignatureModal(false)
+    setTappedFieldId(null)
     for (const field of myUnsignedSignatureFields) {
       await addPlacement({
         document_id: documentId,
@@ -188,6 +189,7 @@ export default function InviteSigningPage() {
     }
     setSignatureData(data)
     await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`)
+    await fetchPlacements(documentId)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -195,6 +197,7 @@ export default function InviteSigningPage() {
   const handleAutoFillInitials = async (data: string) => {
     if (!documentId || !signerData) return
     setSubmitting(true)
+    setTappedFieldId(null)
     for (const field of myUnsignedInitialsFields) {
       await addPlacement({
         document_id: documentId,
@@ -204,7 +207,9 @@ export default function InviteSigningPage() {
         signature_id: data,
       })
     }
+    setInitialsData(data)
     await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`)
+    await fetchPlacements(documentId)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -214,7 +219,11 @@ export default function InviteSigningPage() {
     const isInitials = field?.field_type === 'initials'
     const dataToUse = isInitials ? initialsData : signatureData
 
-    if (!dataToUse || !documentId || !signerData) return
+    console.log('[handleTapToSign]', { fieldId, isInitials, hasData: !!dataToUse, documentId, signerData: !!signerData })
+    if (!dataToUse || !documentId || !signerData) {
+      console.log('[handleTapToSign] EARLY RETURN - missing data')
+      return
+    }
     setSubmitting(true)
 
     await addPlacement({
@@ -306,18 +315,35 @@ export default function InviteSigningPage() {
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
-      // Check if ALL signers have signed by querying DB directly to avoid stale data
-      await new Promise(r => setTimeout(r, 800))
-      const { data: freshSigners } = await supabase
+      // Check if ALL signers have signed by querying DB directly
+      // Wait for DB to propagate the RPC update
+      await new Promise(r => setTimeout(r, 1500))
+      const { data: freshSigners, error: signerError } = await supabase
         .from('document_signers')
         .select('id, status')
         .eq('document_id', documentId)
       
-      const allDone = freshSigners && freshSigners.length > 0 && freshSigners.every(
-        (s: any) => s.status === 'signed' || s.id === signerData.id
-      )
+      console.log('[checkCompletion] freshSigners:', JSON.stringify(freshSigners), 'error:', signerError)
+      
+      // Current signer is definitely signed (we just updated), so only check others
+      const otherSigners = (freshSigners || []).filter((s: any) => s.id !== signerData.id)
+      const othersAllSigned = otherSigners.every((s: any) => s.status === 'signed')
+      const allDone = freshSigners && freshSigners.length > 0 && othersAllSigned
+      
+      console.log('[checkCompletion] otherSigners:', otherSigners.length, 'othersAllSigned:', othersAllSigned, 'allDone:', allDone)
+      
       if (allDone) {
-        await updateDocumentStatus(documentId, 'completed')
+        // Use RPC to bypass RLS (signers are unauthenticated)
+        const { error: rpcError } = await (supabase as any)
+          .rpc('mark_document_completed', { p_document_id: documentId })
+        
+        console.log('[checkCompletion] mark_document_completed RPC result:', rpcError)
+        
+        if (rpcError) {
+          console.error('RPC mark_document_completed failed:', rpcError)
+          // Fallback attempt
+          await updateDocumentStatus(documentId, 'completed')
+        }
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
         // Send completion emails to all signers and document owner
@@ -634,9 +660,18 @@ export default function InviteSigningPage() {
               <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-[hsl(var(--muted))]">
                 <img src={signatureData} alt="Your signature" className="max-h-16 mx-auto" />
               </div>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowSignatureModal(true)}>
-                {t('signee.changeSignature')}
-              </Button>
+              {myUnsignedSignatureFields.length === 0 ? (
+                <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allSignaturesFilled') || 'All signatures filled'}</p>
+              ) : (
+                <div className="space-y-1.5">
+                  <Button size="sm" className="w-full" onClick={() => handleAutoFillSignatures(signatureData)}>
+                    {t('signee.applyToAll')} ({myUnsignedSignatureFields.length})
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowSignatureModal(true)}>
+                    {t('signee.changeSignature')}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <Button className="w-full" onClick={() => setShowSignatureModal(true)}>
@@ -829,12 +864,13 @@ export default function InviteSigningPage() {
                   <div
                     key={field.id}
                     data-field-id={field.id}
-                    className={`absolute transition-all ${isCurrentNav ? 'z-20' : 'z-10'}`}
+                    className={`absolute transition-all ${isTapped ? 'overflow-visible' : ''}`}
                     style={{
                       left: `${field.x}%`,
                       top: `${field.y}%`,
                       width: `${field.width}%`,
                       height: `${field.height}%`,
+                      zIndex: isTapped ? 50 : isCurrentNav ? 20 : 10,
                     }}
                   >
                     {/* === SIGNED STATES — no borders, raw content === */}
@@ -856,35 +892,31 @@ export default function InviteSigningPage() {
                       </div>
 
                     ) : isTapped && isSignatureType && sigData ? (
-                      /* === TAPPED SIGNATURE/INITIALS — Add to this / Add to all === */
-                      <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--card))] flex flex-col items-center justify-center gap-1 shadow-lg">
-                        <img src={sigData} alt="Preview" className="max-w-[80%] max-h-[50%] object-contain opacity-60" />
-                        {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) ? (
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => { handleTapToSign(field.id); }}
-                              disabled={submitting}
-                              className="px-2.5 py-1 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] text-[9px] rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
-                            >
-                              {submitting ? '...' : 'ADD THIS'}
-                            </button>
-                            <button
-                              onClick={() => isInitials ? handleAutoFillInitials(initialsData!) : handleAutoFillSignatures(signatureData!)}
-                              disabled={submitting}
-                              className="px-2.5 py-1 bg-[hsl(var(--primary))] text-white text-[9px] rounded-md font-semibold hover:opacity-90 cursor-pointer"
-                            >
-                              {submitting ? '...' : 'ADD TO ALL'}
-                            </button>
-                          </div>
-                        ) : (
+                      /* === TAPPED SIGNATURE/INITIALS — Apply / Apply to All popover === */
+                      <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
+                        {/* Field highlight */}
+                        <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
+                          <img src={sigData} alt="Preview" className="max-w-full max-h-full object-contain opacity-40" />
+                        </div>
+                        {/* Popover buttons below the field */}
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 flex gap-1 whitespace-nowrap" style={{ zIndex: 100 }}>
                           <button
-                            onClick={() => handleTapToSign(field.id)}
+                            onClick={(e) => { e.stopPropagation(); handleTapToSign(field.id); }}
                             disabled={submitting}
-                            className="px-3 py-1 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-medium hover:opacity-90 cursor-pointer"
+                            className="px-3 py-1.5 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--card))] text-[10px] rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer shadow-lg"
                           >
-                            {submitting ? '...' : 'ADD THIS'}
+                            {submitting ? '...' : 'Apply'}
                           </button>
-                        )}
+                          {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); isInitials ? handleAutoFillInitials(initialsData!) : handleAutoFillSignatures(signatureData!); }}
+                              disabled={submitting}
+                              className="px-3 py-1.5 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
+                            >
+                              {submitting ? '...' : 'Apply to All'}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                     ) : datePickerFieldId === field.id && isDate && isMine ? (
@@ -940,6 +972,7 @@ export default function InviteSigningPage() {
                         }`}
                         style={undefined}
                         onClick={() => {
+                          console.log('[FIELD_CLICK]', { fieldId: field.id, isMine, isSigned, submitting, isCheckbox, isDate, isText, isInitials, signatureData: !!signatureData, initialsData: !!initialsData, fieldType: field.field_type })
                           if (!isMine || isSigned || submitting) return
                           if (isCheckbox) {
                             handleCheckboxField(field.id)
@@ -949,13 +982,17 @@ export default function InviteSigningPage() {
                             setTextInputFieldId(field.id)
                             setTextInputValue('')
                           } else if (isInitials && initialsData) {
+                            console.log('[TAP] initials field with data, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                           } else if (isInitials && !initialsData) {
+                            console.log('[TAP] initials field NO data, opening modal, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                             setShowInitialsModal(true)
                           } else if (!isInitials && signatureData) {
+                            console.log('[TAP] signature field with data, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                           } else if (!isInitials && !signatureData) {
+                            console.log('[TAP] signature field NO data, opening modal, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                             setShowSignatureModal(true)
                           }
