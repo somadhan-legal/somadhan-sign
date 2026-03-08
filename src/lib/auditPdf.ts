@@ -32,6 +32,18 @@ export async function generateAuditPdf(
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+  
+  // Fetch and embed PNG logo
+  let logoImage = null
+  try {
+    const logoResponse = await fetch('/src/assets/somadhan.png')
+    if (logoResponse.ok) {
+      const logoBytes = await logoResponse.arrayBuffer()
+      logoImage = await pdfDoc.embedPng(logoBytes)
+    }
+  } catch (e) {
+    console.warn('Failed to load logo PNG:', e)
+  }
 
   const pageWidth = 595.28 // A4
   const pageHeight = 841.89
@@ -46,6 +58,19 @@ export async function generateAuditPdf(
   const brandColor = rgb(0.02, 0.31, 0.33) // #054F54
   const accentColor = rgb(0.91, 0.46, 0.38) // #e87461
 
+  // PNG Logo (if available)
+  if (logoImage) {
+    const logoHeight = 40
+    const logoWidth = logoImage.width * (logoHeight / logoImage.height)
+    page.drawImage(logoImage, {
+      x: margin,
+      y: yPos - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
+    })
+    yPos -= (logoHeight + 12)
+  }
+
   // Text: "Somadhan" in brand color + "Sign" in accent color
   const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique)
   const somadhanWidth = fontBold.widthOfTextAtSize('Somadhan', 24)
@@ -53,7 +78,7 @@ export async function generateAuditPdf(
   page.drawText('Sign', { x: margin + somadhanWidth, y: yPos, size: 24, font: fontItalic, color: accentColor })
 
   // Tagline
-  page.drawText('Powered by SomadhanSign', {
+  page.drawText('Powered by Somadhan', {
     x: margin,
     y: yPos - 18,
     size: 9,
@@ -212,6 +237,41 @@ export async function generateAuditPdf(
     if (yPos < margin + 40) {
       page = pdfDoc.addPage([pageWidth, pageHeight])
       yPos = pageHeight - margin
+      
+      // Add logo to continuation page
+      if (logoImage) {
+        const logoHeight = 40
+        const logoWidth = logoImage.width * (logoHeight / logoImage.height)
+        page.drawImage(logoImage, {
+          x: margin,
+          y: yPos - logoHeight,
+          width: logoWidth,
+          height: logoHeight,
+        })
+        yPos -= (logoHeight + 12)
+      }
+      
+      // Text branding
+      const somadhanWidth = fontBold.widthOfTextAtSize('Somadhan', 24)
+      page.drawText('Somadhan', { x: margin, y: yPos, size: 24, font: fontBold, color: brandColor })
+      page.drawText('Sign', { x: margin + somadhanWidth, y: yPos, size: 24, font: fontItalic, color: accentColor })
+      page.drawText('Powered by Somadhan', {
+        x: margin,
+        y: yPos - 18,
+        size: 9,
+        font: font,
+        color: rgb(0.5, 0.5, 0.5),
+      })
+      yPos -= 40
+      
+      page.drawLine({
+        start: { x: margin, y: yPos },
+        end: { x: pageWidth - margin, y: yPos },
+        thickness: 1.5,
+        color: brandColor,
+      })
+      yPos -= 20
+      
       page.drawText('AUDIT TRAIL (continued)', {
         x: margin,
         y: yPos,
