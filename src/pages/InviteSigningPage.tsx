@@ -657,7 +657,7 @@ export default function InviteSigningPage() {
           <h3 className="font-medium text-sm mb-3">{t('signee.yourSignature')}</h3>
           {signatureData ? (
             <div className="space-y-2">
-              <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-[hsl(var(--muted))]">
+              <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-white">
                 <img src={signatureData} alt="Your signature" className="max-h-16 mx-auto" />
               </div>
               {myUnsignedSignatureFields.length === 0 ? (
@@ -692,7 +692,7 @@ export default function InviteSigningPage() {
             </h3>
             {initialsData ? (
               <div className="space-y-2">
-                <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-[hsl(var(--muted))]">
+                <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-white">
                   <img src={initialsData} alt="Your initials" className="max-h-12 mx-auto" />
                 </div>
                 {myUnsignedInitialsFields.length === 0 ? (
