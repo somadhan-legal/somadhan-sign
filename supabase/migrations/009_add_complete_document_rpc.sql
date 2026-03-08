@@ -101,6 +101,13 @@ begin
       select a.metadata from public.audit_trail a
       where a.document_id = p_document_id and a.action = 'Document Sent for Signing'
       limit 1
+    ),
+    'audit_trail', (
+      select json_agg(json_build_object(
+        'action', at.action, 'user_email', at.user_email, 'user_name', at.user_name,
+        'created_at', at.created_at, 'metadata', at.metadata, 'ip_address', at.ip_address
+      ) order by at.created_at asc)
+      from public.audit_trail at where at.document_id = p_document_id
     )
   ) into result
   from public.documents d

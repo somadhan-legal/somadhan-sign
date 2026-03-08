@@ -5,46 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Reusable logo icon HTML (matches the SVG: 4 bars — full, half-left, half-right, full)
-const logoIcon = (color: string) => `
-  <table cellpadding="0" cellspacing="0" border="0">
-    <tr><td style="background: ${color}; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-    <tr><td style="height: 3px;"></td></tr>
-    <tr><td style="background: ${color}; width: 14px; height: 4px; border-radius: 1px;"></td></tr>
-    <tr><td style="height: 3px;"></td></tr>
-    <tr><td style="background: ${color}; width: 14px; height: 4px; border-radius: 1px;"></td><td style="width: 14px;"></td></tr>
-    <tr><td style="height: 3px;"></td></tr>
-    <tr><td style="background: ${color}; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-  </table>`
-
-// Reusable logo text
-const logoText = (textColor: string) =>
-  `<span style="color: ${textColor}; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>`
-
-const logoTextSmall = (textColor: string) =>
-  `<span style="color: ${textColor}; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>`
-
-// Header with logo
+// Header with text-only logo
 const headerLogo = (afterLogo: string) => `
   <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-      <tr>
-        <td style="padding-right: 8px; vertical-align: middle;">${logoIcon('white')}</td>
-        <td style="vertical-align: middle;">${logoText('white')}</td>
-      </tr>
-    </table>
+    <div>
+      <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
+    </div>
     ${afterLogo}
   </div>`
 
-// Footer
+// Footer with text-only logo
 const footer = `
   <div style="text-align: center; padding: 20px;">
-    <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-      <tr>
-        <td style="padding-right: 6px; vertical-align: middle;">${logoIcon('#054F54')}</td>
-        <td style="vertical-align: middle;">${logoTextSmall('#054F54')}</td>
-      </tr>
-    </table>
+    <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
     <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0;">
       Somadhan &middot; Dhaka, Bangladesh
     </p>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
 interface BadgeProps {
@@ -23,8 +24,23 @@ const darkVariantStyles: Record<string, { bg: string; color: string; border: str
   outline: { bg: '#1e293b', color: '#94a3b8', border: '#334155' },
 }
 
+function useIsDark() {
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+  useEffect(() => {
+    const el = document.documentElement
+    const observer = new MutationObserver(() => {
+      setIsDark(el.classList.contains('dark'))
+    })
+    observer.observe(el, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+  return isDark
+}
+
 export default function Badge({ children, variant = 'default', className, style }: BadgeProps) {
-  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  const isDark = useIsDark()
   const colors = (isDark ? darkVariantStyles : variantStyles)[variant] || variantStyles.default
   return (
     <span

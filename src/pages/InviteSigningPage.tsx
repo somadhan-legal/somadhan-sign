@@ -341,7 +341,7 @@ export default function InviteSigningPage() {
           let downloadUrl = ''
           let pdfBase64 = ''
           
-          // Generate and upload signed PDF
+          // Generate signed PDF + audit trail combined
           if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
             try {
               const signedFields: SignedField[] = completionData.placements.map((p: any) => {
@@ -357,13 +357,25 @@ export default function InviteSigningPage() {
                 }
               })
               
+              // Step 1: Generate signed PDF
               const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
               
-              // Upload to Supabase storage (signed/ folder allows unauthenticated uploads)
+              // Step 2: Append audit trail pages to the signed PDF
+              let finalBlob = signedBlob
+              if (completionData.audit_trail && completionData.audit_trail.length > 0) {
+                const signedUrl = URL.createObjectURL(signedBlob)
+                try {
+                  finalBlob = await generateAuditPdf(signedUrl, completionData.audit_trail, completionData.title || 'Document')
+                } finally {
+                  URL.revokeObjectURL(signedUrl)
+                }
+              }
+              
+              // Step 3: Upload combined PDF to storage
               const fileName = `signed/${documentId}_${Date.now()}.pdf`
               const { error: uploadError } = await supabase.storage
                 .from('documents')
-                .upload(fileName, signedBlob, { contentType: 'application/pdf', upsert: true })
+                .upload(fileName, finalBlob, { contentType: 'application/pdf', upsert: true })
               
               if (!uploadError) {
                 const { data: urlData } = supabase.storage
@@ -380,8 +392,8 @@ export default function InviteSigningPage() {
                 console.error('Error uploading signed PDF:', uploadError)
               }
               
-              // Convert PDF blob to base64 for email attachment
-              const arrayBuffer = await signedBlob.arrayBuffer()
+              // Step 4: Convert combined PDF to base64 for email attachment
+              const arrayBuffer = await finalBlob.arrayBuffer()
               const uint8Array = new Uint8Array(arrayBuffer)
               let binaryStr = ''
               for (let i = 0; i < uint8Array.length; i++) {
