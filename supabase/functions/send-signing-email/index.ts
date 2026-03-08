@@ -5,23 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const iconUrl = 'https://cfurkapaksdjsqeydhew.supabase.co/storage/v1/object/public/documents/branding/somadhan-mail-icon.png'
-
-// Header with icon + text logo
+// Header with text-only logo
 const headerLogo = (afterLogo: string) => `
   <div style="background-color: #0e6e6e; background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
     <div>
-      <img src="${iconUrl}" alt="" width="32" height="32" style="display: inline-block; vertical-align: middle; margin-right: 6px;" />
-      <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; vertical-align: middle;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif; vertical-align: middle;">Sign</span>
+      <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
     </div>
     ${afterLogo}
   </div>`
 
-// Footer with icon + text logo
+// Footer with text-only logo
 const footer = `
   <div style="text-align: center; padding: 20px;">
-    <img src="${iconUrl}" alt="" width="20" height="20" style="display: inline-block; vertical-align: middle; margin-right: 4px;" />
-    <span style="color: #054F54; font-size: 16px; font-weight: 700; vertical-align: middle;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif; vertical-align: middle;">Sign</span>
+    <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
     <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0;">
       Somadhan &middot; Dhaka, Bangladesh
     </p>
