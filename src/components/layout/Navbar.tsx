@@ -24,9 +24,15 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 bg-[hsl(var(--background))]/80 backdrop-blur-md border-b border-[hsl(var(--border))]">
       <div className="px-4 sm:px-6 lg:px-10">
         <div className="flex items-center justify-between h-20">
-          <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 no-underline">
-            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
-          </Link>
+          {user ? (
+            <Link to="/dashboard" className="flex items-center gap-2 no-underline">
+              <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+            </Link>
+          ) : (
+            <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
+              <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
+            </a>
+          )}
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>

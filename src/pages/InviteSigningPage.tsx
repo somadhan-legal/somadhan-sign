@@ -468,7 +468,9 @@ export default function InviteSigningPage() {
   if (pageLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6" />
+        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
+        </a>
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[hsl(var(--muted-foreground))]">{t('signee.loadingDoc')}</p>
@@ -480,7 +482,9 @@ export default function InviteSigningPage() {
   if (error || !signerData) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6" />
+        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
+        </a>
         <div className="text-center max-w-md">
           <div className="w-16 h-16 rounded-full bg-[hsl(var(--destructive))]/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
@@ -615,7 +619,9 @@ export default function InviteSigningPage() {
       <div className="flex flex-col h-screen bg-[hsl(var(--background))]">
         <div className="flex items-center justify-between px-6 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm">
           <div className="flex items-center gap-3">
-            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+            <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+              <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
+            </a>
             <div className="w-px h-6 bg-[hsl(var(--border))]" />
             <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))]" />
             <h2 className="font-semibold">{signerData?.documents.title} — Signed</h2>
@@ -643,7 +649,9 @@ export default function InviteSigningPage() {
     return (
       <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
-          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
+          </a>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
               <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
@@ -694,7 +702,9 @@ export default function InviteSigningPage() {
       {/* Sidebar */}
       <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
-          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
+          </a>
         </div>
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center justify-between">

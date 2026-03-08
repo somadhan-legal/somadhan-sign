@@ -102,7 +102,9 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 flex items-center justify-between">
-          <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-14" />
+          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+            <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-14 cursor-pointer" />
+          </a>
           <button onClick={toggleLang} className="text-white/60 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title={lang === 'en' ? 'বাংলা' : 'English'}>
             {lang === 'en' ? 'বাং' : 'EN'}
           </button>

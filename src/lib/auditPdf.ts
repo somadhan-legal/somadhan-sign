@@ -42,6 +42,37 @@ export async function generateAuditPdf(
   let page = pdfDoc.addPage([pageWidth, pageHeight])
   let yPos = pageHeight - margin
 
+  // ===== SomadhanSign Branding =====
+  const brandColor = rgb(0.02, 0.31, 0.33) // #054F54
+  const accentColor = rgb(0.91, 0.46, 0.38) // #e87461
+
+  // Text: "Somadhan" in brand color + "Sign" in accent color
+  const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique)
+  const somadhanWidth = fontBold.widthOfTextAtSize('Somadhan', 24)
+  page.drawText('Somadhan', { x: margin, y: yPos, size: 24, font: fontBold, color: brandColor })
+  page.drawText('Sign', { x: margin + somadhanWidth, y: yPos, size: 24, font: fontItalic, color: accentColor })
+
+  // Tagline
+  page.drawText('Powered by SomadhanSign', {
+    x: margin,
+    y: yPos - 18,
+    size: 9,
+    font: font,
+    color: rgb(0.5, 0.5, 0.5),
+  })
+
+  yPos -= 40
+
+  // Separator line after branding
+  page.drawLine({
+    start: { x: margin, y: yPos },
+    end: { x: pageWidth - margin, y: yPos },
+    thickness: 1.5,
+    color: brandColor,
+  })
+  yPos -= 24
+
+  // ===== Certificate Content =====
   // Title
   page.drawText('CERTIFICATE OF COMPLETION', {
     x: margin,

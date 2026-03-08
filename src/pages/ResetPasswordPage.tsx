@@ -98,7 +98,9 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
       <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-md w-full shadow-xl">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14" />
+          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
+          </a>
         </div>
 
         <div className="w-14 h-14 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-4">
