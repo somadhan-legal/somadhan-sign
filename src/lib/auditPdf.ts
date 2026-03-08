@@ -57,37 +57,30 @@ export async function generateAuditPdf(
 
   // ===== SomadhanSign Branding =====
   const brandColor = rgb(0.02, 0.31, 0.33) // #054F54
-  const accentColor = rgb(0.91, 0.46, 0.38) // #e87461
-  const fontItalic = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique)
-  const iconSize = 28
-  let textX = margin
 
-  // PNG Icon + "SomadhanSign" inline on same line (aligned on baseline)
+  // Full PNG Logo
   if (logoImage) {
-    const iconWidth = logoImage.width * (iconSize / logoImage.height)
+    const logoHeight = 35
+    const logoWidth = logoImage.width * (logoHeight / logoImage.height)
     page.drawImage(logoImage, {
       x: margin,
-      y: yPos - 4,
-      width: iconWidth,
-      height: iconSize,
+      y: yPos - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
     })
-    textX = margin + iconWidth + 8
+    yPos -= (logoHeight + 8)
   }
-
-  const somadhanWidth = fontBold.widthOfTextAtSize('Somadhan', 22)
-  page.drawText('Somadhan', { x: textX, y: yPos, size: 22, font: fontBold, color: brandColor })
-  page.drawText('Sign', { x: textX + somadhanWidth, y: yPos, size: 22, font: fontItalic, color: accentColor })
 
   // Tagline below
   page.drawText('Powered by Somadhan', {
     x: margin,
-    y: yPos - 20,
+    y: yPos,
     size: 9,
     font: font,
     color: rgb(0.5, 0.5, 0.5),
   })
 
-  yPos -= 42
+  yPos -= 20
 
   // Separator line after branding
   page.drawLine({
@@ -239,29 +232,27 @@ export async function generateAuditPdf(
       page = pdfDoc.addPage([pageWidth, pageHeight])
       yPos = pageHeight - margin
       
-      // Inline icon + SomadhanSign branding (aligned on baseline)
-      let contTextX = margin
+      // Full PNG Logo
       if (logoImage) {
-        const iconW = logoImage.width * (iconSize / logoImage.height)
+        const logoH = 35
+        const logoW = logoImage.width * (logoH / logoImage.height)
         page.drawImage(logoImage, {
           x: margin,
-          y: yPos - 4,
-          width: iconW,
-          height: iconSize,
+          y: yPos - logoH,
+          width: logoW,
+          height: logoH,
         })
-        contTextX = margin + iconW + 8
+        yPos -= (logoH + 8)
       }
-      const contSomadhanW = fontBold.widthOfTextAtSize('Somadhan', 22)
-      page.drawText('Somadhan', { x: contTextX, y: yPos, size: 22, font: fontBold, color: brandColor })
-      page.drawText('Sign', { x: contTextX + contSomadhanW, y: yPos, size: 22, font: fontItalic, color: accentColor })
+      
       page.drawText('Powered by Somadhan', {
         x: margin,
-        y: yPos - 20,
+        y: yPos,
         size: 9,
         font: font,
         color: rgb(0.5, 0.5, 0.5),
       })
-      yPos -= 42
+      yPos -= 20
       
       page.drawLine({
         start: { x: margin, y: yPos },
