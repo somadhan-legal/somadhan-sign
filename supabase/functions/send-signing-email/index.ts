@@ -5,14 +5,57 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Reusable logo icon HTML (matches the SVG: 4 bars — full, half-left, half-right, full)
+const logoIcon = (color: string) => `
+  <table cellpadding="0" cellspacing="0" border="0">
+    <tr><td style="background: ${color}; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
+    <tr><td style="height: 3px;"></td></tr>
+    <tr><td style="background: ${color}; width: 14px; height: 4px; border-radius: 1px;"></td></tr>
+    <tr><td style="height: 3px;"></td></tr>
+    <tr><td style="background: ${color}; width: 14px; height: 4px; border-radius: 1px;"></td><td style="width: 14px;"></td></tr>
+    <tr><td style="height: 3px;"></td></tr>
+    <tr><td style="background: ${color}; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
+  </table>`
+
+// Reusable logo text
+const logoText = (textColor: string) =>
+  `<span style="color: ${textColor}; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>`
+
+const logoTextSmall = (textColor: string) =>
+  `<span style="color: ${textColor}; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>`
+
+// Header with logo
+const headerLogo = (afterLogo: string) => `
+  <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+      <tr>
+        <td style="padding-right: 8px; vertical-align: middle;">${logoIcon('white')}</td>
+        <td style="vertical-align: middle;">${logoText('white')}</td>
+      </tr>
+    </table>
+    ${afterLogo}
+  </div>`
+
+// Footer
+const footer = `
+  <div style="text-align: center; padding: 20px;">
+    <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+      <tr>
+        <td style="padding-right: 6px; vertical-align: middle;">${logoIcon('#054F54')}</td>
+        <td style="vertical-align: middle;">${logoTextSmall('#054F54')}</td>
+      </tr>
+    </table>
+    <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0;">
+      Somadhan &middot; Dhaka, Bangladesh
+    </p>
+  </div>`
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Verify the request has a valid authorization header (anon key or user JWT)
     const authHeader = req.headers.get('authorization')
     if (!authHeader) {
       return new Response(
@@ -30,102 +73,47 @@ serve(async (req) => {
 
     const isCompletion = type === 'completion'
 
+    // --- Completion email ---
     const downloadButton = downloadUrl ? `
-          <div style="text-align: center; margin: 28px 0;">
-            <a href="${downloadUrl}" 
-               style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
-              ⬇ DOWNLOAD SIGNED DOCUMENT
-            </a>
-          </div>
-    ` : ''
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${downloadUrl}" 
+           style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+          ⬇ DOWNLOAD SIGNED DOCUMENT
+        </a>
+      </div>` : ''
 
     const completionHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-            <tr>
-              <td style="padding-right: 4px; vertical-align: middle;">
-                <table cellpadding="0" cellspacing="0" border="0">
-                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px; margin-left: 14px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-                </table>
-              </td>
-              <td style="vertical-align: middle;">
-                <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
-              </td>
-            </tr>
-          </table>
+        ${headerLogo(`
           <div style="margin-top: 16px;">
             <span style="background: #10b981; color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;">✓ Document Completed</span>
           </div>
-        </div>
-        
+        `)}
         <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
-          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">
-            ${documentTitle}
-          </p>
-          
+          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${documentTitle}</p>
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
             All parties have signed this document. The document is now complete.
           </p>
-
           ${downloadButton}
-
           ${pdfBase64 ? '<p style="color: #6b7280; font-size: 13px; line-height: 1.6;">The signed document is also attached to this email.</p>' : ''}
-          
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">
-            Best,<br>
-            The <strong>Somadhan Sign</strong> Team
-          </p>
-          
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             This is an automated notification from Somadhan Sign. The signed document is securely stored and can be accessed from your dashboard.
           </p>
         </div>
-        
-        <div style="text-align: center; padding: 20px;">
-          <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
-          <p style="color: #9ca3af; font-size: 11px; margin: 6px 0 0;">
-            Somadhan Legal &middot; Dhaka, Bangladesh
-          </p>
-        </div>
-      </div>
-    `
+        ${footer}
+      </div>`
 
-    const emailHtml = isCompletion ? completionHtml : `
+    // --- Invitation email ---
+    const invitationHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-            <tr>
-              <td style="padding-right: 4px; vertical-align: middle;">
-                <table cellpadding="0" cellspacing="0" border="0">
-                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 14px; height: 4px; border-radius: 1px; margin-left: 14px;"></td></tr>
-                  <tr><td style="height: 3px;"></td></tr>
-                  <tr><td style="background: white; width: 28px; height: 4px; border-radius: 1px;"></td></tr>
-                </table>
-              </td>
-              <td style="vertical-align: middle;">
-                <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
-              </td>
-            </tr>
-          </table>
+        ${headerLogo(`
           <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
-            <strong>${senderName}</strong> sent you a document to review and sign
+            <strong>${senderName || ''}</strong> sent you a document to review and sign
           </p>
-        </div>
-        
+        `)}
         <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${signingLink}" 
@@ -133,86 +121,78 @@ serve(async (req) => {
               REVIEW AND SIGN
             </a>
           </div>
-          
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
-          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">
-            ${documentTitle}
-          </p>
-          
+          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${documentTitle}</p>
           ${message ? `
             <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
             <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${message}</p>
           ` : ''}
-          
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">
-            Best,<br>
-            The <strong>Somadhan Sign</strong> Team
-          </p>
-          
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
-          
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             Disclaimer: This email contains a unique signature link intended solely for the recipient. Please do not forward or share this email. Somadhan Sign is not liable for signatures executed by anyone other than the intended recipient.
           </p>
         </div>
-        
-        <div style="text-align: center; padding: 20px;">
-          <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
-          <p style="color: #9ca3af; font-size: 11px; margin: 6px 0 0;">
-            Somadhan Legal &middot; Dhaka, Bangladesh
-          </p>
-        </div>
-      </div>
-    `
+        ${footer}
+      </div>`
 
-    const emailPayload: any = {
-      from: 'Somadhan Sign <noreply@somadhan.com>',
-      to: [to],
-      subject: isCompletion
-        ? `✓ "${documentTitle}" — All parties have signed`
-        : `${senderName} has requested your signature on "${documentTitle}"`,
-      html: emailHtml,
-    }
+    const emailHtml = isCompletion ? completionHtml : invitationHtml
 
-    // Add CC emails if provided
+    // Build list of all recipients (TO + CC as separate emails)
+    const allRecipients = [to]
     if (ccEmails && ccEmails.length > 0) {
-      emailPayload.cc = ccEmails
+      for (const cc of ccEmails) {
+        if (cc && !allRecipients.includes(cc)) allRecipients.push(cc)
+      }
     }
 
-    // Add PDF attachment for completion emails
-    if (isCompletion && pdfBase64) {
-      const safeTitle = (documentTitle || 'document').replace(/[^a-zA-Z0-9_\- ]/g, '_')
-      emailPayload.attachments = [
-        {
-          filename: `${safeTitle}_signed.pdf`,
-          content: pdfBase64,
+    const results = []
+
+    for (const recipient of allRecipients) {
+      const emailPayload: any = {
+        from: 'Somadhan Sign <noreply@somadhan.com>',
+        to: [recipient],
+        subject: isCompletion
+          ? `✓ "${documentTitle}" — All parties have signed`
+          : `${senderName} has requested your signature on "${documentTitle}"`,
+        html: emailHtml,
+      }
+
+      // Add PDF attachment for completion emails
+      if (isCompletion && pdfBase64) {
+        const safeTitle = (documentTitle || 'document').replace(/[^a-zA-Z0-9_\- ]/g, '_')
+        emailPayload.attachments = [
+          {
+            filename: `${safeTitle}_signed.pdf`,
+            content: pdfBase64,
+          },
+        ]
+      }
+
+      console.log('Sending email to:', recipient)
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
         },
-      ]
-    }
+        body: JSON.stringify(emailPayload),
+      })
 
-    console.log('Sending email with payload:', JSON.stringify(emailPayload))
+      const data = await res.json()
+      console.log('Resend API response for', recipient, ':', JSON.stringify(data))
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify(emailPayload),
-    })
+      if (!res.ok) {
+        console.error('Resend API Error for', recipient, ':', data)
+      }
 
-    const data = await res.json()
-    console.log('Resend API response:', JSON.stringify(data))
-    
-    if (!res.ok) {
-      console.error('Resend API Error:', data)
-      throw new Error(data.message || 'Failed to send email')
+      results.push({ recipient, success: res.ok, data })
     }
 
     return new Response(
-      JSON.stringify({ success: true, data }),
+      JSON.stringify({ success: true, results }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

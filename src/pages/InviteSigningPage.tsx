@@ -59,7 +59,6 @@ export default function InviteSigningPage() {
     fetchPlacements,
     fetchSignerByToken,
     updateSignerStatus,
-    updateDocumentStatus,
     addPlacement,
     addAuditEntry,
   } = useDocumentStore()
@@ -315,66 +314,38 @@ export default function InviteSigningPage() {
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
-      // Check if ALL signers have signed by querying DB directly
-      // Wait for DB to propagate the RPC update
-      await new Promise(r => setTimeout(r, 1500))
-      const { data: freshSigners, error: signerError } = await supabase
-        .from('document_signers')
-        .select('id, status')
-        .eq('document_id', documentId)
+      // Use RPC to check if all signers signed (bypasses RLS — unauthenticated signers can't read document_signers)
+      await new Promise(r => setTimeout(r, 1000))
+      const { data: allSigned, error: checkErr } = await (supabase as any)
+        .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
       
-      console.log('[checkCompletion] freshSigners:', JSON.stringify(freshSigners), 'error:', signerError)
+      console.log('[checkCompletion] allSigned:', allSigned, 'error:', checkErr)
       
-      // Current signer is definitely signed (we just updated), so only check others
-      const otherSigners = (freshSigners || []).filter((s: any) => s.id !== signerData.id)
-      const othersAllSigned = otherSigners.every((s: any) => s.status === 'signed')
-      const allDone = freshSigners && freshSigners.length > 0 && othersAllSigned
-      
-      console.log('[checkCompletion] otherSigners:', otherSigners.length, 'othersAllSigned:', othersAllSigned, 'allDone:', allDone)
-      
-      if (allDone) {
-        // Use RPC to bypass RLS (signers are unauthenticated)
+      if (allSigned === true) {
+        // Mark document as completed (bypasses RLS)
         const { error: rpcError } = await (supabase as any)
           .rpc('mark_document_completed', { p_document_id: documentId })
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
-          await updateDocumentStatus(documentId, 'completed')
         }
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
-        // Generate signed PDF, upload, and send completion emails
+        // Get all document data via RPC (bypasses RLS)
         try {
-          // Fetch all data needed for PDF generation and emails
-          const { data: allSignersData } = await supabase
-            .from('document_signers')
-            .select('signer_email, signer_name')
-            .eq('document_id', documentId)
+          const { data: completionData, error: compErr } = await (supabase as any)
+            .rpc('get_document_for_completion', { p_document_id: documentId })
           
-          const { data: docData } = await supabase
-            .from('documents')
-            .select('title, created_by, original_pdf_url')
-            .eq('id', documentId)
-            .single()
-          
-          const { data: allFields } = await supabase
-            .from('signature_fields')
-            .select('*')
-            .eq('document_id', documentId)
-          
-          const { data: allPlacements } = await supabase
-            .from('signature_placements')
-            .select('*')
-            .eq('document_id', documentId)
+          console.log('[checkCompletion] completionData:', completionData ? 'loaded' : 'null', 'error:', compErr)
           
           let downloadUrl = ''
           let pdfBase64 = ''
           
           // Generate and upload signed PDF
-          if (docData?.original_pdf_url && allFields && allPlacements) {
+          if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
             try {
-              const signedFields: SignedField[] = allPlacements.map((p: any) => {
-                const field = allFields.find((f: any) => f.id === p.field_id)
+              const signedFields: SignedField[] = completionData.placements.map((p: any) => {
+                const field = completionData.fields.find((f: any) => f.id === p.field_id)
                 return {
                   field_type: field?.field_type || 'signature',
                   page_number: field?.page_number || 1,
@@ -386,7 +357,7 @@ export default function InviteSigningPage() {
                 }
               })
               
-              const signedBlob = await generateSignedPdf(docData.original_pdf_url, signedFields)
+              const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
               
               // Upload to Supabase storage (signed/ folder allows unauthenticated uploads)
               const fileName = `signed/${documentId}_${Date.now()}.pdf`
@@ -422,35 +393,30 @@ export default function InviteSigningPage() {
             }
           }
           
-          // Send completion emails to all signers, document owner, and CC recipients
-          if (allSignersData && docData) {
-            const allRecipients = allSignersData.map((s: any) => s.signer_email)
+          // Build recipient list: signers + owner + CC
+          if (completionData) {
+            const allRecipients: string[] = []
             
-            // Get document owner's email and CC emails from audit trail
-            const { data: auditData } = await supabase
-              .from('audit_trail')
-              .select('user_email, metadata')
-              .eq('document_id', documentId)
-              .eq('action', 'Document Sent for Signing')
-              .limit(1)
+            // Add all signers
+            if (completionData.signers) {
+              completionData.signers.forEach((s: any) => { if (s.signer_email) allRecipients.push(s.signer_email) })
+            }
             
-            if (auditData && auditData.length > 0) {
-              // Add document owner
-              if (auditData[0].user_email) {
-                allRecipients.push(auditData[0].user_email)
-              }
-              
-              // Add CC recipients from metadata
-              if (auditData[0].metadata) {
-                try {
-                  const metadata = JSON.parse(auditData[0].metadata)
-                  if (metadata.ccEmails && Array.isArray(metadata.ccEmails)) {
-                    allRecipients.push(...metadata.ccEmails)
-                  }
-                } catch (e) {
-                  // metadata is not JSON, ignore
+            // Add document owner
+            if (completionData.owner_email) {
+              allRecipients.push(completionData.owner_email)
+            }
+            
+            // Add CC recipients
+            if (completionData.cc_metadata) {
+              try {
+                const meta = typeof completionData.cc_metadata === 'string'
+                  ? JSON.parse(completionData.cc_metadata)
+                  : completionData.cc_metadata
+                if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
+                  allRecipients.push(...meta.ccEmails)
                 }
-              }
+              } catch (e) { /* not JSON */ }
             }
             
             const uniqueRecipients = [...new Set(allRecipients)]
@@ -460,7 +426,7 @@ export default function InviteSigningPage() {
                 await supabase.functions.invoke('send-signing-email', {
                   body: {
                     to: email,
-                    documentTitle: docData.title,
+                    documentTitle: completionData.title || 'Document',
                     signingLink: '',
                     senderName: 'SomadhanSign',
                     type: 'completion',
