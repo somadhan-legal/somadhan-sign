@@ -62,16 +62,16 @@ export async function generateAuditPdf(
   const iconSize = 28
   let textX = margin
 
-  // PNG Icon + "SomadhanSign" inline on same line
+  // PNG Icon + "SomadhanSign" inline on same line (aligned on baseline)
   if (logoImage) {
     const iconWidth = logoImage.width * (iconSize / logoImage.height)
     page.drawImage(logoImage, {
       x: margin,
-      y: yPos - iconSize + 6,
+      y: yPos - 4,
       width: iconWidth,
       height: iconSize,
     })
-    textX = margin + iconWidth + 6
+    textX = margin + iconWidth + 8
   }
 
   const somadhanWidth = fontBold.widthOfTextAtSize('Somadhan', 22)
@@ -239,17 +239,17 @@ export async function generateAuditPdf(
       page = pdfDoc.addPage([pageWidth, pageHeight])
       yPos = pageHeight - margin
       
-      // Inline icon + SomadhanSign branding
+      // Inline icon + SomadhanSign branding (aligned on baseline)
       let contTextX = margin
       if (logoImage) {
         const iconW = logoImage.width * (iconSize / logoImage.height)
         page.drawImage(logoImage, {
           x: margin,
-          y: yPos - iconSize + 6,
+          y: yPos - 4,
           width: iconW,
           height: iconSize,
         })
-        contTextX = margin + iconW + 6
+        contTextX = margin + iconW + 8
       }
       const contSomadhanW = fontBold.widthOfTextAtSize('Somadhan', 22)
       page.drawText('Somadhan', { x: contTextX, y: yPos, size: 22, font: fontBold, color: brandColor })
