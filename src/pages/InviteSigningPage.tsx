@@ -963,15 +963,15 @@ export default function InviteSigningPage() {
                       >
                         {isMine ? (
                           isCheckbox ? (
-                            <div className="w-3.5 h-3.5 border border-[hsl(var(--border))] rounded-sm" />
+                            <div className="w-3.5 h-3.5 border border-gray-500 rounded-sm" />
                           ) : isDate ? (
-                            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{isCurrentNav ? 'Tap to add date' : 'Date'}</span>
+                            <span className="text-[10px] text-black">{isCurrentNav ? 'Tap to add date' : 'Date'}</span>
                           ) : isText ? (
-                            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{isCurrentNav ? 'Tap to enter text' : 'Text'}</span>
+                            <span className="text-[10px] text-black">{isCurrentNav ? 'Tap to enter text' : 'Text'}</span>
                           ) : (
                             <>
-                              {fieldTypeIcons[field.field_type]}
-                              <span className="text-[10px] ml-1">
+                              <span className="text-black">{fieldTypeIcons[field.field_type]}</span>
+                              <span className="text-[10px] ml-1 text-black">
                                 {isCurrentNav ? 'Tap to sign' : isInitials ? 'Initials' : 'Your signature'}
                               </span>
                             </>

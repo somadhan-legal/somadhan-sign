@@ -50,44 +50,30 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
     padRef.current?.clear()
   }
 
-  const handleSave = () => {
+  // Convert drawn signature to black ink (for PDF — paper is always white)
+  const getBlackInkDataUrl = (): string | null => {
     if (activeTab === 'draw') {
-      if (padRef.current?.isEmpty()) return
-      const dataUrl = padRef.current?.toDataURL('image/png') || ''
-      onSave(dataUrl, 'drawn')
-    } else if (activeTab === 'type') {
-      if (!typedName.trim()) return
-      const canvas = document.createElement('canvas')
-      canvas.width = 600
-      canvas.height = 200
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.fillStyle = 'transparent'
-        ctx.fillRect(0, 0, 600, 200)
-        ctx.font = 'italic 64px "Georgia", serif'
-        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(typedName, 300, 100)
+      if (padRef.current?.isEmpty() || !canvasRef.current) return null
+      const srcCanvas = canvasRef.current
+      const outCanvas = document.createElement('canvas')
+      outCanvas.width = srcCanvas.width
+      outCanvas.height = srcCanvas.height
+      const ctx = outCanvas.getContext('2d')!
+      ctx.drawImage(srcCanvas, 0, 0)
+      if (isDark) {
+        // Invert white strokes to black
+        const imgData = ctx.getImageData(0, 0, outCanvas.width, outCanvas.height)
+        const d = imgData.data
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] > 0) { // has opacity
+            d[i] = 0;     // R
+            d[i + 1] = 0;  // G
+            d[i + 2] = 0;  // B
+          }
+        }
+        ctx.putImageData(imgData, 0, 0)
       }
-      onSave(canvas.toDataURL('image/png'), 'typed')
-    } else if (activeTab === 'upload' && uploadedImage) {
-      onSave(uploadedImage, 'uploaded')
-    }
-  }
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setUploadedImage(reader.result as string)
-    reader.readAsDataURL(file)
-  }
-
-  const getDataUrl = (): string | null => {
-    if (activeTab === 'draw') {
-      if (padRef.current?.isEmpty()) return null
-      return padRef.current?.toDataURL('image/png') || null
+      return outCanvas.toDataURL('image/png')
     } else if (activeTab === 'type') {
       if (!typedName.trim()) return null
       const canvas = document.createElement('canvas')
@@ -98,7 +84,7 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
         ctx.fillStyle = 'transparent'
         ctx.fillRect(0, 0, 600, 200)
         ctx.font = 'italic 64px "Georgia", serif'
-        ctx.fillStyle = isDark ? '#ffffff' : '#1e293b'
+        ctx.fillStyle = '#1e293b'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText(typedName, 300, 100)
@@ -110,8 +96,23 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
     return null
   }
 
+  const handleSave = () => {
+    const dataUrl = getBlackInkDataUrl()
+    if (!dataUrl) return
+    const type = activeTab === 'draw' ? 'drawn' : activeTab === 'type' ? 'typed' : 'uploaded'
+    onSave(dataUrl, type)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setUploadedImage(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
   const handleApplyToAll = () => {
-    const dataUrl = getDataUrl()
+    const dataUrl = getBlackInkDataUrl()
     if (dataUrl && onApplyToAll) {
       onApplyToAll(dataUrl)
     }
@@ -213,19 +214,19 @@ export default function SignaturePad({ onSave, onCancel, onApplyToAll, showApply
       )}
 
       <div className="flex flex-col gap-2 pt-2">
-        {showApplyAll && onApplyToAll && (
-          <Button className="w-full" variant="secondary" onClick={handleApplyToAll}>
-            {applyAllLabel || t('signee.applyToAll')}
-          </Button>
-        )}
         <div className="flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onCancel}>
             {t('editor.cancel')}
           </Button>
           <Button className="flex-1" onClick={handleSave}>
-            {t('signee.saveSignature') || 'Save Signature'}
+            {t('signee.saveSignature') || 'Save'}
           </Button>
         </div>
+        {showApplyAll && onApplyToAll && (
+          <Button className="w-full" variant="secondary" onClick={handleApplyToAll}>
+            {applyAllLabel || t('signee.applyToAll')}
+          </Button>
+        )}
       </div>
     </div>
   )
