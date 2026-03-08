@@ -26,9 +26,18 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured')
     }
 
-    const { to, documentTitle, signingLink, senderName, message, ccEmails, type } = await req.json()
+    const { to, documentTitle, signingLink, senderName, message, ccEmails, type, downloadUrl, pdfBase64 } = await req.json()
 
     const isCompletion = type === 'completion'
+
+    const downloadButton = downloadUrl ? `
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${downloadUrl}" 
+               style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+              ⬇ DOWNLOAD SIGNED DOCUMENT
+            </a>
+          </div>
+    ` : ''
 
     const completionHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -62,13 +71,13 @@ serve(async (req) => {
             ${documentTitle}
           </p>
           
-          <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 20px;">
-            ${message || 'All parties have signed this document. The document is now complete.'}
+          <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
+            All parties have signed this document. The document is now complete.
           </p>
-          
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">
-            You can download the signed document from your Somadhan Sign dashboard.
-          </p>
+
+          ${downloadButton}
+
+          ${pdfBase64 ? '<p style="color: #6b7280; font-size: 13px; line-height: 1.6;">The signed document is also attached to this email.</p>' : ''}
           
           <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">
             Best,<br>
@@ -170,6 +179,17 @@ serve(async (req) => {
     // Add CC emails if provided
     if (ccEmails && ccEmails.length > 0) {
       emailPayload.cc = ccEmails
+    }
+
+    // Add PDF attachment for completion emails
+    if (isCompletion && pdfBase64) {
+      const safeTitle = (documentTitle || 'document').replace(/[^a-zA-Z0-9_\- ]/g, '_')
+      emailPayload.attachments = [
+        {
+          filename: `${safeTitle}_signed.pdf`,
+          content: pdfBase64,
+        },
+      ]
     }
 
     console.log('Sending email with payload:', JSON.stringify(emailPayload))

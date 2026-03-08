@@ -337,17 +337,15 @@ export default function InviteSigningPage() {
         const { error: rpcError } = await (supabase as any)
           .rpc('mark_document_completed', { p_document_id: documentId })
         
-        console.log('[checkCompletion] mark_document_completed RPC result:', rpcError)
-        
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
-          // Fallback attempt
           await updateDocumentStatus(documentId, 'completed')
         }
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
-        // Send completion emails to all signers and document owner
+        // Generate signed PDF, upload, and send completion emails
         try {
+          // Fetch all data needed for PDF generation and emails
           const { data: allSignersData } = await supabase
             .from('document_signers')
             .select('signer_email, signer_name')
@@ -355,22 +353,106 @@ export default function InviteSigningPage() {
           
           const { data: docData } = await supabase
             .from('documents')
-            .select('title, created_by')
+            .select('title, created_by, original_pdf_url')
             .eq('id', documentId)
             .single()
           
+          const { data: allFields } = await supabase
+            .from('signature_fields')
+            .select('*')
+            .eq('document_id', documentId)
+          
+          const { data: allPlacements } = await supabase
+            .from('signature_placements')
+            .select('*')
+            .eq('document_id', documentId)
+          
+          let downloadUrl = ''
+          let pdfBase64 = ''
+          
+          // Generate and upload signed PDF
+          if (docData?.original_pdf_url && allFields && allPlacements) {
+            try {
+              const signedFields: SignedField[] = allPlacements.map((p: any) => {
+                const field = allFields.find((f: any) => f.id === p.field_id)
+                return {
+                  field_type: field?.field_type || 'signature',
+                  page_number: field?.page_number || 1,
+                  x_percent: field?.x || 0,
+                  y_percent: field?.y || 0,
+                  width_percent: field?.width || 10,
+                  height_percent: field?.height || 5,
+                  signature_id: p.signature_id,
+                }
+              })
+              
+              const signedBlob = await generateSignedPdf(docData.original_pdf_url, signedFields)
+              
+              // Upload to Supabase storage (signed/ folder allows unauthenticated uploads)
+              const fileName = `signed/${documentId}_${Date.now()}.pdf`
+              const { error: uploadError } = await supabase.storage
+                .from('documents')
+                .upload(fileName, signedBlob, { contentType: 'application/pdf', upsert: true })
+              
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage
+                  .from('documents')
+                  .getPublicUrl(fileName)
+                downloadUrl = urlData?.publicUrl || ''
+                
+                // Save final PDF URL to document record
+                await (supabase as any).rpc('save_final_pdf_url', {
+                  p_document_id: documentId,
+                  p_final_pdf_url: downloadUrl,
+                })
+              } else {
+                console.error('Error uploading signed PDF:', uploadError)
+              }
+              
+              // Convert PDF blob to base64 for email attachment
+              const arrayBuffer = await signedBlob.arrayBuffer()
+              const uint8Array = new Uint8Array(arrayBuffer)
+              let binaryStr = ''
+              for (let i = 0; i < uint8Array.length; i++) {
+                binaryStr += String.fromCharCode(uint8Array[i])
+              }
+              pdfBase64 = btoa(binaryStr)
+            } catch (pdfErr) {
+              console.error('Error generating signed PDF:', pdfErr)
+            }
+          }
+          
+          // Send completion emails to all signers, document owner, and CC recipients
           if (allSignersData && docData) {
             const allRecipients = allSignersData.map((s: any) => s.signer_email)
-            // Try to get document owner's email from audit trail
+            
+            // Get document owner's email and CC emails from audit trail
             const { data: auditData } = await supabase
               .from('audit_trail')
-              .select('user_email')
+              .select('user_email, metadata')
               .eq('document_id', documentId)
-              .eq('action', 'Document Sent')
+              .eq('action', 'Document Sent for Signing')
               .limit(1)
-            if (auditData && auditData.length > 0 && auditData[0].user_email) {
-              allRecipients.push(auditData[0].user_email)
+            
+            if (auditData && auditData.length > 0) {
+              // Add document owner
+              if (auditData[0].user_email) {
+                allRecipients.push(auditData[0].user_email)
+              }
+              
+              // Add CC recipients from metadata
+              if (auditData[0].metadata) {
+                try {
+                  const metadata = JSON.parse(auditData[0].metadata)
+                  if (metadata.ccEmails && Array.isArray(metadata.ccEmails)) {
+                    allRecipients.push(...metadata.ccEmails)
+                  }
+                } catch (e) {
+                  // metadata is not JSON, ignore
+                }
+              }
             }
+            
             const uniqueRecipients = [...new Set(allRecipients)]
             
             for (const email of uniqueRecipients) {
@@ -381,8 +463,9 @@ export default function InviteSigningPage() {
                     documentTitle: docData.title,
                     signingLink: '',
                     senderName: 'SomadhanSign',
-                    message: `All parties have signed "${docData.title}". The document is now complete. You can download the signed document from your SomadhanSign dashboard.`,
                     type: 'completion',
+                    downloadUrl,
+                    pdfBase64,
                   },
                 })
               } catch (emailErr) {
@@ -392,7 +475,7 @@ export default function InviteSigningPage() {
             await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients`)
           }
         } catch (completionErr) {
-          console.error('Error sending completion emails:', completionErr)
+          console.error('Error in completion flow:', completionErr)
         }
       }
       

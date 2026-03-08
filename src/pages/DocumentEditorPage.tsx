@@ -418,9 +418,10 @@ export default function DocumentEditorPage() {
     
     await sendForSigning(id, senderName, sendMessage, ccEmailsList)
     
-    // Log document sent
+    // Log document sent (store CC emails in metadata for completion emails)
     if (user.email) {
-      await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, `Sent to ${signers.length} signer(s)`)
+      const metadata = ccEmailsList.length > 0 ? JSON.stringify({ ccEmails: ccEmailsList }) : `Sent to ${signers.length} signer(s)`
+      await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, metadata)
     }
     
     await fetchSigners(id)
