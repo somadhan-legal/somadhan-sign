@@ -48,7 +48,7 @@ export default function DashboardPage() {
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const itemsPerPage = 5
   const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
 
   // Reset upload form state
