@@ -531,9 +531,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     // Send view-only notification emails to CC recipients
     if (ccEmails && ccEmails.length > 0) {
       const viewLink = `${window.location.origin}/view/${documentId}`
+      const signeeEmails = signers.map(s => s.signer_email)
       for (const ccEmail of ccEmails) {
         try {
-          await supabase.functions.invoke('send-signing-email', {
+          const { error: ccErr } = await supabase.functions.invoke('send-signing-email', {
             body: {
               to: ccEmail,
               documentTitle: doc.title,
@@ -542,8 +543,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
               message: message || '',
               type: 'cc-notification',
               viewLink,
+              signeeEmails,
             },
           })
+          if (ccErr) {
+            console.error(`Failed to send CC notification to ${ccEmail}:`, ccErr)
+          }
         } catch (err) {
           console.error(`Error sending CC notification to ${ccEmail}:`, err)
         }

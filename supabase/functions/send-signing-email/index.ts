@@ -43,7 +43,7 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured')
     }
 
-    const { to, documentTitle, signingLink, senderName, message, ccEmails, type, downloadUrl, pdfBase64, viewLink } = await req.json()
+    const { to, documentTitle, signingLink, senderName, message, ccEmails, type, downloadUrl, pdfBase64, viewLink, signeeEmails } = await req.json()
 
     const isCompletion = type === 'completion'
     const isCcNotification = type === 'cc-notification'
@@ -82,11 +82,15 @@ serve(async (req) => {
       </div>`
 
     // --- CC Notification email (view-only) ---
+    const signeeList = signeeEmails && Array.isArray(signeeEmails) && signeeEmails.length > 0
+      ? signeeEmails.map((e: string) => `<span style="background: #f3f4f6; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #374151; display: inline-block; margin: 2px 4px 2px 0;">${e}</span>`).join('')
+      : ''
+
     const ccNotificationHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         ${headerLogo(`
           <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
-            <strong>${senderName || ''}</strong> shared a document with you for viewing
+            <strong>${senderName || ''}</strong> initiated signing on a document
           </p>
         `)}
         <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
@@ -100,7 +104,16 @@ serve(async (req) => {
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
           <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${documentTitle}</p>
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
-            You have been added as a viewer on this document. You can view the document and track its signing progress.
+            <strong>${senderName || 'Someone'}</strong> has initiated signing on this document between the following parties:
+          </p>
+          ${signeeList ? `
+            <div style="margin: 12px 0 20px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 600;">Signees</p>
+              <div>${signeeList}</div>
+            </div>
+          ` : ''}
+          <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
+            You have been added as a viewer (CC) on this document. You can view the document and track its signing progress.
           </p>
           ${message ? `
             <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
