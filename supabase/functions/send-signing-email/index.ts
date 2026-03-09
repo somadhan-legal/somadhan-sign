@@ -16,13 +16,10 @@ const headerLogo = (afterLogo: string) => `
     ${afterLogo}
   </div>`
 
-// Footer with logo image on teal background pill
+// Footer - simple text only, no logo
 const footer = `
   <div style="text-align: center; padding: 20px;">
-    <div style="display: inline-block; background-color: #075056; border-radius: 8px; padding: 10px 20px; margin-bottom: 8px;">
-      <img src="${logoUrl}" alt="SomadhanSign" style="height: 28px; width: auto; display: block;" />
-    </div>
-    <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0;">
+    <p style="color: #9ca3af; font-size: 11px; margin: 0;">
       Somadhan &middot; Dhaka, Bangladesh
     </p>
   </div>`
