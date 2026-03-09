@@ -82,9 +82,17 @@ serve(async (req) => {
       </div>`
 
     // --- CC Notification email (view-only) ---
-    const signeeList = signeeEmails && Array.isArray(signeeEmails) && signeeEmails.length > 0
-      ? signeeEmails.map((e: string) => `<span style="background: #f3f4f6; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #374151; display: inline-block; margin: 2px 4px 2px 0;">${e}</span>`).join('')
-      : ''
+    console.log('CC notification signeeEmails:', JSON.stringify(signeeEmails))
+
+    let signeeListHtml = ''
+    if (signeeEmails && Array.isArray(signeeEmails) && signeeEmails.length > 0) {
+      const pills = signeeEmails.map((e: string) => `<span style="background: #f3f4f6; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #374151; display: inline-block; margin: 2px 4px 2px 0;">${e}</span>`).join('')
+      signeeListHtml = `
+        <div style="margin: 12px 0 20px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 600;">Signees</p>
+          <div>${pills}</div>
+        </div>`
+    }
 
     const ccNotificationHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -106,12 +114,7 @@ serve(async (req) => {
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
             <strong>${senderName || 'Someone'}</strong> has initiated signing on this document between the following parties:
           </p>
-          ${signeeList ? `
-            <div style="margin: 12px 0 20px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 600;">Signees</p>
-              <div>${signeeList}</div>
-            </div>
-          ` : ''}
+          ${signeeListHtml}
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
             You have been added as a viewer (CC) on this document. You can view the document and track its signing progress.
           </p>

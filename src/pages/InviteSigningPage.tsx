@@ -314,24 +314,30 @@ export default function InviteSigningPage() {
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
+    console.log('[checkCompletion] remaining fields:', remaining.length, 'myFields:', myFields.length, 'placements:', latestPlacements.length)
     if (remaining.length === 0) {
+      console.log('[checkCompletion] All fields signed, updating signer status...')
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
       // Use RPC to check if all signers signed (bypasses RLS — unauthenticated signers can't read document_signers)
       await new Promise(r => setTimeout(r, 1000))
+      console.log('[checkCompletion] Checking if all signers signed...')
       const { data: allSigned, error: checkErr } = await (supabase as any)
         .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
       
-      console.log('[checkCompletion] allSigned:', allSigned, 'error:', checkErr)
+      console.log('[checkCompletion] allSigned:', allSigned, 'type:', typeof allSigned, 'error:', checkErr)
       
-      if (allSigned === true) {
+      if (allSigned) {
         // Mark document as completed (bypasses RLS)
+        console.log('[checkCompletion] Marking document as completed...')
         const { error: rpcError } = await (supabase as any)
           .rpc('mark_document_completed', { p_document_id: documentId })
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
+        } else {
+          console.log('[checkCompletion] Document marked as completed successfully')
         }
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
