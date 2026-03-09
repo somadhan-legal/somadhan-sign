@@ -9,7 +9,7 @@ const logoUrl = 'https://cfurkapaksdjsqeydhew.supabase.co/storage/v1/object/publ
 
 // Header with logo image
 const headerLogo = (afterLogo: string) => `
-  <div style="background-color: #0e6e6e; background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+  <div style="background-color: #075056; background: linear-gradient(135deg, #075056 0%, #0a6b72 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
     <div>
       <img src="${logoUrl}" alt="SomadhanSign" style="height: 40px; width: auto; display: inline-block;" />
     </div>
@@ -54,7 +54,7 @@ serve(async (req) => {
     const downloadButton = downloadUrl ? `
       <div style="text-align: center; margin: 28px 0;">
         <a href="${downloadUrl}" 
-           style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+           style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
           ⬇ DOWNLOAD SIGNED DOCUMENT
         </a>
       </div>` : ''
@@ -94,7 +94,7 @@ serve(async (req) => {
         <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${signingLink}" 
-               style="background: #0e6e6e; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
+               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
               REVIEW AND SIGN
             </a>
           </div>
