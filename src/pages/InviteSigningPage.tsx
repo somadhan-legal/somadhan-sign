@@ -357,129 +357,135 @@ export default function InviteSigningPage() {
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
         // Get all document data via RPC (bypasses RLS)
+        let completionData: any = null
         try {
-          const { data: completionData, error: compErr } = await (supabase as any)
+          const { data, error: compErr } = await (supabase as any)
             .rpc('get_document_for_completion', { p_document_id: documentId })
-          
-          console.log('[checkCompletion] completionData:', completionData ? 'loaded' : 'null', 'error:', compErr)
-          
-          let downloadUrl = ''
-          let pdfBase64 = ''
-          
-          // Generate signed PDF + audit trail combined
-          if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
-            try {
-              const signedFields: SignedField[] = completionData.placements.map((p: any) => {
-                const field = completionData.fields.find((f: any) => f.id === p.field_id)
-                return {
-                  field_type: field?.field_type || 'signature',
-                  page_number: field?.page_number || 1,
-                  x_percent: field?.x || 0,
-                  y_percent: field?.y || 0,
-                  width_percent: field?.width || 10,
-                  height_percent: field?.height || 5,
-                  signature_id: p.signature_id,
-                }
-              })
-              
-              // Step 1: Generate signed PDF
-              const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
-              
-              // Step 2: Append audit trail pages to the signed PDF
-              let finalBlob = signedBlob
-              if (completionData.audit_trail && completionData.audit_trail.length > 0) {
-                const signedUrl = URL.createObjectURL(signedBlob)
-                try {
-                  finalBlob = await generateAuditPdf(signedUrl, completionData.audit_trail, completionData.title || 'Document')
-                } finally {
-                  URL.revokeObjectURL(signedUrl)
-                }
+          completionData = data
+          console.log('[completion] RPC data loaded:', !!completionData, 'error:', compErr)
+        } catch (rpcErr) {
+          console.error('[completion] RPC get_document_for_completion failed:', rpcErr)
+        }
+        
+        let downloadUrl = ''
+        let pdfBase64 = ''
+        
+        // Generate signed PDF + audit trail combined (non-blocking for email)
+        if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
+          try {
+            console.log('[completion] Generating signed PDF...')
+            const signedFields: SignedField[] = completionData.placements.map((p: any) => {
+              const field = completionData.fields.find((f: any) => f.id === p.field_id)
+              return {
+                field_type: field?.field_type || 'signature',
+                page_number: field?.page_number || 1,
+                x_percent: field?.x || 0,
+                y_percent: field?.y || 0,
+                width_percent: field?.width || 10,
+                height_percent: field?.height || 5,
+                signature_id: p.signature_id,
               }
-              
-              // Step 3: Upload combined PDF to storage
-              const fileName = `signed/${documentId}_${Date.now()}.pdf`
-              const { error: uploadError } = await supabase.storage
-                .from('documents')
-                .upload(fileName, finalBlob, { contentType: 'application/pdf', upsert: true })
-              
-              if (!uploadError) {
-                const { data: urlData } = supabase.storage
-                  .from('documents')
-                  .getPublicUrl(fileName)
-                downloadUrl = urlData?.publicUrl || ''
-                
-                // Save final PDF URL to document record
-                await (supabase as any).rpc('save_final_pdf_url', {
-                  p_document_id: documentId,
-                  p_final_pdf_url: downloadUrl,
-                })
-              } else {
-                console.error('Error uploading signed PDF:', uploadError)
+            })
+            
+            const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
+            
+            let finalBlob = signedBlob
+            if (completionData.audit_trail && completionData.audit_trail.length > 0) {
+              const signedUrl = URL.createObjectURL(signedBlob)
+              try {
+                finalBlob = await generateAuditPdf(signedUrl, completionData.audit_trail, completionData.title || 'Document')
+              } finally {
+                URL.revokeObjectURL(signedUrl)
               }
-              
-              // Step 4: Convert combined PDF to base64 for email attachment
-              const arrayBuffer = await finalBlob.arrayBuffer()
-              const uint8Array = new Uint8Array(arrayBuffer)
-              let binaryStr = ''
-              for (let i = 0; i < uint8Array.length; i++) {
-                binaryStr += String.fromCharCode(uint8Array[i])
-              }
-              pdfBase64 = btoa(binaryStr)
-            } catch (pdfErr) {
-              console.error('Error generating signed PDF:', pdfErr)
             }
+            
+            const fileName = `signed/${documentId}_${Date.now()}.pdf`
+            const { error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(fileName, finalBlob, { contentType: 'application/pdf', upsert: true })
+            
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('documents')
+                .getPublicUrl(fileName)
+              downloadUrl = urlData?.publicUrl || ''
+              
+              await (supabase as any).rpc('save_final_pdf_url', {
+                p_document_id: documentId,
+                p_final_pdf_url: downloadUrl,
+              })
+              console.log('[completion] PDF uploaded, downloadUrl:', downloadUrl)
+            } else {
+              console.error('[completion] Upload error:', uploadError)
+            }
+            
+            const arrayBuffer = await finalBlob.arrayBuffer()
+            const uint8Array = new Uint8Array(arrayBuffer)
+            let binaryStr = ''
+            for (let i = 0; i < uint8Array.length; i++) {
+              binaryStr += String.fromCharCode(uint8Array[i])
+            }
+            pdfBase64 = btoa(binaryStr)
+            console.log('[completion] PDF base64 ready, length:', pdfBase64.length)
+          } catch (pdfErr) {
+            console.error('[completion] PDF generation error (will still send email):', pdfErr)
+          }
+        } else {
+          console.warn('[completion] Missing PDF data, skipping PDF generation')
+        }
+        
+        // Send completion email — always attempt even if PDF failed
+        try {
+          const directRecipients: string[] = []
+          
+          if (completionData?.signers) {
+            completionData.signers.forEach((s: any) => { if (s.signer_email) directRecipients.push(s.signer_email) })
           }
           
-          // Send ONE completion email: all signers + owner in TO, all CC in CC field
-          if (completionData) {
-            const directRecipients: string[] = []
-            
-            // Add all signers
-            if (completionData.signers) {
-              completionData.signers.forEach((s: any) => { if (s.signer_email) directRecipients.push(s.signer_email) })
-            }
-            
-            // Add document owner
-            if (completionData.owner_email) {
-              directRecipients.push(completionData.owner_email)
-            }
-            
-            // Extract CC emails
-            let ccEmails: string[] = []
-            if (completionData.cc_metadata) {
-              try {
-                const meta = typeof completionData.cc_metadata === 'string'
-                  ? JSON.parse(completionData.cc_metadata)
-                  : completionData.cc_metadata
-                if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
-                  ccEmails = meta.ccEmails
-                }
-              } catch (e) { /* not JSON */ }
-            }
-            
-            const uniqueRecipients = [...new Set(directRecipients)]
-            
-            // Send single completion email to all recipients at once
+          if (completionData?.owner_email) {
+            directRecipients.push(completionData.owner_email)
+          }
+          
+          // Extract CC emails from audit trail metadata
+          let ccEmails: string[] = []
+          if (completionData?.cc_metadata) {
             try {
-              await supabase.functions.invoke('send-signing-email', {
-                body: {
-                  to: uniqueRecipients,
-                  documentTitle: completionData.title || 'Document',
-                  signingLink: '',
-                  senderName: 'SomadhanSign',
-                  type: 'completion',
-                  downloadUrl,
-                  pdfBase64,
-                  ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
-                },
-              })
-            } catch (emailErr) {
-              console.error('Error sending completion email:', emailErr)
+              const meta = typeof completionData.cc_metadata === 'string'
+                ? JSON.parse(completionData.cc_metadata)
+                : completionData.cc_metadata
+              if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
+                ccEmails = meta.ccEmails
+              }
+            } catch (e) { /* not JSON */ }
+          }
+          
+          const uniqueRecipients = [...new Set(directRecipients)]
+          console.log('[completion] Sending email to:', uniqueRecipients, 'CC:', ccEmails)
+          
+          if (uniqueRecipients.length > 0) {
+            const { error: emailFnErr } = await supabase.functions.invoke('send-signing-email', {
+              body: {
+                to: uniqueRecipients,
+                documentTitle: completionData?.title || 'Document',
+                signingLink: '',
+                senderName: 'SomadhanSign',
+                type: 'completion',
+                downloadUrl,
+                pdfBase64,
+                ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
+              },
+            })
+            if (emailFnErr) {
+              console.error('[completion] Edge function error:', emailFnErr)
+            } else {
+              console.log('[completion] Completion email sent successfully')
             }
             await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`)
+          } else {
+            console.warn('[completion] No recipients found for completion email')
           }
-        } catch (completionErr) {
-          console.error('Error in completion flow:', completionErr)
+        } catch (emailErr) {
+          console.error('[completion] Error sending completion email:', emailErr)
         }
       }
       
