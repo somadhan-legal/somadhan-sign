@@ -122,9 +122,8 @@ export default function DocumentEditorPage() {
   // Inline confirmation for signer deletion
   const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
   
-  // Panel collapse states
+  // Panel collapse state
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
 
   useEffect(() => {
     if (id) fetchDocument(id)
