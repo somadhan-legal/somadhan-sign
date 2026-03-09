@@ -92,7 +92,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUpWithEmail: async (email: string, password: string, name: string) => {
     set({ loading: true })
     try {
-      const { error } = await supabase.auth.signUp({
+      const beforeSignup = new Date()
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -101,6 +102,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         },
       })
       if (error) throw error
+      // Supabase returns a user with empty identities when email already exists (confirmed user)
+      if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('User already exists')
+      }
+      // Also detect existing user: if created_at is well before this signup call, user already existed
+      if (data?.user?.created_at) {
+        const createdAt = new Date(data.user.created_at)
+        if (beforeSignup.getTime() - createdAt.getTime() > 5000) {
+          throw new Error('User already exists')
+        }
+      }
       set({ loading: false })
     } catch (error) {
       set({ loading: false })

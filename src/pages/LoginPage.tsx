@@ -78,8 +78,8 @@ export default function LoginPage() {
             setOtpAttempts([Date.now()])
           } catch (signupError: any) {
             if (signupError?.message?.includes('already registered') || signupError?.message?.includes('User already exists')) {
-              setError('This email is already registered. Please login instead or use forgot password if you need to reset.')
-              setTimeout(() => setMode('login'), 3000)
+              setMode('login')
+              setError('This email is already registered. Please login with your password or use "Forgot password" to reset it. If you signed up with Google, use "Continue with Google" instead.')
             } else {
               throw signupError
             }
