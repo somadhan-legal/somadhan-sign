@@ -113,60 +113,52 @@ serve(async (req) => {
 
     const emailHtml = isCompletion ? completionHtml : invitationHtml
 
-    // Build list of all recipients (TO + CC as separate emails)
-    const allRecipients = [to]
-    if (ccEmails && ccEmails.length > 0) {
-      for (const cc of ccEmails) {
-        if (cc && !allRecipients.includes(cc)) allRecipients.push(cc)
-      }
+    // Build email payload - send to primary recipient with CC if provided
+    const emailPayload: any = {
+      from: 'Somadhan Sign <noreply@somadhan.com>',
+      to: [to],
+      subject: isCompletion
+        ? `✓ "${documentTitle}" — All parties have signed`
+        : `${senderName} has requested your signature on "${documentTitle}"`,
+      html: emailHtml,
     }
 
-    const results = []
+    // Add CC recipients to email header (they won't get separate emails)
+    if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
+      emailPayload.cc = ccEmails
+    }
 
-    for (const recipient of allRecipients) {
-      const emailPayload: any = {
-        from: 'Somadhan Sign <noreply@somadhan.com>',
-        to: [recipient],
-        subject: isCompletion
-          ? `✓ "${documentTitle}" — All parties have signed`
-          : `${senderName} has requested your signature on "${documentTitle}"`,
-        html: emailHtml,
-      }
-
-      // Add PDF attachment for completion emails
-      if (isCompletion && pdfBase64) {
-        const safeTitle = (documentTitle || 'document').replace(/[^a-zA-Z0-9_\- ]/g, '_')
-        emailPayload.attachments = [
-          {
-            filename: `${safeTitle}_signed.pdf`,
-            content: pdfBase64,
-          },
-        ]
-      }
-
-      console.log('Sending email to:', recipient)
-
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
+    // Add PDF attachment for completion emails
+    if (isCompletion && pdfBase64) {
+      const safeTitle = (documentTitle || 'document').replace(/[^a-zA-Z0-9_\- ]/g, '_')
+      emailPayload.attachments = [
+        {
+          filename: `${safeTitle}_signed.pdf`,
+          content: pdfBase64,
         },
-        body: JSON.stringify(emailPayload),
-      })
+      ]
+    }
 
-      const data = await res.json()
-      console.log('Resend API response for', recipient, ':', JSON.stringify(data))
+    console.log('Sending email to:', to, ccEmails ? `(CC: ${ccEmails.join(', ')})` : '')
 
-      if (!res.ok) {
-        console.error('Resend API Error for', recipient, ':', data)
-      }
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify(emailPayload),
+    })
 
-      results.push({ recipient, success: res.ok, data })
+    const data = await res.json()
+    console.log('Resend API response:', JSON.stringify(data))
+
+    if (!res.ok) {
+      console.error('Resend API Error:', data)
     }
 
     return new Response(
-      JSON.stringify({ success: true, results }),
+      JSON.stringify({ success: true }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

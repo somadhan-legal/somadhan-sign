@@ -409,34 +409,36 @@ export default function InviteSigningPage() {
             }
           }
           
-          // Build recipient list: signers + owner + CC
+          // Build recipient list: signers + owner (NOT CC - they only get CC'd)
           if (completionData) {
-            const allRecipients: string[] = []
+            const directRecipients: string[] = []
             
             // Add all signers
             if (completionData.signers) {
-              completionData.signers.forEach((s: any) => { if (s.signer_email) allRecipients.push(s.signer_email) })
+              completionData.signers.forEach((s: any) => { if (s.signer_email) directRecipients.push(s.signer_email) })
             }
             
             // Add document owner
             if (completionData.owner_email) {
-              allRecipients.push(completionData.owner_email)
+              directRecipients.push(completionData.owner_email)
             }
             
-            // Add CC recipients
+            // Extract CC emails (they won't get direct emails, only CC'd)
+            let ccEmails: string[] = []
             if (completionData.cc_metadata) {
               try {
                 const meta = typeof completionData.cc_metadata === 'string'
                   ? JSON.parse(completionData.cc_metadata)
                   : completionData.cc_metadata
                 if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
-                  allRecipients.push(...meta.ccEmails)
+                  ccEmails = meta.ccEmails
                 }
               } catch (e) { /* not JSON */ }
             }
             
-            const uniqueRecipients = [...new Set(allRecipients)]
+            const uniqueRecipients = [...new Set(directRecipients)]
             
+            // Send to direct recipients only (signers + owner), with CC emails in CC field
             for (const email of uniqueRecipients) {
               try {
                 await supabase.functions.invoke('send-signing-email', {
@@ -448,13 +450,14 @@ export default function InviteSigningPage() {
                     type: 'completion',
                     downloadUrl,
                     pdfBase64,
+                    ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
                   },
                 })
               } catch (emailErr) {
                 console.error('Error sending completion email to', email, emailErr)
               }
             }
-            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients`)
+            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`)
           }
         } catch (completionErr) {
           console.error('Error in completion flow:', completionErr)
