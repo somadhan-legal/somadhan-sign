@@ -79,7 +79,7 @@ export default function LoginPage() {
           } catch (signupError: any) {
             if (signupError?.message?.includes('already registered') || signupError?.message?.includes('User already exists')) {
               setMode('login')
-              setError('This email is already registered. Please login with your password or use "Forgot password" to reset it. If you signed up with Google, use "Continue with Google" instead.')
+              setError(t('login.alreadyRegistered'))
             } else {
               throw signupError
             }

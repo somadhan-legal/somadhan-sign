@@ -6,7 +6,6 @@ import {
   Send,
   UserPlus,
   ChevronRight,
-  ChevronLeft,
   ChevronUp,
   ChevronDown,
   X,
@@ -16,6 +15,8 @@ import {
   SquareCheck,
   CheckCircle2,
   HelpCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -669,22 +670,23 @@ export default function DocumentEditorPage() {
           )}
           <button
             onClick={() => setLeftPanelCollapsed(true)}
-            className="w-full py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded transition-colors flex items-center justify-center gap-1"
+            className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+            title="Collapse panel"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            Collapse
+            <PanelLeftClose className="w-5 h-5" />
           </button>
         </div>
       </div>
       )}
       
-      {/* Collapse button when left panel is collapsed */}
+      {/* Expand button when left panel is collapsed */}
       {leftPanelCollapsed && (
         <button
           onClick={() => setLeftPanelCollapsed(false)}
-          className="w-8 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center"
+          className="w-10 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
+          title="Expand panel"
         >
-          <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+          <PanelLeftOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
         </button>
       )}
 

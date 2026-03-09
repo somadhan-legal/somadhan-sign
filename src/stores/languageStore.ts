@@ -111,6 +111,10 @@ const translations: Record<string, Record<Language, string>> = {
     bn: 'আপনার ইমেইল দিন এবং আমরা পাসওয়ার্ড রিসেট লিঙ্ক পাঠাব',
   },
   'login.sendResetLink': { en: 'Send Reset Link', bn: 'রিসেট লিঙ্ক পাঠান' },
+  'login.alreadyRegistered': {
+    en: 'This email is already registered. Please login with your password or use "Forgot password" to reset it. If you signed up with Google, use "Continue with Google" instead.',
+    bn: 'এই ইমেইলটি ইতিমধ্যে নিবন্ধিত। অনুগ্রহ করে আপনার পাসওয়ার্ড দিয়ে লগইন করুন অথবা "পাসওয়ার্ড ভুলে গেছেন?" ব্যবহার করুন। আপনি যদি Google দিয়ে সাইন আপ করে থাকেন, তাহলে "Google দিয়ে চালিয়ে যান" ব্যবহার করুন।',
+  },
   'login.backToSignIn': { en: 'Back to sign in', bn: 'সাইন ইন-এ ফিরে যান' },
   'login.verifyEmail': { en: 'Verify your email', bn: 'আপনার ইমেইল যাচাই করুন' },
   'login.verifyEmailDesc': { en: 'Enter the 6-digit code sent to', bn: '৬ সংখ্যার কোড দিন যা পাঠানো হয়েছে' },
