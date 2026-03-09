@@ -87,6 +87,7 @@ export default function InviteSigningPage() {
   const hasLoggedView = useRef(false)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => {
     if (!token) return
@@ -461,8 +462,20 @@ export default function InviteSigningPage() {
       }
       
       setFinished(true)
+      setCountdown(3)
     }
   }
+  
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return
+    
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
+  }, [countdown])
 
   const getPageFields = (pageNumber: number) => signatureFields.filter(
     (f) => f.document_id === documentId && f.page_number === pageNumber
@@ -650,7 +663,7 @@ export default function InviteSigningPage() {
 
   if (finished) {
     return (
-      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
+      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))] relative">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
           <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
@@ -664,6 +677,22 @@ export default function InviteSigningPage() {
             </Button>
           </div>
         </div>
+        
+        {/* Countdown in bottom-left */}
+        {countdown !== null && countdown > 0 && (
+          <div className="fixed bottom-6 left-6 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
+            <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+            <div>
+              <p className="text-sm font-medium text-[hsl(var(--foreground))]">
+                {lang === 'bn' ? 'প্রক্রিয়াকরণ...' : 'Processing...'}
+              </p>
+              <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                {countdown}s
+              </p>
+            </div>
+          </div>
+        )}
+        
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md p-8">
             <div className="w-20 h-20 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-6">
