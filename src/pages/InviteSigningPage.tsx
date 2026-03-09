@@ -321,12 +321,27 @@ export default function InviteSigningPage() {
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
       // Use RPC to check if all signers signed (bypasses RLS — unauthenticated signers can't read document_signers)
-      await new Promise(r => setTimeout(r, 1000))
-      console.log('[checkCompletion] Checking if all signers signed...')
-      const { data: allSigned, error: checkErr } = await (supabase as any)
-        .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
+      // Retry up to 3 times with increasing delay to handle race conditions
+      let allSigned = false
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await new Promise(r => setTimeout(r, attempt * 1500))
+        console.log(`[checkCompletion] Attempt ${attempt}: Checking if all signers signed...`)
+        const { data, error: checkErr } = await (supabase as any)
+          .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
+        console.log(`[checkCompletion] Attempt ${attempt}: allSigned:`, data, 'type:', typeof data, 'error:', checkErr)
+        if (data) {
+          allSigned = true
+          break
+        }
+        if (checkErr) {
+          console.error(`[checkCompletion] Attempt ${attempt} error:`, checkErr)
+          break
+        }
+      }
       
-      console.log('[checkCompletion] allSigned:', allSigned, 'type:', typeof allSigned, 'error:', checkErr)
+      if (!allSigned) {
+        console.warn('[checkCompletion] All retries exhausted — other signers may not have completed yet')
+      }
       
       if (allSigned) {
         // Mark document as completed (bypasses RLS)
