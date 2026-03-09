@@ -6,6 +6,7 @@ import {
   Send,
   UserPlus,
   ChevronRight,
+  ChevronLeft,
   ChevronUp,
   ChevronDown,
   X,
@@ -120,6 +121,10 @@ export default function DocumentEditorPage() {
   
   // Inline confirmation for signer deletion
   const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
+  
+  // Panel collapse states
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -491,6 +496,7 @@ export default function DocumentEditorPage() {
   return (
     <div className="flex h-full">
       {/* Left Sidebar */}
+      {!leftPanelCollapsed && (
       <div className="w-56 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col overflow-hidden">
         {/* Scrollable sidebar content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -662,8 +668,26 @@ export default function DocumentEditorPage() {
               </Button>
             </>
           )}
+          <button
+            onClick={() => setLeftPanelCollapsed(true)}
+            className="w-full py-1.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded transition-colors flex items-center justify-center gap-1"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Collapse
+          </button>
         </div>
       </div>
+      )}
+      
+      {/* Collapse button when left panel is collapsed */}
+      {leftPanelCollapsed && (
+        <button
+          onClick={() => setLeftPanelCollapsed(false)}
+          className="w-8 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center"
+        >
+          <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+        </button>
+      )}
 
       {/* PDF Viewer */}
       <div

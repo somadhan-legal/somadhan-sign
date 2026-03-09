@@ -84,6 +84,7 @@ export default function InviteSigningPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const hasLoggedView = useRef(false)
   const { isDark, toggle } = useThemeStore()
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
 
   useEffect(() => {
     if (!token) return
@@ -700,6 +701,7 @@ export default function InviteSigningPage() {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
+      {!leftPanelCollapsed && (
       <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
@@ -897,8 +899,28 @@ export default function InviteSigningPage() {
               </p>
             </div>
           )}
+          
+          {/* Collapse button */}
+          <button
+            onClick={() => setLeftPanelCollapsed(true)}
+            className="w-full py-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded transition-colors flex items-center justify-center gap-1 mt-2"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Collapse Panel
+          </button>
         </div>
       </div>
+      )}
+      
+      {/* Expand button when collapsed */}
+      {leftPanelCollapsed && (
+        <button
+          onClick={() => setLeftPanelCollapsed(false)}
+          className="w-10 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center"
+        >
+          <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+        </button>
+      )}
 
       {/* PDF Viewer */}
       <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative">

@@ -63,11 +63,11 @@ export default function Navbar() {
             ) : (
               !isLoginPage && (
                 <div className="flex items-center gap-2">
-                  <Link to="/login">
+                  <Link to="/login" className="hidden sm:block">
                     <Button variant="ghost" size="sm">{t('nav.signIn')}</Button>
                   </Link>
                   <Link to="/login?mode=signup">
-                    <Button size="sm">{t('nav.getStarted')}</Button>
+                    <Button size="sm" className="w-full sm:w-auto px-6">{t('nav.getStarted')}</Button>
                   </Link>
                 </div>
               )

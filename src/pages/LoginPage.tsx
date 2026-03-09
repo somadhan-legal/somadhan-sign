@@ -70,11 +70,20 @@ export default function LoginPage() {
             const remainingMin = Math.ceil((blockedUntil - Date.now()) / 60000)
             throw new Error(`Too many OTP attempts. Please try again in ${remainingMin} minutes.`)
           }
-          await signUpWithEmail(email, password, name)
-          setMessage('A 6-digit OTP has been sent to your email.')
-          setMode('verify-otp')
-          setResendTimer(60)
-          setOtpAttempts([Date.now()])
+          try {
+            await signUpWithEmail(email, password, name)
+            setMessage('A 6-digit OTP has been sent to your email.')
+            setMode('verify-otp')
+            setResendTimer(60)
+            setOtpAttempts([Date.now()])
+          } catch (signupError: any) {
+            if (signupError?.message?.includes('already registered') || signupError?.message?.includes('User already exists')) {
+              setError('This email is already registered. Please login instead or use forgot password if you need to reset.')
+              setTimeout(() => setMode('login'), 3000)
+            } else {
+              throw signupError
+            }
+          }
           break
         case 'verify-otp':
           await verifySignupOtp(email, otpCode)

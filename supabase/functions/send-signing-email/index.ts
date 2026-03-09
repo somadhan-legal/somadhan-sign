@@ -5,19 +5,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Header with text-only logo
+const logoUrl = 'https://cfurkapaksdjsqeydhew.supabase.co/storage/v1/object/public/documents/branding/sign-somadhan-mail.png'
+
+// Header with logo image
 const headerLogo = (afterLogo: string) => `
   <div style="background-color: #0e6e6e; background: linear-gradient(135deg, #0e6e6e 0%, #117a7a 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
     <div>
-      <span style="color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">Somadhan</span><span style="color: #e87461; font-size: 26px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
+      <img src="${logoUrl}" alt="SomadhanSign" style="height: 40px; width: auto; display: inline-block;" />
     </div>
     ${afterLogo}
   </div>`
 
-// Footer with text-only logo
+// Footer with logo image
 const footer = `
   <div style="text-align: center; padding: 20px;">
-    <span style="color: #054F54; font-size: 16px; font-weight: 700;">Somadhan</span><span style="color: #e87461; font-size: 16px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">Sign</span>
+    <img src="${logoUrl}" alt="SomadhanSign" style="height: 28px; width: auto; display: inline-block; margin-bottom: 8px;" />
     <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0;">
       Somadhan &middot; Dhaka, Bangladesh
     </p>
