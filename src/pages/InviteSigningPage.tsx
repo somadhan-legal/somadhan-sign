@@ -461,8 +461,13 @@ export default function InviteSigningPage() {
         }
       }
       
-      setFinished(true)
+      // Start countdown before transitioning to finished
       setCountdown(3)
+      
+      // Wait for countdown to finish, then transition
+      setTimeout(() => {
+        setFinished(true)
+      }, 3000)
     }
   }
   
@@ -663,7 +668,7 @@ export default function InviteSigningPage() {
 
   if (finished) {
     return (
-      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))] relative">
+      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
           <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
@@ -677,22 +682,6 @@ export default function InviteSigningPage() {
             </Button>
           </div>
         </div>
-        
-        {/* Countdown in bottom-left */}
-        {countdown !== null && countdown > 0 && (
-          <div className="fixed bottom-6 left-6 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
-            <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
-            <div>
-              <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-                {lang === 'bn' ? 'প্রক্রিয়াকরণ...' : 'Processing...'}
-              </p>
-              <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                {countdown}s
-              </p>
-            </div>
-          </div>
-        )}
-        
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md p-8">
             <div className="w-20 h-20 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-6">
@@ -730,7 +719,22 @@ export default function InviteSigningPage() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen relative">
+      {/* Countdown in bottom-left - shown on signing page when processing */}
+      {countdown !== null && countdown > 0 && (
+        <div className="fixed bottom-6 left-6 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 z-50">
+          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+          <div>
+            <p className="text-sm font-medium text-[hsl(var(--foreground))]">
+              {lang === 'bn' ? 'প্রক্রিয়াকরণ...' : 'Processing...'}
+            </p>
+            <p className="text-xs text-[hsl(var(--muted-foreground))]">
+              {countdown}s
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
