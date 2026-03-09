@@ -495,7 +495,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (ccEmails && ccEmails.length > 0) {
       await supabase
         .from('documents')
-        .update({ cc_metadata: JSON.stringify({ ccEmails }) })
+        .update({ cc_metadata: JSON.stringify({ ccEmails }) } as any)
         .eq('id', documentId)
     }
     

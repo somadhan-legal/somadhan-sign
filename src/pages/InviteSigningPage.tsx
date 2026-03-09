@@ -409,7 +409,7 @@ export default function InviteSigningPage() {
             }
           }
           
-          // Build recipient list: signers + owner (NOT CC - they only get CC'd)
+          // Send ONE completion email: all signers + owner in TO, all CC in CC field
           if (completionData) {
             const directRecipients: string[] = []
             
@@ -423,7 +423,7 @@ export default function InviteSigningPage() {
               directRecipients.push(completionData.owner_email)
             }
             
-            // Extract CC emails (they won't get direct emails, only CC'd)
+            // Extract CC emails
             let ccEmails: string[] = []
             if (completionData.cc_metadata) {
               try {
@@ -438,24 +438,22 @@ export default function InviteSigningPage() {
             
             const uniqueRecipients = [...new Set(directRecipients)]
             
-            // Send to direct recipients only (signers + owner), with CC emails in CC field
-            for (const email of uniqueRecipients) {
-              try {
-                await supabase.functions.invoke('send-signing-email', {
-                  body: {
-                    to: email,
-                    documentTitle: completionData.title || 'Document',
-                    signingLink: '',
-                    senderName: 'SomadhanSign',
-                    type: 'completion',
-                    downloadUrl,
-                    pdfBase64,
-                    ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
-                  },
-                })
-              } catch (emailErr) {
-                console.error('Error sending completion email to', email, emailErr)
-              }
+            // Send single completion email to all recipients at once
+            try {
+              await supabase.functions.invoke('send-signing-email', {
+                body: {
+                  to: uniqueRecipients,
+                  documentTitle: completionData.title || 'Document',
+                  signingLink: '',
+                  senderName: 'SomadhanSign',
+                  type: 'completion',
+                  downloadUrl,
+                  pdfBase64,
+                  ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
+                },
+              })
+            } catch (emailErr) {
+              console.error('Error sending completion email:', emailErr)
             }
             await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`)
           }

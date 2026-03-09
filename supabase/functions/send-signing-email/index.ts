@@ -148,10 +148,11 @@ serve(async (req) => {
 
     const emailHtml = isCcNotification ? ccNotificationHtml : isCompletion ? completionHtml : invitationHtml
 
-    // Build email payload - send to primary recipient with CC if provided
+    // Build email payload - 'to' can be a string or array (array for completion emails)
+    const toRecipients = Array.isArray(to) ? to : [to]
     const emailPayload: any = {
       from: 'Somadhan Sign <noreply@somadhan.com>',
-      to: [to],
+      to: toRecipients,
       subject: isCcNotification
         ? `📄 "${documentTitle}" — Shared with you for viewing`
         : isCompletion
