@@ -720,21 +720,6 @@ export default function InviteSigningPage() {
 
   return (
     <div className="flex h-screen relative">
-      {/* Countdown in bottom-left - shown on signing page when processing */}
-      {countdown !== null && countdown > 0 && (
-        <div className="fixed bottom-6 left-6 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 z-50">
-          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
-          <div>
-            <p className="text-sm font-medium text-[hsl(var(--foreground))]">
-              {lang === 'bn' ? 'প্রক্রিয়াকরণ...' : 'Processing...'}
-            </p>
-            <p className="text-xs text-[hsl(var(--muted-foreground))]">
-              {countdown}s
-            </p>
-          </div>
-        </div>
-      )}
-      
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
@@ -928,7 +913,13 @@ export default function InviteSigningPage() {
 
           {allMyUnsigned.length === 0 && myFields.length > 0 && (
             <div className="text-center">
-              <CheckCircle2 className="w-10 h-10 mx-auto text-[hsl(var(--success))] mb-2" />
+              {countdown !== null && countdown > 0 ? (
+                <div className="w-10 h-10 mx-auto mb-2 rounded-full border-4 border-[hsl(var(--success))] flex items-center justify-center">
+                  <span className="text-2xl font-bold text-[hsl(var(--success))]">{countdown}</span>
+                </div>
+              ) : (
+                <CheckCircle2 className="w-10 h-10 mx-auto text-[hsl(var(--success))] mb-2" />
+              )}
               <p className="text-sm font-medium text-[hsl(var(--success))]">
                 {lang === 'bn' ? 'আপনার সব ক্ষেত্র স্বাক্ষরিত হয়েছে!' : 'All your fields are signed!'}
               </p>
