@@ -1068,7 +1068,7 @@ export default function InviteSigningPage() {
                           onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
                           placeholder="Type here..."
-                          className="w-full h-full text-[11px] font-medium text-[hsl(var(--foreground))] bg-transparent border-b border-[hsl(var(--primary))] outline-none px-1"
+                          className="w-full h-full text-[11px] font-medium text-black bg-white border-b border-[hsl(var(--primary))] outline-none px-1"
                         />
                       </div>
 
