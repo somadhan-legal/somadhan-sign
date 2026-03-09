@@ -43,9 +43,10 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured')
     }
 
-    const { to, documentTitle, signingLink, senderName, message, ccEmails, type, downloadUrl, pdfBase64 } = await req.json()
+    const { to, documentTitle, signingLink, senderName, message, ccEmails, type, downloadUrl, pdfBase64, viewLink } = await req.json()
 
     const isCompletion = type === 'completion'
+    const isCcNotification = type === 'cc-notification'
 
     // --- Completion email ---
     const downloadButton = downloadUrl ? `
@@ -75,6 +76,40 @@ serve(async (req) => {
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             This is an automated notification from Somadhan Sign. The signed document is securely stored and can be accessed from your dashboard.
+          </p>
+        </div>
+        ${footer}
+      </div>`
+
+    // --- CC Notification email (view-only) ---
+    const ccNotificationHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        ${headerLogo(`
+          <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
+            <strong>${senderName || ''}</strong> shared a document with you for viewing
+          </p>
+        `)}
+        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${viewLink || signingLink}" 
+               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
+              VIEW DOCUMENT
+            </a>
+          </div>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
+          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${documentTitle}</p>
+          <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
+            You have been added as a viewer on this document. You can view the document and track its signing progress.
+          </p>
+          ${message ? `
+            <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
+            <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+          ` : ''}
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
+            You are receiving this email because you were added as a viewer (CC) on this document. This is a view-only link — you cannot sign the document.
           </p>
         </div>
         ${footer}
@@ -111,15 +146,17 @@ serve(async (req) => {
         ${footer}
       </div>`
 
-    const emailHtml = isCompletion ? completionHtml : invitationHtml
+    const emailHtml = isCcNotification ? ccNotificationHtml : isCompletion ? completionHtml : invitationHtml
 
     // Build email payload - send to primary recipient with CC if provided
     const emailPayload: any = {
       from: 'Somadhan Sign <noreply@somadhan.com>',
       to: [to],
-      subject: isCompletion
-        ? `✓ "${documentTitle}" — All parties have signed`
-        : `${senderName} has requested your signature on "${documentTitle}"`,
+      subject: isCcNotification
+        ? `📄 "${documentTitle}" — Shared with you for viewing`
+        : isCompletion
+          ? `✓ "${documentTitle}" — All parties have signed`
+          : `${senderName} has requested your signature on "${documentTitle}"`,
       html: emailHtml,
     }
 

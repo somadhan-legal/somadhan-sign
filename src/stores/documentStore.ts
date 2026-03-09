@@ -491,7 +491,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     await get().saveSignatureFields(documentId)
     await get().updateDocumentStatus(documentId, 'pending')
     
-    // Send emails to all signers
+    // Store CC emails in document metadata for completion emails (not for invitations)
+    if (ccEmails && ccEmails.length > 0) {
+      await supabase
+        .from('documents')
+        .update({ cc_metadata: JSON.stringify({ ccEmails }) })
+        .eq('id', documentId)
+    }
+    
+    // Send emails to all signers (NOT to CC recipients)
     const signers = get().signers
     const doc = get().currentDocument
     
@@ -509,7 +517,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             signingLink,
             senderName: senderName || 'A user',
             message: message || '',
-            ccEmails: ccEmails || [],
           },
         })
 
@@ -518,6 +525,28 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         }
       } catch (error) {
         console.error(`Error sending email to ${signer.signer_email}:`, error)
+      }
+    }
+    
+    // Send view-only notification emails to CC recipients
+    if (ccEmails && ccEmails.length > 0) {
+      const viewLink = `${window.location.origin}/view/${documentId}`
+      for (const ccEmail of ccEmails) {
+        try {
+          await supabase.functions.invoke('send-signing-email', {
+            body: {
+              to: ccEmail,
+              documentTitle: doc.title,
+              signingLink: '',
+              senderName: senderName || 'A user',
+              message: message || '',
+              type: 'cc-notification',
+              viewLink,
+            },
+          })
+        } catch (err) {
+          console.error(`Error sending CC notification to ${ccEmail}:`, err)
+        }
       }
     }
   },

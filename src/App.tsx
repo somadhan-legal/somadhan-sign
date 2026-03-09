@@ -9,6 +9,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import DocumentEditorPage from '@/pages/DocumentEditorPage'
 import DocumentPreviewPage from '@/pages/DocumentPreviewPage'
 import InviteSigningPage from '@/pages/InviteSigningPage'
+import ViewDocumentPage from '@/pages/ViewDocumentPage'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 
 function HomeRedirect() {
@@ -42,6 +43,8 @@ export default function App() {
       <Routes>
         {/* Public signing route — no auth required */}
         <Route path="/sign/:token" element={<InviteSigningPage />} />
+        {/* Public view-only route for CC recipients — no auth required */}
+        <Route path="/view/:documentId" element={<ViewDocumentPage />} />
         <Route path="/login" element={<LoginPage />} />
 
         <Route element={<Layout />}>
