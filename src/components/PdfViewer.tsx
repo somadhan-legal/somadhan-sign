@@ -127,14 +127,15 @@ export default function PdfViewer({
       <Document
         file={fileUrl}
         onLoadSuccess={onDocumentLoadSuccess}
+        onLoadError={(err) => console.error('PdfViewer load error:', err)}
         loading={
           <div className="w-[600px] h-[800px] flex items-center justify-center">
             <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
           </div>
         }
         error={
-          <div className="w-[600px] h-[400px] flex items-center justify-center text-[hsl(var(--muted-foreground))]">
-            Failed to load PDF. Make sure you have a valid PDF URL.
+          <div className="w-[600px] h-[400px] flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
+            <p>Failed to load PDF. Make sure you have a valid PDF URL.</p>
           </div>
         }
       >

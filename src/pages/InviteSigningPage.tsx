@@ -20,7 +20,6 @@ import AuditTrailModal from '@/components/AuditTrailModal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
-// import { generateColor } from '@/lib/utils'
 import { generateAuditPdf } from '@/lib/auditPdf'
 import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
@@ -222,9 +221,7 @@ export default function InviteSigningPage() {
     const isInitials = field?.field_type === 'initials'
     const dataToUse = isInitials ? initialsData : signatureData
 
-    console.log('[handleTapToSign]', { fieldId, isInitials, hasData: !!dataToUse, documentId, signerData: !!signerData })
     if (!dataToUse || !documentId || !signerData) {
-      console.log('[handleTapToSign] EARLY RETURN - missing data')
       return
     }
     setSubmitting(true)
@@ -314,9 +311,7 @@ export default function InviteSigningPage() {
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
-    console.log('[checkCompletion] remaining fields:', remaining.length, 'myFields:', myFields.length, 'placements:', latestPlacements.length)
     if (remaining.length === 0) {
-      console.log('[checkCompletion] All fields signed, updating signer status...')
       await updateSignerStatus(signerData.id, 'signed')
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
       
@@ -325,16 +320,14 @@ export default function InviteSigningPage() {
       let allSigned = false
       for (let attempt = 1; attempt <= 3; attempt++) {
         await new Promise(r => setTimeout(r, attempt * 1500))
-        console.log(`[checkCompletion] Attempt ${attempt}: Checking if all signers signed...`)
         const { data, error: checkErr } = await (supabase as any)
           .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
-        console.log(`[checkCompletion] Attempt ${attempt}: allSigned:`, data, 'type:', typeof data, 'error:', checkErr)
         if (data) {
           allSigned = true
           break
         }
         if (checkErr) {
-          console.error(`[checkCompletion] Attempt ${attempt} error:`, checkErr)
+          console.error('[checkCompletion] Error checking all signers signed:', checkErr)
           break
         }
       }
@@ -345,24 +338,20 @@ export default function InviteSigningPage() {
       
       if (allSigned) {
         // Mark document as completed (bypasses RLS)
-        console.log('[checkCompletion] Marking document as completed...')
         const { error: rpcError } = await (supabase as any)
           .rpc('mark_document_completed', { p_document_id: documentId })
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
-        } else {
-          console.log('[checkCompletion] Document marked as completed successfully')
         }
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
         // Get all document data via RPC (bypasses RLS)
         let completionData: any = null
         try {
-          const { data, error: compErr } = await (supabase as any)
+          const { data } = await (supabase as any)
             .rpc('get_document_for_completion', { p_document_id: documentId })
           completionData = data
-          console.log('[completion] RPC data loaded:', !!completionData, 'error:', compErr)
         } catch (rpcErr) {
           console.error('[completion] RPC get_document_for_completion failed:', rpcErr)
         }
@@ -373,7 +362,6 @@ export default function InviteSigningPage() {
         // Generate signed PDF + audit trail combined (non-blocking for email)
         if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
           try {
-            console.log('[completion] Generating signed PDF...')
             const signedFields: SignedField[] = completionData.placements.map((p: any) => {
               const field = completionData.fields.find((f: any) => f.id === p.field_id)
               return {
@@ -414,7 +402,6 @@ export default function InviteSigningPage() {
                 p_document_id: documentId,
                 p_final_pdf_url: downloadUrl,
               })
-              console.log('[completion] PDF uploaded, downloadUrl:', downloadUrl)
             } else {
               console.error('[completion] Upload error:', uploadError)
             }
@@ -426,12 +413,9 @@ export default function InviteSigningPage() {
               binaryStr += String.fromCharCode(uint8Array[i])
             }
             pdfBase64 = btoa(binaryStr)
-            console.log('[completion] PDF base64 ready, length:', pdfBase64.length)
           } catch (pdfErr) {
-            console.error('[completion] PDF generation error (will still send email):', pdfErr)
+            console.error('[completion] PDF generation error:', pdfErr)
           }
-        } else {
-          console.warn('[completion] Missing PDF data, skipping PDF generation')
         }
         
         // Send completion email — always attempt even if PDF failed
@@ -460,7 +444,6 @@ export default function InviteSigningPage() {
           }
           
           const uniqueRecipients = [...new Set(directRecipients)]
-          console.log('[completion] Sending email to:', uniqueRecipients, 'CC:', ccEmails)
           
           if (uniqueRecipients.length > 0) {
             const { error: emailFnErr } = await supabase.functions.invoke('send-signing-email', {
@@ -477,12 +460,8 @@ export default function InviteSigningPage() {
             })
             if (emailFnErr) {
               console.error('[completion] Edge function error:', emailFnErr)
-            } else {
-              console.log('[completion] Completion email sent successfully')
             }
             await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`)
-          } else {
-            console.warn('[completion] No recipients found for completion email')
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)
@@ -588,13 +567,9 @@ export default function InviteSigningPage() {
   }
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
-    // Fetch document fresh from Supabase to avoid stale data
     const docId = signerData!.document_id
-    const { data: freshDoc } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', docId)
-      .single()
+    const { data: freshDoc } = await (supabase as any)
+      .rpc('get_document_for_viewer', { p_document_id: docId })
 
     const pdfUrl = freshDoc?.original_pdf_url || signerData!.documents.original_pdf_url
     const title = freshDoc?.title || signerData!.documents.title
@@ -614,7 +589,7 @@ export default function InviteSigningPage() {
       .eq('document_id', docId)
       .order('created_at', { ascending: true })
 
-    if (auditErr) console.error('[InviteSigningPage] Audit trail error:', auditErr)
+    if (auditErr) console.error('Audit trail error:', auditErr)
 
     // EXTRA SAFETY: Filter client-side in case Supabase RLS returns extra rows
     const filteredAudit = (auditData || []).filter(e => e.document_id === docId)
@@ -1120,7 +1095,6 @@ export default function InviteSigningPage() {
                         }`}
                         style={undefined}
                         onClick={() => {
-                          console.log('[FIELD_CLICK]', { fieldId: field.id, isMine, isSigned, submitting, isCheckbox, isDate, isText, isInitials, signatureData: !!signatureData, initialsData: !!initialsData, fieldType: field.field_type })
                           if (!isMine || isSigned || submitting) return
                           if (isCheckbox) {
                             handleCheckboxField(field.id)
@@ -1130,17 +1104,13 @@ export default function InviteSigningPage() {
                             setTextInputFieldId(field.id)
                             setTextInputValue('')
                           } else if (isInitials && initialsData) {
-                            console.log('[TAP] initials field with data, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                           } else if (isInitials && !initialsData) {
-                            console.log('[TAP] initials field NO data, opening modal, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                             setShowInitialsModal(true)
                           } else if (!isInitials && signatureData) {
-                            console.log('[TAP] signature field with data, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                           } else if (!isInitials && !signatureData) {
-                            console.log('[TAP] signature field NO data, opening modal, setting tappedFieldId:', field.id)
                             setTappedFieldId(field.id)
                             setShowSignatureModal(true)
                           }
@@ -1181,7 +1151,6 @@ export default function InviteSigningPage() {
       <Modal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} title={t('signee.createYourSignature')} size="md">
         <SignaturePad
           onSave={handleSaveSignature}
-          onCancel={() => setShowSignatureModal(false)}
           saveLabel="Save Signature"
           showApplyAll={myUnsignedSignatureFields.length > 0}
           onApplyToAll={handleAutoFillSignatures}
@@ -1196,7 +1165,6 @@ export default function InviteSigningPage() {
         </p>
         <SignaturePad
           onSave={handleSaveInitials}
-          onCancel={() => setShowInitialsModal(false)}
           saveLabel="Save Initials"
           showApplyAll={myUnsignedInitialsFields.length > 0}
           onApplyToAll={(data) => { setInitialsData(data); setShowInitialsModal(false); handleAutoFillInitials(data) }}

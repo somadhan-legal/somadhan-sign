@@ -432,13 +432,12 @@ export default function DocumentEditorPage() {
     await fetchSigners(id)
     await fetchDocument(id) // Refresh to get updated status
     setSaving(false)
-    setShowSendConfirm(false)
     
     // Show success toast with countdown
     setSentToast(true)
     setCountdown(5)
     
-    // Countdown timer
+    // Countdown timer — navigates to dashboard when countdown reaches 0
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -450,9 +449,6 @@ export default function DocumentEditorPage() {
         return prev - 1
       })
     }, 1000)
-    
-    // Navigate after showing the toast
-    setTimeout(() => navigate('/dashboard'), 5000)
   }
 
   const handleFieldDragStop = (fieldId: string, _e: unknown, data: { x: number; y: number }) => {

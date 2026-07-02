@@ -8,7 +8,6 @@ import { useThemeStore } from '@/stores/themeStore'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
-  onCancel?: () => void
   onApplyToAll?: (dataUrl: string) => void
   showApplyAll?: boolean
   applyAllLabel?: string

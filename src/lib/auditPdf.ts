@@ -28,7 +28,7 @@ export async function generateAuditPdf(
   // If no audit entries, just return the original PDF
   if (!auditEntries || auditEntries.length === 0) {
     const pdfBytes = await pdfDoc.save()
-    return new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+    return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
   }
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -396,5 +396,5 @@ export async function generateAuditPdf(
   }
 
   const pdfBytes = await pdfDoc.save()
-  return new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+  return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
 }

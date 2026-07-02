@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Environment variables
+.env
+.env.*
+
+# Credentials — never commit
+Creds.rtf
+client_secret_*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +30,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+supabase/.temp/

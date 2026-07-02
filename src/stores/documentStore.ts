@@ -61,6 +61,9 @@ interface DocumentState {
   sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
 }
 
+let cachedIpAddress: string | null = null
+let ipFetchAttempted = false
+
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   documents: [],
   currentDocument: null,
@@ -457,13 +460,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string) => {
-    let ipAddress: string | null = null
-    try {
-      const res = await fetch('https://api.ipify.org?format=json')
-      const json = await res.json()
-      ipAddress = json.ip || null
-    } catch {
-      // silently fail
+    let ipAddress: string | null = cachedIpAddress
+    if (ipAddress === null && !ipFetchAttempted) {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json')
+        const json = await res.json()
+        ipAddress = json.ip || null
+        cachedIpAddress = ipAddress
+      } catch {
+        // silently fail
+      }
+      ipFetchAttempted = true
     }
 
     const { data, error } = await supabase
@@ -490,14 +497,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   sendForSigning: async (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => {
     await get().saveSignatureFields(documentId)
     await get().updateDocumentStatus(documentId, 'pending')
-    
-    // Store CC emails in document metadata for completion emails (not for invitations)
-    if (ccEmails && ccEmails.length > 0) {
-      await supabase
-        .from('documents')
-        .update({ cc_metadata: JSON.stringify({ ccEmails }) } as any)
-        .eq('id', documentId)
-    }
     
     // Send emails to all signers (NOT to CC recipients)
     const signers = get().signers
