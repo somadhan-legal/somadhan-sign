@@ -55,9 +55,9 @@ export default function App() {
         {/* Public view-only route for CC recipients — no auth required */}
         <Route path="/view/:documentId" element={<Suspense fallback={<PageLoader />}><ViewDocumentPage /></Suspense>} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<HomeRedirect />} />
 
         <Route element={<Layout />}>
-          <Route path="/" element={<HomeRedirect />} />
           <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
           <Route
             path="/dashboard"
