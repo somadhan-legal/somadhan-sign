@@ -1,12 +1,12 @@
 # SomadhanSign - Digital Document Signing Platform
 
-![SomadhanSign](https://img.shields.io/badge/Status-Production%20Ready-success)
+![SomadhanSign](https://img.shields.io/badge/Status-Production%20Beta-blue)
 ![React](https://img.shields.io/badge/React-19.2.0-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-green)
 ![License](https://img.shields.io/badge/License-Proprietary-red)
 
-A modern, secure, and user-friendly digital document signing platform built with React, TypeScript, and Supabase. SomadhanSign enables users to upload PDF documents, define signature fields, invite multiple signers, and manage the entire signing workflow with real-time tracking and audit trails.
+A modern document signing platform built with React, TypeScript, and Supabase. SomadhanSign enables users to upload PDF documents, define signature fields, invite multiple signers, and manage the signing workflow with progress tracking and audit trails.
 
 **Live Demo:** [https://sign.somadhan.com](https://sign.somadhan.com)
 
@@ -33,12 +33,12 @@ A modern, secure, and user-friendly digital document signing platform built with
 ## ✨ Features
 
 ### Core Functionality
-- **📄 PDF Document Upload** - Upload any PDF document up to 10MB
+- **📄 PDF Document Upload** - Upload supported PDF documents up to 5 MB
 - **✍️ Multi-Type Signature Fields** - Support for signatures, initials, dates, text fields, and checkboxes
 - **👥 Multi-Party Signing** - Invite unlimited signers with individual field assignments
 - **🎨 Drag & Drop Field Placement** - Intuitive visual editor for placing signature fields
 - **📧 Email Notifications** - Automated email invitations and reminders via Resend
-- **🔍 Real-Time Tracking** - Monitor document status and signer progress
+- **🔍 Progress Tracking** - Monitor document status and signer progress from the dashboard
 - **📊 Audit Trail** - Complete audit log with timestamps and IP tracking
 - **📥 Signed PDF Generation** - Automatic PDF generation with embedded signatures and audit certificate
 
@@ -53,10 +53,10 @@ A modern, secure, and user-friendly digital document signing platform built with
 ### Security & Privacy
 - **🔒 Row Level Security (RLS)** - Supabase RLS policies on all tables
 - **🔑 OAuth Integration** - Google OAuth for seamless authentication
-- **🛡️ Email Verification** - Required email confirmation for new accounts
+- **🛡️ Email Verification** - Supports Supabase email-confirmation policies when enabled for the project
 - **🔐 Password Reset** - Secure password recovery flow
 - **📜 Audit Logging** - Every action logged with user details and timestamps
-- **🗑️ Auto Cleanup** - Automatic deletion of orphaned records
+- **🗑️ Referential Cleanup** - Related records are removed through database foreign-key cascades
 
 ---
 
@@ -436,26 +436,17 @@ Complete audit log of all document actions.
 | `user_email` | TEXT | User who performed action |
 | `user_name` | TEXT | User's full name |
 | `ip_address` | TEXT | IP address (optional) |
-| `details` | TEXT | Additional details |
+| `metadata` | TEXT | Additional event details |
 | `created_at` | TIMESTAMPTZ | Action timestamp |
 
-**Automatic Cleanup:**
-- Orphaned audit entries are automatically deleted via triggers
+**Retention helper:**
+- Migration `006_auto_cleanup_old_documents.sql` defines a cleanup function for documents older than 12 months. Scheduling and retention policy approval are deployment responsibilities.
 
 ---
 
 ### Database Migrations
 
-All migrations are located in `supabase/migrations/` and should be run in order:
-
-1. **001_initial_schema.sql** - Creates all tables and initial RLS policies
-2. **002_fix_rls_policies.sql** - Fixes RLS policy conflicts
-3. **003_fix_rls_recursion.sql** - Resolves recursive policy issues
-4. **004_fix_signing_rls.sql** - Enables public signing access
-5. **005_fix_audit_trail_filtering.sql** - Improves audit trail queries
-6. **006_auto_cleanup_old_documents.sql** - Adds automatic cleanup triggers
-7. **007_add_signer_update_policy.sql** - Allows signers to update their status
-8. **008_strict_audit_cleanup.sql** - Strict orphan record cleanup
+All migrations are located in `supabase/migrations/`. Apply every tracked migration through the Supabase CLI in migration order. See `supabase/migrations/README.md` for the current rollout notes. Do not use `000_complete_setup.sql` as an additional migration on a database that already has the numbered migrations.
 
 ---
 
@@ -464,8 +455,8 @@ All migrations are located in `supabase/migrations/` and should be run in order:
 ### Authentication Methods
 
 1. **Email/Password**
-   - Email verification required
-   - Password minimum 6 characters
+   - Email verification follows the Supabase project configuration
+   - Password minimum 8 characters in the application UI
    - Secure password reset flow
 
 2. **Google OAuth**
@@ -477,11 +468,10 @@ All migrations are located in `supabase/migrations/` and should be run in order:
 
 - **Row Level Security (RLS)** - Every table has RLS policies
 - **JWT Tokens** - Supabase handles token generation and validation
-- **Unique Signing Tokens** - 256-bit random tokens for each signer
+- **Unique Signing Tokens** - Opaque random tokens for each signer
 - **HTTPS Only** - All traffic encrypted in production
-- **CORS Protection** - Configured for specific domains only
 - **SQL Injection Prevention** - Parameterized queries via Supabase client
-- **XSS Protection** - React's built-in escaping + Content Security Policy
+- **XSS Protection** - React escapes rendered text and email content is explicitly sanitized
 
 ### RLS Policy Examples
 
@@ -513,7 +503,7 @@ SomadhanSign uses **Resend** for transactional emails with the following feature
 
 - **Signing Invitations** - Sent when document is sent for signing
 - **Reminder Emails** - Manual reminders to pending signers
-- **Completion Notifications** - When all signers complete (optional)
+- **Completion Notifications** - Sent when all signers complete and final-document delivery succeeds
 
 ### Email Templates
 

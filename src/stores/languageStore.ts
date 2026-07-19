@@ -127,7 +127,7 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'landing.feat.track': { en: 'Send & Track', bn: 'পাঠান ও ট্র্যাক করুন' },
   'landing.feat.trackDesc': {
-    en: 'Send documents for signing and track progress in real-time from your dashboard.',
+    en: 'Send documents for signing and track progress from your dashboard.',
     bn: 'স্বাক্ষরের জন্য ডকুমেন্ট পাঠান এবং ড্যাশবোর্ড থেকে রিয়েল-টাইমে অগ্রগতি ট্র্যাক করুন।',
   },
   'landing.feat.secure': { en: 'Secure & Private', bn: 'সুরক্ষিত ও গোপনীয়' },
