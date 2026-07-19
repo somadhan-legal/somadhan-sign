@@ -33,6 +33,26 @@ import type { Document, DocumentSigner } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 
+const safePdfFilename = (title: string, suffix = '') => {
+  const printableTitle = Array.from(title).filter((character) => character.charCodeAt(0) >= 32).join('')
+  const safeTitle = printableTitle.replace(/[|<>:"/\\?*]/g, '_').trim() || 'Document'
+  return `${safeTitle}${suffix}.pdf`
+}
+
+const downloadPdfUrl = async (url: string, filename: string) => {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('The PDF could not be downloaded')
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const link = window.document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(objectUrl)
+}
+
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { t } = useLanguageStore()
@@ -392,6 +412,18 @@ export default function DashboardPage() {
                               if (!currentDoc) return
 
                               try {
+                                if (currentDoc.status !== 'completed') {
+                                  const sourcePdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
+                                  await downloadPdfUrl(sourcePdfUrl, safePdfFilename(currentDoc.title))
+                                  return
+                                }
+
+                                if (currentDoc.final_pdf_url) {
+                                  const finalPdfUrl = await createOwnerDocumentUrl(currentDoc.final_pdf_url)
+                                  await downloadPdfUrl(finalPdfUrl, safePdfFilename(currentDoc.title, ' - Signed'))
+                                  return
+                                }
+
                                 const originalPdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
                                 // Fetch placements
                                 const { data: placementsArr, error: pErr } = await supabase
@@ -401,10 +433,7 @@ export default function DashboardPage() {
 
                                 if (pErr) throw pErr
 
-                                if (!placementsArr || placementsArr.length === 0) {
-                                  window.open(originalPdfUrl, '_blank', 'noopener,noreferrer')
-                                  return
-                                }
+                                if (!placementsArr || placementsArr.length === 0) throw new Error('The completed signature data is unavailable')
 
                                 // Fetch corresponding fields
                                 const fieldIds = placementsArr.map(p => p.field_id)
@@ -415,10 +444,7 @@ export default function DashboardPage() {
 
                                 if (fErr) throw fErr
 
-                                if (!fieldsArr || fieldsArr.length === 0) {
-                                  window.open(originalPdfUrl, '_blank', 'noopener,noreferrer')
-                                  return
-                                }
+                                if (!fieldsArr || fieldsArr.length === 0) throw new Error('The completed field data is unavailable')
 
                                 const fieldsMap = new Map(fieldsArr.map(f => [f.id, f]))
                                 const signedFields: SignedField[] = placementsArr
@@ -458,13 +484,11 @@ export default function DashboardPage() {
                                 URL.revokeObjectURL(signedUrl)
 
                                 const url = URL.createObjectURL(finalBlob)
-                                const link = window.document.createElement('a')
-                                link.href = url
-                                link.download = `${currentDoc.title} - Signed.pdf`
-                                document.body.appendChild(link)
-                                link.click()
-                                document.body.removeChild(link)
-                                URL.revokeObjectURL(url)
+                                try {
+                                  await downloadPdfUrl(url, safePdfFilename(currentDoc.title, ' - Signed'))
+                                } finally {
+                                  URL.revokeObjectURL(url)
+                                }
                               } catch (error) {
                                 console.error('Error generating signed PDF:', error)
                                 showNotice('The completed PDF could not be generated. Please try again.', 'error')
