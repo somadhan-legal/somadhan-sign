@@ -119,12 +119,13 @@ function Paper({ children }: { children?: React.ReactNode }) {
 }
 
 function UploadScene() {
+  const { t } = useLanguageStore()
   return (
     <div className="w-full max-w-lg">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border-2 border-dashed border-[hsl(var(--primary))] bg-[hsl(var(--background))] p-10 text-center sm:p-14">
         <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2.2, repeat: Infinity }} className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsl(var(--primary))] text-white"><FileText className="h-7 w-7" /></motion.div>
-        <p className="mt-6 text-lg font-extrabold">Agreement.pdf</p>
-        <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">Ready to prepare for signing</p>
+        <p className="mt-6 text-lg font-extrabold">{t('landing.demoDocument')}</p>
+        <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{t('landing.demoReady')}</p>
         <div className="mx-auto mt-7 h-2 max-w-64 overflow-hidden rounded-full bg-[hsl(var(--muted))]"><motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 1.2 }} className="h-full bg-[hsl(var(--accent-coral))]" /></div>
       </motion.div>
     </div>
@@ -132,11 +133,12 @@ function UploadScene() {
 }
 
 function PrepareScene() {
+  const { t } = useLanguageStore()
   return (
     <div className="relative w-full max-w-xl">
       <Paper>
         <motion.div initial={{ opacity: 0, scale: 0.9, x: 30 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ delay: 0.16, type: 'spring', stiffness: 180 }} className="absolute bottom-24 right-7 flex h-14 w-36 items-center justify-center rounded-lg border-2 border-[#F95943] bg-white text-xs font-extrabold text-[#F95943] shadow-lg sm:right-10">
-          <Fingerprint className="mr-2 h-4 w-4" /> SIGN HERE
+          <Fingerprint className="mr-2 h-4 w-4" /> {t('landing.demoSignHere')}
         </motion.div>
       </Paper>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1, x: [0, 7, 0], y: [0, 5, 0] }} transition={{ opacity: { delay: 0.25 }, duration: 2.2, repeat: Infinity }} className="absolute bottom-20 right-8 rounded-full bg-[#232323] p-2 text-white shadow-lg sm:right-16"><MousePointer2 className="h-4 w-4" /></motion.div>
@@ -145,10 +147,11 @@ function PrepareScene() {
 }
 
 function InviteScene() {
+  const { t } = useLanguageStore()
   const people = [['AR', 'Ariana Rahman', 'ariana@example.com'], ['NK', 'Nabil Khan', 'nabil@example.com'], ['TS', 'Tania Sultana', 'tania@example.com']]
   return (
     <div className="w-full max-w-lg rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-5 shadow-xl sm:p-7">
-      <div className="mb-5 flex items-center justify-between"><div><p className="text-lg font-extrabold">Invite signers</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Every signer gets their own fields</p></div><Users className="h-5 w-5 text-[hsl(var(--primary))]" /></div>
+      <div className="mb-5 flex items-center justify-between"><div><p className="text-lg font-extrabold">{t('landing.demoInviteTitle')}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{t('landing.demoInviteDesc')}</p></div><Users className="h-5 w-5 text-[hsl(var(--primary))]" /></div>
       <div className="space-y-3">
         {people.map(([initials, name, email], index) => (
           <motion.div key={email} initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.14 }} className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--border))] p-3">
@@ -158,12 +161,13 @@ function InviteScene() {
           </motion.div>
         ))}
       </div>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-5 flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-bold text-white"><Mail className="mr-2 h-4 w-4" /> Invitations ready</motion.div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-5 flex items-center justify-center rounded-xl bg-[hsl(var(--primary))] py-3 text-sm font-bold text-white"><Mail className="mr-2 h-4 w-4" /> {t('landing.demoInvitationsReady')}</motion.div>
     </div>
   )
 }
 
 function CompleteScene() {
+  const { t } = useLanguageStore()
   return (
     <div className="relative w-full max-w-xl">
       <Paper>
@@ -171,7 +175,7 @@ function CompleteScene() {
           <motion.path d="M12 50 C32 8, 48 58, 68 31 S105 22, 122 44 S162 8, 205 35" fill="none" stroke="#075056" strokeWidth="3" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.25, ease: 'easeInOut' }} />
         </motion.svg>
       </Paper>
-      <motion.div initial={{ scale: 0.75, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.8, type: 'spring', stiffness: 180 }} className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[hsl(var(--primary))] px-5 py-3 text-sm font-extrabold text-white shadow-xl"><Send className="h-4 w-4" /> Signed and complete</motion.div>
+      <motion.div initial={{ scale: 0.75, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.8, type: 'spring', stiffness: 180 }} className="absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-[hsl(var(--primary))] px-5 py-3 text-sm font-extrabold text-white shadow-xl"><Send className="h-4 w-4" /> {t('landing.demoSignedComplete')}</motion.div>
     </div>
   )
 }

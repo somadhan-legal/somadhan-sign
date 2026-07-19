@@ -59,7 +59,7 @@ export default function ViewDocumentPage() {
       if (!accessError) {
         const securePackage = accessData?.viewerPackage as ViewerPackageResult | undefined
         if (!securePackage?.document) {
-          setError('Document not found or access denied.')
+          setError(t('signee.docNotFoundDesc'))
           setLoading(false)
           return
         }
@@ -69,7 +69,7 @@ export default function ViewDocumentPage() {
         return
       }
       if (!isMissingEdgeFunction(accessError)) {
-        setError('Document not found or access denied.')
+        setError(t('signee.docNotFoundDesc'))
         setLoading(false)
         return
       }
@@ -79,7 +79,7 @@ export default function ViewDocumentPage() {
 
       if (!packageError) {
         if (!viewerPackage?.document) {
-          setError('Document not found or access denied.')
+          setError(t('signee.docNotFoundDesc'))
           setLoading(false)
           return
         }
@@ -93,7 +93,7 @@ export default function ViewDocumentPage() {
       }
 
       if (!isMissingRpc(packageError)) {
-        setError('Document not found or access denied.')
+        setError(t('signee.docNotFoundDesc'))
         setLoading(false)
         return
       }
@@ -103,7 +103,7 @@ export default function ViewDocumentPage() {
         .rpc('get_document_for_viewer', { p_document_id: documentId })
 
       if (docErr || !doc || doc.length === 0) {
-        setError('Document not found or access denied.')
+        setError(t('signee.docNotFoundDesc'))
         setLoading(false)
         return
       }
@@ -127,7 +127,7 @@ export default function ViewDocumentPage() {
       setLoading(false)
     }
     load()
-  }, [documentId])
+  }, [documentId, t])
 
   if (loading) {
     return (
@@ -136,7 +136,7 @@ export default function ViewDocumentPage() {
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-[hsl(var(--muted-foreground))]">Loading document...</p>
+        <p className="text-[hsl(var(--muted-foreground))]">{t('signee.loadingDoc')}</p>
       </div>
     )
   }
@@ -151,9 +151,9 @@ export default function ViewDocumentPage() {
           <div className="w-16 h-16 rounded-full bg-[hsl(var(--destructive))]/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
           </div>
-          <h2 className="text-xl font-bold mb-2">Document Not Found</h2>
+          <h2 className="text-xl font-bold mb-2">{t('signee.docNotFound')}</h2>
           <p className="text-[hsl(var(--muted-foreground))]">
-            {error || 'The document you\'re looking for was not found or access is denied.'}
+            {error || t('signee.docNotFoundDesc')}
           </p>
         </div>
       </div>
@@ -197,7 +197,7 @@ export default function ViewDocumentPage() {
           <div
             className="w-full bg-[hsl(var(--muted))] rounded-full h-2 mb-3"
             role="progressbar"
-            aria-label="Document signing progress"
+            aria-label={t('viewer.signingProgress')}
             aria-valuemin={0}
             aria-valuemax={Math.max(totalSigners, 1)}
             aria-valuenow={signedCount}
@@ -243,7 +243,7 @@ export default function ViewDocumentPage() {
         <div className="p-3 border-t border-[hsl(var(--border))]">
           <Button variant="ghost" className="w-full" onClick={() => setLeftPanelCollapsed(true)}>
             <PanelLeftClose className="mr-2 h-4 w-4" />
-            Hide details
+            {t('viewer.hideDetails')}
           </Button>
         </div>
       </div>
@@ -253,7 +253,7 @@ export default function ViewDocumentPage() {
         <button
           type="button"
           onClick={() => setLeftPanelCollapsed(false)}
-          aria-label="Show document details"
+          aria-label={t('viewer.showDetails')}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
         >
           <PanelLeftOpen className="h-5 w-5" />

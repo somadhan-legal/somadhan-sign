@@ -123,21 +123,21 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col items-center">
           <div className="w-full max-w-md">
-            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/55">A clearer way to sign</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/55">{t('login.brandingEyebrow')}</p>
             <h1 className="mt-4 text-3xl font-bold leading-tight tracking-[-0.04em] text-white lg:text-5xl">
-              Your document.<br />Ready for everyone.
+              {t('login.brandingNewTitle1')}<br />{t('login.brandingNewTitle2')}
             </h1>
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/65 lg:text-base lg:leading-7">{t('login.brandingDesc')}</p>
 
             <div className="mt-8 rounded-3xl border border-white/20 bg-white p-5 text-[#232323] shadow-2xl lg:p-7">
               <div className="flex items-center justify-between border-b border-[#d9e2e3] pb-4">
-                <span className="text-xs font-extrabold uppercase tracking-[0.16em]">Agreement.pdf</span>
-                <span className="rounded-full bg-[#075056] px-3 py-1 text-[10px] font-bold text-white">READY</span>
+                <span className="text-xs font-extrabold uppercase tracking-[0.16em]">{t('landing.demoDocument')}</span>
+                <span className="rounded-full bg-[#075056] px-3 py-1 text-[10px] font-bold uppercase text-white">{t('landing.demoReadyStatus')}</span>
               </div>
               <div className="mt-8 space-y-3">
                 {[100, 82, 94, 66].map((width) => <div key={width} className="h-2 bg-[#d9e2e3]" style={{ width: `${width}%` }} />)}
               </div>
-              <div className="mt-9 ml-auto flex h-12 w-32 items-center justify-center rounded-lg border-2 border-[#F95943] text-xs font-extrabold text-[#F95943]">SIGN HERE</div>
+              <div className="mt-9 ml-auto flex h-12 w-32 items-center justify-center rounded-lg border-2 border-[#F95943] px-2 text-center text-xs font-extrabold text-[#F95943]">{t('landing.demoSignHere')}</div>
             </div>
           </div>
         </div>

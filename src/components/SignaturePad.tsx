@@ -194,20 +194,20 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
         <div className="relative">
           <canvas
             ref={canvasRef}
-            aria-label="Draw your signature"
+            aria-label={t('signee.drawSignature')}
             className="w-full h-48 touch-none border-2 border-dashed border-[hsl(var(--border))] rounded-lg cursor-crosshair"
           />
           <button
             type="button"
             onClick={handleClear}
-            aria-label="Clear drawn signature"
+            aria-label={t('signee.clearSignature')}
             className="absolute top-2 right-2 p-1.5 rounded-md bg-[hsl(var(--card))]/80 hover:bg-[hsl(var(--card))] shadow-sm cursor-pointer"
-            title="Clear"
+            title={t('signee.clear')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
           <p className="text-xs text-center text-[hsl(var(--muted-foreground))] mt-2">
-            Draw your signature above
+            {t('signee.drawAbove')}
           </p>
         </div>
       )}
@@ -215,7 +215,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       {activeTab === 'type' && (
         <div>
           <Input
-            placeholder="Type your full name"
+            placeholder={t('signee.typeFullName')}
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
             maxLength={80}
@@ -250,12 +250,12 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
               ) : (
                 <>
                   <Upload className="w-8 h-8 mx-auto text-[hsl(var(--muted-foreground))]/50 mb-2" />
-                  <p className="text-sm font-medium mb-1">Click to upload signature image</p>
+                  <p className="text-sm font-medium mb-1">{t('signee.uploadSignatureImage')}</p>
                   <p className="text-xs text-[hsl(var(--muted-foreground))] mb-2">
-                    PNG, JPG up to 2MB
+                    {t('signee.signatureImageFormats')}
                   </p>
                   <p className="text-xs text-[hsl(var(--primary))] font-medium">
-                    💡 Upload PNG/JPG with transparent background for better appearance
+                    {t('signee.transparentImageHint')}
                   </p>
                 </>
               )}

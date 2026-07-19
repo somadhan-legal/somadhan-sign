@@ -175,15 +175,15 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3 sm:px-5">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--accent-coral))]" />
-                    <span className="text-xs font-bold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">Agreement.pdf</span>
+                    <span className="text-xs font-bold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">{t('landing.demoDocument')}</span>
                   </div>
-                  <span className="rounded-full border border-[hsl(var(--border))] px-3 py-1 text-[11px] font-bold">DRAFT</span>
+                  <span className="rounded-full border border-[hsl(var(--border))] px-3 py-1 text-[11px] font-bold uppercase">{t('landing.demoDraft')}</span>
                 </div>
                 <div className="grid min-h-[450px] grid-cols-[72px_1fr] sm:grid-cols-[170px_1fr]">
                   <div className="border-r border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3 sm:p-4">
-                    <p className="hidden text-[11px] font-extrabold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))] sm:block">Fields</p>
+                    <p className="hidden text-[11px] font-extrabold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))] sm:block">{t('landing.demoFields')}</p>
                     <div className="mt-4 space-y-2">
-                      {[['Sign', Fingerprint], ['Initial', FileCheck2], ['Date', History]].map(([label, Icon]) => (
+                      {[[t('editor.signature'), Fingerprint], [t('editor.initials'), FileCheck2], [t('editor.date'), History]].map(([label, Icon]) => (
                         <div key={label as string} className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2.5 text-xs font-semibold">
                           <Icon className="h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
                           <span className="hidden sm:inline">{label as string}</span>
@@ -205,7 +205,7 @@ export default function LandingPage() {
                         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                         className="absolute bottom-24 right-6 flex h-14 w-36 items-center justify-center rounded-lg border-2 border-[hsl(var(--accent-coral))] bg-[hsl(var(--background))] text-xs font-extrabold text-[hsl(var(--accent-coral))] shadow-lg sm:right-9"
                       >
-                        <Fingerprint className="mr-2 h-4 w-4" /> SIGN HERE
+                        <Fingerprint className="mr-2 h-4 w-4" /> {t('landing.demoSignHere')}
                       </motion.div>
                       <div className="absolute bottom-10 left-7 right-7 h-px bg-[hsl(var(--border))] sm:left-9 sm:right-9" />
                     </div>
@@ -221,7 +221,7 @@ export default function LandingPage() {
               </div>
               <div className="absolute -bottom-5 -left-3 hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 shadow-xl sm:flex sm:items-center sm:gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-bold text-white">3</span>
-                <div><p className="text-xs font-bold">Signers ready</p><p className="text-[11px] text-[hsl(var(--muted-foreground))]">Each field is assigned</p></div>
+                <div><p className="text-xs font-bold">{t('landing.demoSignersReady')}</p><p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('landing.demoFieldsAssigned')}</p></div>
               </div>
             </motion.div>
           </div>
@@ -269,18 +269,18 @@ export default function LandingPage() {
             </motion.div>
             <motion.div {...reveal} className="landing-audit-card">
               <div className="flex items-center justify-between border-b border-[hsl(var(--border))] p-5">
-                <div className="flex items-center gap-3"><History className="h-5 w-5 text-[hsl(var(--primary))]" /><span className="font-bold">Audit trail</span></div>
-                <span className="text-xs font-bold text-[hsl(var(--primary))]">VERIFIED</span>
+                <div className="flex items-center gap-3"><History className="h-5 w-5 text-[hsl(var(--primary))]" /><span className="font-bold">{t('landing.demoAuditTrail')}</span></div>
+                <span className="text-xs font-bold uppercase text-[hsl(var(--primary))]">{t('landing.demoVerified')}</span>
               </div>
               <div className="space-y-6 p-6 sm:p-8">
                 {[
-                  ['Document created', '09:42'],
-                  ['Invitations delivered', '09:44'],
-                  ['All signatures completed', '10:17'],
+                  [t('landing.demoDocumentCreated'), '09:42'],
+                  [t('landing.demoInvitationsDelivered'), '09:44'],
+                  [t('landing.demoAllSigned'), '10:17'],
                 ].map(([label, time], index) => (
                   <div key={label} className="grid grid-cols-[20px_1fr_auto] items-start gap-4">
                     <div className="relative mt-1.5 h-3 w-3 rounded-full bg-[hsl(var(--primary))]">{index < 2 && <span className="absolute left-[5px] top-4 h-10 w-px bg-[hsl(var(--border))]" />}</div>
-                    <div><p className="font-semibold">{label}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Agreement.pdf</p></div>
+                    <div><p className="font-semibold">{label}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{t('landing.demoDocument')}</p></div>
                     <span className="text-xs text-[hsl(var(--muted-foreground))]">{time}</span>
                   </div>
                 ))}

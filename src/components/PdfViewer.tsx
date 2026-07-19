@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { useLanguageStore } from '@/stores/languageStore'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -36,6 +37,7 @@ function PageWithOverlay({
   onPageMouseLeave?: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { t } = useLanguageStore()
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -84,7 +86,7 @@ function PageWithOverlay({
       onPointerLeave={onPageMouseLeave}
       role={onPageClick ? 'button' : undefined}
       tabIndex={onPageClick ? 0 : undefined}
-      aria-label={onPageClick ? `PDF page ${pageNumber}. Press Enter to place the selected field in the center.` : undefined}
+      aria-label={onPageClick ? `${t('viewer.pdfPage')} ${pageNumber}. ${t('viewer.placeCenterHint')}` : undefined}
       style={{ userSelect: 'none', touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom' }}
     >
       <Page
@@ -114,6 +116,7 @@ export default function PdfViewer({
   onPagePointerMove,
   onPageMouseLeave,
 }: PdfViewerProps) {
+  const { t } = useLanguageStore()
   const [totalPages, setTotalPages] = useState(0)
   const [internalScale, setInternalScale] = useState(1.0)
   const [availableWidth, setAvailableWidth] = useState(680)
@@ -148,14 +151,14 @@ export default function PdfViewer({
       {/* Zoom Controls */}
       <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
         <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
-          {totalPages} {totalPages === 1 ? 'page' : 'pages'}
+          {totalPages} {totalPages === 1 ? t('viewer.page') : t('viewer.pages')}
         </span>
         <div className="w-px h-6 bg-[hsl(var(--border))] mx-1" />
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.max(0.5, s - 0.1))}
-          aria-label="Zoom out"
+          aria-label={t('viewer.zoomOut')}
           className="h-11 w-11"
         >
           <ZoomOut className="w-4 h-4" />
@@ -167,7 +170,7 @@ export default function PdfViewer({
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.min(2, s + 0.1))}
-          aria-label="Zoom in"
+          aria-label={t('viewer.zoomIn')}
           className="h-11 w-11"
         >
           <ZoomIn className="w-4 h-4" />
@@ -182,7 +185,7 @@ export default function PdfViewer({
         onLoadError={(err) => {
           console.error('PdfViewer load error:', err)
           setTotalPages(0)
-          setLoadError('The PDF could not be loaded. Check your connection and try again.')
+          setLoadError(t('viewer.pdfLoadFailed'))
         }}
         loading={
           <div className="w-full min-w-[260px] max-w-[680px] h-[70vh] flex items-center justify-center">
@@ -191,9 +194,9 @@ export default function PdfViewer({
         }
         error={
           <div role="alert" className="w-full min-w-[260px] max-w-[680px] h-[50vh] px-6 text-center flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
-            <p>{loadError || 'The PDF could not be loaded.'}</p>
+            <p>{loadError || t('viewer.pdfLoadFailed')}</p>
             <Button className="mt-4" variant="outline" onClick={() => { setLoadError(''); setReloadKey((key) => key + 1) }}>
-              Try again
+              {t('viewer.tryAgain')}
             </Button>
           </div>
         }
