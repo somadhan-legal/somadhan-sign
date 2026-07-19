@@ -11,7 +11,7 @@ import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
 import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
-import { isMissingEdgeFunction } from '@/lib/edgeFunctionError'
+import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 
 interface DocumentData {
   id: string
@@ -48,10 +48,15 @@ export default function ViewDocumentPage() {
       setLoading(true)
       setError(null)
 
-      const { data: accessData, error: accessError } = await supabase.functions.invoke('get-document-access', {
-        body: { viewerToken: documentId },
-      })
-      if (!accessError) {
+      if (secureDocumentAccessEnabled) {
+        const { data: accessData, error: accessError } = await supabase.functions.invoke('get-document-access', {
+          body: { viewerToken: documentId },
+        })
+        if (accessError) {
+          setError(t('signee.docNotFoundDesc'))
+          setLoading(false)
+          return
+        }
         const securePackage = accessData?.viewerPackage as ViewerPackageResult | undefined
         if (!securePackage?.document) {
           setError(t('signee.docNotFoundDesc'))
@@ -60,11 +65,6 @@ export default function ViewDocumentPage() {
         }
         setDocument(securePackage.document)
         setSigners(securePackage.signers || [])
-        setLoading(false)
-        return
-      }
-      if (!isMissingEdgeFunction(accessError)) {
-        setError(t('signee.docNotFoundDesc'))
         setLoading(false)
         return
       }

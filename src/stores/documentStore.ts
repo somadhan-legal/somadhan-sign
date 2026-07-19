@@ -17,7 +17,7 @@ import {
   getDocumentStoragePath,
   getLegacyPublicDocumentUrl,
 } from '@/lib/documentStorage'
-import { isMissingEdgeFunction } from '@/lib/edgeFunctionError'
+import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -99,11 +99,14 @@ const normalizeSigningPackageUrl = (signingPackage: SigningPackageResult): Signi
 })
 
 const fetchSigningAccessPackage = async (token: string): Promise<SigningPackageResult | null | undefined> => {
+  // Legacy access is a deliberate deployment mode. Once the secure service is
+  // enabled, every service error fails closed instead of silently downgrading.
+  if (!secureDocumentAccessEnabled) return undefined
+
   const { data, error } = await supabase.functions.invoke('get-document-access', {
     body: { signingToken: token },
   })
   if (!error) return data?.signerPackage || null
-  if (isMissingEdgeFunction(error)) return undefined
   console.error('Error fetching secure document access:', error)
   return null
 }

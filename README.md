@@ -192,6 +192,8 @@ The application uses **Zustand** for global state management with the following 
    ```env
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key-here
+   # Set to true only after get-document-access and the secure access migration are deployed.
+   VITE_SECURE_DOCUMENT_ACCESS_ENABLED=false
    ```
 
 4. **Set up Supabase**
