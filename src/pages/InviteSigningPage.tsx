@@ -28,6 +28,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
+import type { DocumentCompletionResult } from '@/types/database'
 
 const fieldTypeIcons: Record<string, React.ReactNode> = {
   signature: <PenTool className="w-3 h-3" />,
@@ -85,7 +86,9 @@ export default function InviteSigningPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const hasLoggedView = useRef(false)
   const { isDark, toggle } = useThemeStore()
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024
+  )
   const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => {
@@ -320,7 +323,7 @@ export default function InviteSigningPage() {
       let allSigned = false
       for (let attempt = 1; attempt <= 3; attempt++) {
         await new Promise(r => setTimeout(r, attempt * 1500))
-        const { data, error: checkErr } = await (supabase as any)
+        const { data, error: checkErr } = await supabase
           .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
         if (data) {
           allSigned = true
@@ -338,7 +341,7 @@ export default function InviteSigningPage() {
       
       if (allSigned) {
         // Mark document as completed (bypasses RLS)
-        const { error: rpcError } = await (supabase as any)
+        const { error: rpcError } = await supabase
           .rpc('mark_document_completed', { p_document_id: documentId })
         
         if (rpcError) {
@@ -347,9 +350,9 @@ export default function InviteSigningPage() {
         await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
         
         // Get all document data via RPC (bypasses RLS)
-        let completionData: any = null
+        let completionData: DocumentCompletionResult | null = null
         try {
-          const { data } = await (supabase as any)
+          const { data } = await supabase
             .rpc('get_document_for_completion', { p_document_id: documentId })
           completionData = data
         } catch (rpcErr) {
@@ -362,8 +365,8 @@ export default function InviteSigningPage() {
         // Generate signed PDF + audit trail combined (non-blocking for email)
         if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
           try {
-            const signedFields: SignedField[] = completionData.placements.map((p: any) => {
-              const field = completionData.fields.find((f: any) => f.id === p.field_id)
+            const signedFields: SignedField[] = completionData.placements.map((p) => {
+              const field = completionData.fields?.find((candidate) => candidate.id === p.field_id)
               return {
                 field_type: field?.field_type || 'signature',
                 page_number: field?.page_number || 1,
@@ -398,7 +401,7 @@ export default function InviteSigningPage() {
                 .getPublicUrl(fileName)
               downloadUrl = urlData?.publicUrl || ''
               
-              await (supabase as any).rpc('save_final_pdf_url', {
+              await supabase.rpc('save_final_pdf_url', {
                 p_document_id: documentId,
                 p_final_pdf_url: downloadUrl,
               })
@@ -423,7 +426,7 @@ export default function InviteSigningPage() {
           const directRecipients: string[] = []
           
           if (completionData?.signers) {
-            completionData.signers.forEach((s: any) => { if (s.signer_email) directRecipients.push(s.signer_email) })
+            completionData.signers.forEach((signer) => { if (signer.signer_email) directRecipients.push(signer.signer_email) })
           }
           
           if (completionData?.owner_email) {
@@ -440,7 +443,7 @@ export default function InviteSigningPage() {
               if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
                 ccEmails = meta.ccEmails
               }
-            } catch (e) { /* not JSON */ }
+            } catch { /* not JSON */ }
           }
           
           const uniqueRecipients = [...new Set(directRecipients)]
@@ -568,11 +571,12 @@ export default function InviteSigningPage() {
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
     const docId = signerData!.document_id
-    const { data: freshDoc } = await (supabase as any)
+    const { data: freshDoc } = await supabase
       .rpc('get_document_for_viewer', { p_document_id: docId })
 
-    const pdfUrl = freshDoc?.original_pdf_url || signerData!.documents.original_pdf_url
-    const title = freshDoc?.title || signerData!.documents.title
+    const documentRow = freshDoc?.[0]
+    const pdfUrl = documentRow?.original_pdf_url || signerData!.documents.original_pdf_url
+    const title = documentRow?.title || signerData!.documents.title
 
     // Step 1: Generate signed PDF with overlays
     const signedFields = await fetchSignedFields()
@@ -648,7 +652,7 @@ export default function InviteSigningPage() {
             </a>
             <div className="w-px h-6 bg-[hsl(var(--border))]" />
             <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))]" />
-            <h2 className="font-semibold">{signerData?.documents.title} — Signed</h2>
+            <h2 className="font-semibold">{signerData?.documents.title} | Signed</h2>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
@@ -722,10 +726,10 @@ export default function InviteSigningPage() {
   }
 
   return (
-    <div className="flex h-screen relative">
+    <div className="flex h-screen min-w-0 relative">
       {/* Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
+      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
@@ -858,7 +862,7 @@ export default function InviteSigningPage() {
                   )}
                   <span className="flex items-center gap-1">
                     {icon}
-                    {field.field_type === 'initials' ? 'Initials' : field.field_type === 'signature' ? 'Sign' : field.field_type.charAt(0).toUpperCase() + field.field_type.slice(1)} {index + 1} — Pg {field.page_number}
+                    {field.field_type === 'initials' ? 'Initials' : field.field_type === 'signature' ? 'Sign' : field.field_type.charAt(0).toUpperCase() + field.field_type.slice(1)} {index + 1} | Pg {field.page_number}
                   </span>
                 </button>
               )
@@ -945,7 +949,7 @@ export default function InviteSigningPage() {
       {leftPanelCollapsed && (
         <button
           onClick={() => setLeftPanelCollapsed(false)}
-          className="w-10 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
+          className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
           title="Expand panel"
         >
           <PanelLeftOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
@@ -953,13 +957,13 @@ export default function InviteSigningPage() {
       )}
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative">
+      <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center relative">
         {/* Language & Theme toggles - top right */}
         <div className="fixed top-3 right-4 z-40 flex items-center gap-1 bg-[hsl(var(--card))]/90 backdrop-blur rounded-lg border border-[hsl(var(--border))] px-1 py-0.5 shadow-sm">
-          <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
             <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-11 w-11">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </div>
@@ -1032,7 +1036,11 @@ export default function InviteSigningPage() {
                           </button>
                           {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); isInitials ? handleAutoFillInitials(initialsData!) : handleAutoFillSignatures(signatureData!); }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (isInitials) handleAutoFillInitials(initialsData!)
+                                else handleAutoFillSignatures(signatureData!)
+                              }}
                               disabled={submitting}
                               className="px-3 py-1.5 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
                             >

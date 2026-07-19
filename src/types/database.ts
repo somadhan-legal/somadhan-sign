@@ -1,3 +1,58 @@
+export interface SignerByTokenResult {
+  id: string
+  document_id: string
+  signer_email: string
+  signer_name: string | null
+  status: 'pending' | 'viewed' | 'signed'
+  signed_at: string | null
+  signing_token: string
+  documents: {
+    title: string
+    original_pdf_url: string
+    status: string
+  }
+}
+
+export interface DocumentCompletionResult {
+  title: string
+  created_by: string
+  original_pdf_url: string
+  signers: Array<{ signer_email: string; signer_name: string | null }> | null
+  fields: Array<{
+    id: string
+    field_type: 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
+    page_number: number
+    x: number
+    y: number
+    width: number
+    height: number
+  }> | null
+  placements: Array<{ field_id: string; signature_id: string }> | null
+  owner_email: string | null
+  cc_metadata: string | null
+  audit_trail: Array<{
+    action: string
+    user_email: string
+    user_name: string | null
+    created_at: string
+    metadata: string | null
+    ip_address: string | null
+  }> | null
+}
+
+export interface ViewerDocumentResult {
+  id: string
+  title: string
+  original_pdf_url: string
+  status: string
+}
+
+export interface ViewerSignerResult {
+  signer_email: string
+  signer_name: string | null
+  status: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -207,7 +262,38 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_all_signers_signed: {
+        Args: { p_document_id: string; p_current_signer_id: string }
+        Returns: boolean
+      }
+      get_document_for_completion: {
+        Args: { p_document_id: string }
+        Returns: DocumentCompletionResult
+      }
+      get_document_for_viewer: {
+        Args: { p_document_id: string }
+        Returns: ViewerDocumentResult[]
+      }
+      get_signer_by_token: {
+        Args: { p_token: string }
+        Returns: SignerByTokenResult | null
+      }
+      get_signers_for_viewer: {
+        Args: { p_document_id: string }
+        Returns: ViewerSignerResult[]
+      }
+      mark_document_completed: {
+        Args: { p_document_id: string }
+        Returns: undefined
+      }
+      save_final_pdf_url: {
+        Args: { p_document_id: string; p_final_pdf_url: string }
+        Returns: undefined
+      }
+      update_signer_status_by_id: {
+        Args: { p_signer_id: string; p_status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

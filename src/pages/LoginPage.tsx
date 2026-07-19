@@ -76,8 +76,9 @@ export default function LoginPage() {
             setMode('verify-otp')
             setResendTimer(60)
             setOtpAttempts([Date.now()])
-          } catch (signupError: any) {
-            if (signupError?.message?.includes('already registered') || signupError?.message?.includes('User already exists')) {
+          } catch (signupError: unknown) {
+            const signupMessage = signupError instanceof Error ? signupError.message : ''
+            if (signupMessage.includes('already registered') || signupMessage.includes('User already exists')) {
               setMode('login')
               setError(t('login.alreadyRegistered'))
             } else {
@@ -102,46 +103,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="min-h-screen flex overflow-hidden bg-[hsl(var(--background))]">
       {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#075056] to-[#043a3d] p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center opacity-[0.04]">
-          <div className="w-[600px] h-[600px] rounded-full border border-white" />
-          <div className="absolute w-[450px] h-[450px] rounded-full border border-white" />
-        </div>
+      <div className="hidden md:flex md:w-[42%] bg-[#075056] p-8 lg:p-12 flex-col justify-between relative overflow-hidden">
+        <div className="landing-solid-lines absolute inset-0 opacity-10" />
 
         <div className="relative z-10 flex items-center justify-between">
-          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
-            <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-14 cursor-pointer" />
+          <a href="/">
+            <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-11 lg:h-14 cursor-pointer" />
           </a>
           <button onClick={toggleLang} className="text-white/60 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title={lang === 'en' ? 'বাংলা' : 'English'}>
             {lang === 'en' ? 'বাং' : 'EN'}
           </button>
         </div>
 
-        <div className="relative z-10 text-center flex flex-col items-center">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            {t('login.brandingTitle')}
-          </h1>
-          <h1 className="text-4xl font-bold mb-4">
-            <span className="text-white">Somadhan</span><span className="text-[hsl(var(--accent-coral))]">Sign</span>
-          </h1>
-          <p className="text-base text-white/60 max-w-md mb-10">
-            {t('login.brandingDesc')}
-          </p>
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="w-full max-w-md">
+            <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/55">A clearer way to sign</p>
+            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-[-0.04em] text-white lg:text-5xl">
+              Your document.<br />Ready for everyone.
+            </h1>
+            <p className="mt-5 max-w-sm text-sm leading-6 text-white/65 lg:text-base lg:leading-7">{t('login.brandingDesc')}</p>
 
-          <div className="flex gap-4">
-            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
-              <div className="text-2xl font-bold text-white">10k+</div>
-              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statDocuments')}</div>
-            </div>
-            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
-              <div className="text-2xl font-bold text-white">5k+</div>
-              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statUsers')}</div>
-            </div>
-            <div className="border border-white/20 rounded-xl px-6 py-4 text-center min-w-[120px]">
-              <div className="text-2xl font-bold text-white">99.9%</div>
-              <div className="text-[11px] text-white/50 uppercase tracking-wider mt-1">{t('login.statUptime')}</div>
+            <div className="mt-8 rounded-3xl border border-white/20 bg-white p-5 text-[#232323] shadow-2xl lg:p-7">
+              <div className="flex items-center justify-between border-b border-[#d9e2e3] pb-4">
+                <span className="text-xs font-extrabold uppercase tracking-[0.16em]">Agreement.pdf</span>
+                <span className="rounded-full bg-[#075056] px-3 py-1 text-[10px] font-bold text-white">READY</span>
+              </div>
+              <div className="mt-8 space-y-3">
+                {[100, 82, 94, 66].map((width) => <div key={width} className="h-2 bg-[#d9e2e3]" style={{ width: `${width}%` }} />)}
+              </div>
+              <div className="mt-9 ml-auto flex h-12 w-32 items-center justify-center rounded-lg border-2 border-[#F95943] text-xs font-extrabold text-[#F95943]">SIGN HERE</div>
             </div>
           </div>
         </div>
@@ -152,8 +144,12 @@ export default function LoginPage() {
       </div>
 
       {/* Right - Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center px-5 py-8 sm:p-8 lg:p-12 overflow-y-auto">
+        <div className="w-full max-w-md rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-[0_24px_80px_hsl(var(--foreground)/0.08)] sm:p-8 md:border-0 md:p-0 md:shadow-none">
+          <div className="mb-8 flex items-center justify-between md:hidden">
+            <a href="/"><img src={SomadhanLogoDark} alt="SomadhanSign" className="h-10 rounded-lg bg-[#075056] px-2 py-1" /></a>
+            <button onClick={toggleLang} className="min-h-11 min-w-11 rounded-xl text-xs font-bold hover:bg-[hsl(var(--muted))]">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
+          </div>
 
           {/* Forgot Password Screen */}
           {mode === 'forgot-password' ? (
@@ -386,7 +382,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 bottom-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+                      className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>

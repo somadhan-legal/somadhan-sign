@@ -111,11 +111,6 @@ export default function DashboardPage() {
   const endIndex = startIndex + itemsPerPage
   const paginatedDocs = filteredDocs.slice(startIndex, endIndex)
 
-  // Reset to page 1 when search or filter changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, filterStatus])
-
   const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
     draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },
     pending: { icon: <Clock className="w-3 h-3" />, variant: 'warning', label: t('dashboard.pending') },
@@ -172,7 +167,7 @@ export default function DashboardPage() {
             type="text"
             placeholder={t('dashboard.searchDocs')}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
             className="w-full h-10 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
           />
         </div>
@@ -185,7 +180,7 @@ export default function DashboardPage() {
           ].map((item) => (
             <button
               key={item.status}
-              onClick={() => setFilterStatus(item.status)}
+              onClick={() => { setFilterStatus(item.status); setCurrentPage(1) }}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 filterStatus === item.status
                   ? 'bg-[hsl(var(--primary))] text-white'

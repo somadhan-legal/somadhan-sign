@@ -51,6 +51,32 @@ const fieldTypeOptions: { type: FieldType; label: string }[] = [
   { type: 'text', label: 'Text' },
 ]
 
+const FIELD_SIZE_PERCENTAGES: Record<FieldType, { width: number; height: number }> = {
+  signature: { width: 20, height: 6 },
+  initials: { width: 10, height: 5 },
+  date: { width: 14, height: 4 },
+  text: { width: 18, height: 4 },
+  checkbox: { width: 4, height: 4 },
+}
+
+const getFieldPlacement = (
+  type: FieldType,
+  pointerX: number,
+  pointerY: number,
+  pageWidth: number,
+  pageHeight: number
+) => {
+  const size = FIELD_SIZE_PERCENTAGES[type]
+  const pointerXPercent = (pointerX / pageWidth) * 100
+  const pointerYPercent = (pointerY / pageHeight) * 100
+  return {
+    x: Math.max(0, Math.min(100 - size.width, pointerXPercent - size.width / 2)),
+    y: Math.max(0, Math.min(100 - size.height, pointerYPercent - size.height / 2)),
+    width: size.width,
+    height: size.height,
+  }
+}
+
 function DraggableField({ children, onStop, bounds, style, className, fieldId }: {
   children: React.ReactNode
   onStop: (e: unknown, data: { x: number; y: number }) => void
@@ -97,6 +123,7 @@ export default function DocumentEditorPage() {
   const [signerFirstName, setSignerFirstName] = useState('')
   const [signerLastName, setSignerLastName] = useState('')
   const [signerEmail, setSignerEmail] = useState('')
+  const [signerFormError, setSignerFormError] = useState('')
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
@@ -107,7 +134,13 @@ export default function DocumentEditorPage() {
   const [showSendConfirm, setShowSendConfirm] = useState(false)
   const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
   const [countdown, setCountdown] = useState(5)
-  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
+  const [placementPreview, setPlacementPreview] = useState<{
+    pageNumber: number
+    x: number
+    y: number
+    width: number
+    height: number
+  } | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const signerListRef = useRef<HTMLDivElement>(null)
   
@@ -124,7 +157,9 @@ export default function DocumentEditorPage() {
   const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
   
   // Panel collapse state
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024
+  )
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -144,7 +179,7 @@ export default function DocumentEditorPage() {
 
   const isInteracting = useRef(false)
 
-  const handleResizeStart = useCallback((fieldId: string, corner: 'nw' | 'ne' | 'sw' | 'se', e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((fieldId: string, corner: 'nw' | 'ne' | 'sw' | 'se', e: React.PointerEvent) => {
     e.stopPropagation()
     e.preventDefault()
     const field = signatureFields.find((f) => f.id === fieldId)
@@ -161,7 +196,7 @@ export default function DocumentEditorPage() {
     const fieldEl = (e.target as HTMLElement).closest('[data-field-id]') as HTMLElement
     if (!fieldEl) return
 
-    const handleMouseMove = (ev: MouseEvent) => {
+    const handlePointerMove = (ev: PointerEvent) => {
       ev.preventDefault()
       const pageEl = document.querySelector('.react-pdf__Page') as HTMLElement
       if (!pageEl) return
@@ -195,9 +230,9 @@ export default function DocumentEditorPage() {
       fieldEl.style.top = `${newTop}%`
     }
 
-    const handleMouseUp = (ev: MouseEvent) => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
+    const handlePointerUp = (ev: PointerEvent) => {
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
 
       const pageEl = document.querySelector('.react-pdf__Page') as HTMLElement
       if (pageEl) {
@@ -231,8 +266,8 @@ export default function DocumentEditorPage() {
       setTimeout(() => { isInteracting.current = false }, 100)
     }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    document.addEventListener('pointermove', handlePointerMove)
+    document.addEventListener('pointerup', handlePointerUp)
   }, [signatureFields, updateSignatureField])
 
   const handlePageClick = useCallback(
@@ -252,24 +287,15 @@ export default function DocumentEditorPage() {
 
       const assignedEmail = signers[selectedSignerIdx]?.signer_email || signers[0].signer_email
       const fieldId = `field_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-      const sizeMap: Record<FieldType, { w: number; h: number }> = {
-        signature: { w: 20, h: 6 },
-        initials: { w: 10, h: 5 },
-        date: { w: 14, h: 4 },
-        text: { w: 18, h: 4 },
-        checkbox: { w: 4, h: 4 },
-      }
-      const size = sizeMap[selectedFieldType]
-      const rawX = (x / pageWidth) * 100
-      const rawY = (y / pageHeight) * 100
+      const placement = getFieldPlacement(selectedFieldType, x, y, pageWidth, pageHeight)
       addSignatureField({
         id: fieldId,
         document_id: id,
         page_number: pageNumber,
-        x: Math.max(0, Math.min(100 - size.w, rawX - size.w / 2)),
-        y: Math.max(0, Math.min(100 - size.h, rawY - size.h / 2)),
-        width: size.w,
-        height: size.h,
+        x: placement.x,
+        y: placement.y,
+        width: placement.width,
+        height: placement.height,
         assigned_to_email: assignedEmail,
         field_type: selectedFieldType,
         field_order: signatureFields.length + 1,
@@ -279,22 +305,31 @@ export default function DocumentEditorPage() {
       // Auto-select the newly placed field in the right panel
       setSelectedField(fieldId)
     },
-    [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx]
+    [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx, currentDocument?.status, t]
   )
 
   const handleSaveSigner = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id) return
     const fullName = [signerFirstName.trim(), signerLastName.trim()].filter(Boolean).join(' ')
+    const normalizedEmail = signerEmail.trim().toLowerCase()
+    const duplicate = signers.some(
+      (signer) => signer.id !== editingSignerId && signer.signer_email.trim().toLowerCase() === normalizedEmail
+    )
+    if (duplicate) {
+      setSignerFormError(t('editor.duplicateEmail'))
+      return
+    }
+    setSignerFormError('')
 
     try {
       if (editingSignerId) {
         await updateSigner(editingSignerId, {
-          signer_email: signerEmail,
+          signer_email: normalizedEmail,
           signer_name: fullName || undefined,
         })
       } else {
-        await addSigner(id, signerEmail, fullName || undefined)
+        await addSigner(id, normalizedEmail, fullName || undefined)
       }
 
       // Refetch signers and fields to ensure UI is in sync
@@ -318,6 +353,10 @@ export default function DocumentEditorPage() {
       setShowSignerModal(false)
     } catch (err) {
       console.error('[DocumentEditor] Error saving signer:', err)
+      if (err instanceof Error && (err.message === 'DUPLICATE_SIGNER_EMAIL' || err.message.includes('document_signers_document_email_unique'))) {
+        setSignerFormError(t('editor.duplicateEmail'))
+        return
+      }
       setConfirmDialog({
         isOpen: true,
         title: t('editor.error'),
@@ -329,6 +368,7 @@ export default function DocumentEditorPage() {
   }
 
   const openEditSignerModal = (signer: typeof signers[0]) => {
+    setSignerFormError('')
     setEditingSignerId(signer.id)
     const parts = (signer.signer_name || '').split(' ')
     setSignerFirstName(parts[0] || '')
@@ -338,6 +378,7 @@ export default function DocumentEditorPage() {
   }
 
   const openAddSignerModal = () => {
+    setSignerFormError('')
     setEditingSignerId(null)
     setSignerFirstName('')
     setSignerLastName('')
@@ -414,7 +455,10 @@ export default function DocumentEditorPage() {
     setSaving(true)
     
     const senderName = user.user_metadata?.full_name || user.email || 'A user'
-    const ccEmailsList = ccEmails.split(',').map(e => e.trim()).filter(Boolean)
+    const signerEmailSet = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
+    const ccEmailsList = Array.from(new Set(
+      ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
+    )).filter((email) => !signerEmailSet.has(email))
     
     // Log document creation (first time sending)
     if (currentDocument?.status === 'draft' && user.email) {
@@ -490,10 +534,10 @@ export default function DocumentEditorPage() {
   const isLocked = currentDocument.status !== 'draft'
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-full min-w-0">
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="w-56 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col overflow-hidden">
+      <div className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden lg:static lg:z-auto lg:w-56 lg:shadow-none">
         {/* Scrollable sidebar content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
@@ -561,7 +605,7 @@ export default function DocumentEditorPage() {
                       </p>
                     </div>
                     {!isLocked && (
-                      <div className="shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity relative">
+                      <div className="shrink-0 flex items-center gap-0.5 opacity-100 transition-opacity relative lg:opacity-0 lg:group-hover:opacity-100">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
                           className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
@@ -679,7 +723,7 @@ export default function DocumentEditorPage() {
       {leftPanelCollapsed && (
         <button
           onClick={() => setLeftPanelCollapsed(false)}
-          className="w-10 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
+          className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
           title="Expand panel"
         >
           <PanelLeftOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
@@ -689,38 +733,54 @@ export default function DocumentEditorPage() {
       {/* PDF Viewer */}
       <div
         ref={pdfContainerRef}
-        className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative"
-        onMouseLeave={() => setCursorPos(null)}
+        className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center relative"
+        onPointerLeave={() => setPlacementPreview(null)}
       >
-        {/* Cursor stamp - only visible when hovering over PDF pages */}
-        {cursorPos && !isLocked && signers.length > 0 && (
-          <div
-            className="fixed z-50 pointer-events-none flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-lg border text-xs font-semibold"
-            style={{
-              left: cursorPos.x + 14,
-              top: cursorPos.y + 14,
-              backgroundColor: `${SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length]}18`,
-              borderColor: SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length],
-              color: SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length],
-            }}
-          >
-            {fieldTypeIcons[selectedFieldType]}
-            {t('editor.clickToAddField')}
-          </div>
-        )}
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           onPageClick={handlePageClick}
-          onPageMouseMove={(e) => {
-            if (!isLocked && signers.length > 0) {
-              setCursorPos({ x: e.clientX, y: e.clientY })
+          onPagePointerMove={(pageNumber, x, y, pageWidth, pageHeight, pointerType) => {
+            if (!isLocked && signers.length > 0 && pointerType !== 'touch') {
+              setPlacementPreview({
+                pageNumber,
+                ...getFieldPlacement(selectedFieldType, x, y, pageWidth, pageHeight),
+              })
             }
           }}
-          onPageMouseLeave={() => setCursorPos(null)}
+          onPageMouseLeave={() => setPlacementPreview(null)}
           renderPageOverlay={(pageNumber) => {
             const pageFields = getPageFields(pageNumber)
+            const previewColor = SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length]
+            const previewSigner = signers[selectedSignerIdx]
+            const previewLabel = selectedFieldType === 'signature' ? 'Signature' : selectedFieldType === 'initials' ? 'Initials' : selectedFieldType === 'date' ? 'Date' : selectedFieldType === 'checkbox' ? 'Checkbox' : 'Text'
             return (
             <>
+              {placementPreview?.pageNumber === pageNumber && !isLocked && previewSigner && (
+                <div
+                  aria-hidden="true"
+                  className="absolute z-30 pointer-events-none"
+                  style={{
+                    left: `${placementPreview.x}%`,
+                    top: `${placementPreview.y}%`,
+                    width: `${placementPreview.width}%`,
+                    height: `${placementPreview.height}%`,
+                  }}
+                >
+                  <div
+                    className="relative flex h-full w-full items-center justify-center rounded border-2 border-solid shadow-lg"
+                    style={{
+                      borderColor: previewColor,
+                      backgroundColor: `${previewColor}26`,
+                      color: previewColor,
+                    }}
+                  >
+                    <span className="truncate px-1 text-[11px] font-semibold">{previewLabel}</span>
+                    <span className="absolute bottom-0 left-0 right-0 truncate px-0.5 text-center text-[8px] font-medium opacity-80">
+                      {previewSigner.signer_name || previewSigner.signer_email.split('@')[0]}
+                    </span>
+                  </div>
+                </div>
+              )}
               {pageFields.map((field) => {
                 const color = field.assigned_to_email ? getSignerColor(field.assigned_to_email) : '#9CA3AF'
                 const sName = field.assigned_to_email ? getSignerName(field.assigned_to_email) : 'Unassigned'
@@ -809,10 +869,10 @@ export default function DocumentEditorPage() {
                     )}
                     {isSelected && (
                       <>
-                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-nw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'nw', e)} />
-                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-ne-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'ne', e)} />
-                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-sw-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'sw', e)} />
-                        <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-2 bg-[hsl(var(--card))] cursor-se-resize z-30" style={{ borderColor: color }} onMouseDown={(e) => handleResizeStart(field.id, 'se', e)} />
+                        <div className="absolute -top-3 -left-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-nw-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'nw', e)} />
+                        <div className="absolute -top-3 -right-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-ne-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'ne', e)} />
+                        <div className="absolute -bottom-3 -left-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-sw-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'sw', e)} />
+                        <div className="absolute -bottom-3 -right-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-se-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'se', e)} />
                       </>
                     )}
                   </DraggableField>
@@ -948,11 +1008,14 @@ export default function DocumentEditorPage() {
                 type="email"
                 placeholder="signer@example.com"
                 value={signerEmail}
-                onChange={(e) => setSignerEmail(e.target.value)}
+                onChange={(e) => { setSignerEmail(e.target.value); setSignerFormError('') }}
                 required
                 pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
                 title={t('editor.invalidEmail')}
               />
+              {signerFormError && (
+                <p role="alert" className="text-sm font-medium text-[hsl(var(--destructive))]">{signerFormError}</p>
+              )}
               <div className="flex gap-3">
                 <Button
                   type="button"

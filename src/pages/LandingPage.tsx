@@ -1,16 +1,20 @@
-import { useRef } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
-  Upload,
-  PenTool,
-  Send,
-  Shield,
-  Zap,
-  Users,
-  CheckCircle2,
   ArrowRight,
-  Star,
+  Check,
+  FileCheck2,
+  Fingerprint,
+  History,
+  Menu,
+  Moon,
+  MousePointer2,
+  Send,
+  ShieldCheck,
+  Sun,
+  Users,
+  X,
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -19,350 +23,294 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import HowItWorks from '@/components/HowItWorks'
 
+const reveal = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-80px' },
+  transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as const },
+}
+
 export default function LandingPage() {
   const { t, lang, toggle: toggleLang } = useLanguageStore()
   const { isDark, toggle: toggleTheme } = useThemeStore()
-  const heroRef = useRef<HTMLDivElement>(null)
-
-  const { scrollYProgress: heroScroll } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start'],
-  })
-
-  const heroY = useTransform(heroScroll, [0, 1], [0, 150])
-  const heroOpacity = useTransform(heroScroll, [0, 0.8], [1, 0])
-  const heroScale = useTransform(heroScroll, [0, 1], [1, 0.95])
-
-  const renderHeroTitle = () => {
-    if (lang === 'bn') {
-      return (
-        <>
-          <span style={{ whiteSpace: 'pre-wrap' }}>{t('landing.heroTitle1')}</span>
-          <br />
-          <span style={{ whiteSpace: 'pre-wrap' }}>সমাধান <span className="gradient-text">সাইন</span> দিয়ে</span>
-        </>
-      )
-    }
-    return (
-      <>
-        {t('landing.heroTitle1')}{' '}
-        <span className="gradient-text">Somadhan Sign</span>
-      </>
-    )
-  }
+  const [menuOpen, setMenuOpen] = useState(false)
+  const logo = isDark ? SomadhanLogoDark : SomadhanLogoLight
 
   const features = [
-    {
-      icon: Upload,
-      titleKey: 'landing.feat.upload',
-      descKey: 'landing.feat.uploadDesc',
-    },
-    {
-      icon: PenTool,
-      titleKey: 'landing.feat.fields',
-      descKey: 'landing.feat.fieldsDesc',
-    },
-    {
-      icon: Users,
-      titleKey: 'landing.feat.multi',
-      descKey: 'landing.feat.multiDesc',
-    },
-    {
-      icon: Send,
-      titleKey: 'landing.feat.track',
-      descKey: 'landing.feat.trackDesc',
-    },
-    {
-      icon: Shield,
-      titleKey: 'landing.feat.secure',
-      descKey: 'landing.feat.secureDesc',
-    },
-    {
-      icon: Zap,
-      titleKey: 'landing.feat.anywhere',
-      descKey: 'landing.feat.anywhereDesc',
-    },
+    { icon: MousePointer2, title: t('landing.feat.fields'), copy: t('landing.feat.fieldsDesc'), tone: 'coral' },
+    { icon: Users, title: t('landing.feat.multi'), copy: t('landing.feat.multiDesc'), tone: 'teal' },
+    { icon: Send, title: t('landing.feat.track'), copy: t('landing.feat.trackDesc'), tone: 'teal' },
+    { icon: ShieldCheck, title: t('landing.feat.secure'), copy: t('landing.feat.secureDesc'), tone: 'coral' },
   ]
 
   return (
-    <div className="overflow-x-hidden">
-      {/* ─── Navbar ─── */}
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 z-50 glass border-b border-[hsl(var(--border) / 0.2)]"
-      >
-        <div className="px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
-          <a href="https://sign.somadhan.com" className="flex items-center gap-2">
-            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-8" />
+    <div className="landing-shell min-h-screen overflow-x-hidden bg-[hsl(var(--background))]">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[hsl(var(--border))] bg-[hsl(var(--background)/0.94)] backdrop-blur-xl">
+        <div className="landing-container flex h-20 items-center justify-between">
+          <a href="#top" aria-label="Somadhan Sign home" className="shrink-0">
+            <img src={logo} alt="Somadhan Sign" className="h-10 w-auto sm:h-11" />
           </a>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleLang}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
-            >
-              {lang === 'en' ? 'বাং' : 'EN'}
+          <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label="Primary navigation">
+            <a href="#product" className="landing-nav-link">{t('landing.navProduct')}</a>
+            <a href="#capabilities" className="landing-nav-link">{t('landing.navCapabilities')}</a>
+            <a href="#security" className="landing-nav-link">{t('landing.navSecurity')}</a>
+          </nav>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            <button onClick={toggleLang} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
+              {lang === 'en' ? 'বাংলা' : 'EN'}
             </button>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer text-[hsl(var(--muted-foreground))]"
-              title={isDark ? 'Light mode' : 'Dark mode'}
-            >
-              {isDark ? '☀️' : '🌙'}
+            <button onClick={toggleTheme} className="landing-icon-button" title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <Link to="/login">
-              <Button variant="ghost" size="sm" className="text-sm">
-                {t('landing.signIn')}
-              </Button>
-            </Link>
-            <Link to="/login?mode=signup">
-              <Button size="sm" className="text-sm">
-                {t('landing.getStartedFree')}
-              </Button>
-            </Link>
+            <Link to="/login"><Button variant="ghost" size="sm">{t('landing.signIn')}</Button></Link>
+            <Link to="/login?mode=signup"><Button size="sm">{t('landing.getStartedFree')}</Button></Link>
           </div>
-        </div>
-      </motion.nav>
 
-      {/* ─── Hero ─── */}
-      <section
-        ref={heroRef}
-        className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16"
-      >
-        {/* Animated background */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 grid-pattern opacity-20" />
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-[hsl(var(--primary))]/8 blur-[100px] animate-pulse-glow" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-[hsl(var(--accent-coral))]/8 blur-[100px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
+          <button
+            className="landing-icon-button sm:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
 
-        <motion.div
-          style={{ y: heroY, opacity: heroOpacity, scale: heroScale }}
-          className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6"
-        >
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-8"
-          >
-            <Star className="w-3.5 h-3.5 text-[hsl(var(--accent-coral))] fill-[hsl(var(--accent-coral))]" />
-            <span className="text-xs font-medium tracking-wide">
-              The modern way to sign documents
-            </span>
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]"
-          >
-            {renderHeroTitle()}
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.35 }}
-            className="text-lg sm:text-xl text-[hsl(var(--muted-foreground))] mb-10 max-w-2xl mx-auto leading-relaxed"
-          >
-            {t('landing.heroDesc')}
-          </motion.p>
-
-          {/* CTA buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.5 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center"
-          >
-            <Link to="/login?mode=signup">
-              <Button size="lg" className="text-base px-8 h-12 group">
-                {t('landing.getStartedFree')}
-                <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button variant="outline" size="lg" className="text-base px-8 h-12">
-                {t('landing.signIn')}
-              </Button>
-            </Link>
-          </motion.div>
-
-          {/* Trust indicators */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.8 }}
-            className="flex items-center justify-center gap-6 mt-12 text-sm text-[hsl(var(--muted-foreground))]"
-          >
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
-              {t('landing.freeToStart')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
-              {t('landing.noCreditCard')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
-              {t('landing.unlimitedDocs')}
-            </span>
-          </motion.div>
-        </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          style={{ opacity: heroOpacity }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="w-6 h-10 rounded-full border-2 border-[hsl(var(--muted-foreground) / 0.3)] flex items-start justify-center p-1.5"
-          >
-            <div className="w-1 h-2 rounded-full bg-[hsl(var(--muted-foreground) / 0.5)]" />
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* ─── How It Works ─── */}
-      <HowItWorks />
-
-      {/* ─── Features ─── */}
-      <section className="py-24 lg:py-32 relative overflow-hidden">
-        <div className="absolute inset-0 dot-pattern opacity-30 pointer-events-none" />
-
-        <div className="px-4 sm:px-6 lg:px-10 relative">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <span className="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-[hsl(var(--accent-coral))]/10 text-[hsl(var(--accent-coral))] mb-4">
-              Features
-            </span>
-            <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-              {t('landing.everything')}
-            </h2>
-            <p className="text-[hsl(var(--muted-foreground))] max-w-xl mx-auto text-lg">
-              {t('landing.everythingDesc')}
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {features.map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <motion.div
-                  key={feature.titleKey}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-50px' }}
-                  transition={{ duration: 0.5, delay: index * 0.08 }}
-                  whileHover={{ y: -4 }}
-                  className="group relative rounded-2xl p-6 glass hover:shadow-xl transition-shadow"
-                >
-                  {/* Hover glow */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full bg-[hsl(var(--primary))]/10 blur-2xl" />
-                  </div>
-
-                  <div className="relative z-10">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[hsl(var(--primary))]/15 to-[hsl(var(--accent-coral))]/10 flex items-center justify-center text-[hsl(var(--primary))] mb-4 group-hover:scale-110 transition-transform duration-300">
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <h3 className="font-bold text-lg mb-2">{t(feature.titleKey)}</h3>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))] leading-relaxed">
-                      {t(feature.descKey)}
-                    </p>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA ─── */}
-      <section className="py-24 lg:py-32 relative overflow-hidden">
-        <div className="px-4 sm:px-6 lg:px-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="relative max-w-5xl mx-auto rounded-3xl overflow-hidden"
-          >
-            {/* Gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary))]/90 to-[hsl(var(--accent-coral))]/80" />
-
-            {/* Decorative shapes */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full border border-white/10 animate-float-slow" />
-              <div className="absolute -bottom-32 -left-16 w-80 h-80 rounded-full border border-white/10 animate-float" />
-              <div className="absolute top-1/2 right-1/3 w-32 h-32 rounded-full border border-white/10 animate-float-slow" style={{ animationDelay: '2s' }} />
-            </div>
-
-            <div className="relative z-10 p-12 lg:p-16 text-center text-white">
-              <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                {t('landing.ctaTitle')}
-              </h2>
-              <p className="text-white/80 mb-8 max-w-xl mx-auto text-lg">
-                {t('landing.ctaDesc')}
-              </p>
-              <Link to="/login?mode=signup">
-                <Button
-                  size="lg"
-                  className="bg-white text-[hsl(var(--primary))] hover:bg-white/90 text-base px-8 h-12 group"
-                >
-                  {t('landing.createFreeAccount')}
-                  <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-              <div className="flex items-center justify-center gap-6 mt-8 text-white/70 text-sm">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> {t('landing.freeToStart')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> {t('landing.noCreditCard')}
-                </span>
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> {t('landing.unlimitedDocs')}
-                </span>
+        {menuOpen && (
+          <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-5 sm:hidden">
+            <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
+              {[
+                ['#product', t('landing.navProduct')],
+                ['#capabilities', t('landing.navCapabilities')],
+                ['#security', t('landing.navSecurity')],
+              ].map(([href, label]) => (
+                <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 font-semibold hover:bg-[hsl(var(--muted))]">{label}</a>
+              ))}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link to="/login"><Button variant="outline" className="w-full">{t('landing.signIn')}</Button></Link>
+                <Link to="/login?mode=signup"><Button className="w-full">{t('nav.getStarted')}</Button></Link>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+              <div className="mt-3 flex gap-2">
+                <button onClick={toggleLang} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
+                <button onClick={toggleTheme} className="landing-icon-button flex-1">
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+              </div>
+            </nav>
+          </div>
+        )}
+      </header>
 
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-[hsl(var(--border))] py-12">
-        <div className="px-4 sm:px-6 lg:px-10 max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-7" />
+      <main>
+        <section id="top" className="relative flex min-h-[min(900px,100svh)] items-center pt-24">
+          <div className="landing-rule-grid absolute inset-0 opacity-60" aria-hidden="true" />
+          <div className="landing-container relative grid items-center gap-14 py-20 lg:grid-cols-[0.92fr_1.08fr] lg:py-24">
+            <div className="max-w-2xl">
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="landing-kicker mb-7"
+              >
+                <span className="h-2 w-2 rounded-full bg-[hsl(var(--accent-coral))]" />
+                {t('landing.heroKicker')}
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                className="landing-display text-balance"
+              >
+                {t('landing.heroNewTitle')}
+                <span className="block text-[hsl(var(--primary))]">{t('landing.heroNewAccent')}</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.65, delay: 0.2 }}
+                className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))] sm:text-xl"
+              >
+                {t('landing.heroNewDesc')}
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.65, delay: 0.32 }}
+                className="mt-9 flex flex-col gap-3 sm:flex-row"
+              >
+                <Link to="/login?mode=signup">
+                  <Button size="lg" className="group h-13 w-full px-7 text-base sm:w-auto">
+                    {t('landing.getStartedFree')}
+                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+                <a href="#product" className="inline-flex h-13 items-center justify-center rounded-lg border border-[hsl(var(--border))] px-7 text-base font-semibold transition-colors hover:bg-[hsl(var(--muted))]">
+                  {t('landing.watchProduct')}
+                </a>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.48 }}
+                className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[hsl(var(--muted-foreground))]"
+              >
+                {[t('landing.freeToStart'), t('landing.noCreditCard'), t('landing.noInstall')].map((item) => (
+                  <span key={item} className="flex items-center gap-2"><Check className="h-4 w-4 text-[hsl(var(--primary))]" />{item}</span>
+                ))}
+              </motion.div>
             </div>
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
-              &copy; {new Date().getFullYear()} {t('landing.footer')}
-            </p>
-            <div className="flex items-center gap-4 text-sm text-[hsl(var(--muted-foreground))]">
-              <a href="https://sign.somadhan.com" className="hover:text-[hsl(var(--foreground))] transition-colors">
-                {t('nav.getStarted')}
-              </a>
+
+            <motion.div
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="relative mx-auto w-full max-w-[680px]"
+              aria-label="Somadhan Sign document workspace preview"
+            >
+              <div className="landing-product-frame">
+                <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3 sm:px-5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--accent-coral))]" />
+                    <span className="text-xs font-bold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))]">Agreement.pdf</span>
+                  </div>
+                  <span className="rounded-full border border-[hsl(var(--border))] px-3 py-1 text-[11px] font-bold">DRAFT</span>
+                </div>
+                <div className="grid min-h-[450px] grid-cols-[72px_1fr] sm:grid-cols-[170px_1fr]">
+                  <div className="border-r border-[hsl(var(--border))] bg-[hsl(var(--muted))] p-3 sm:p-4">
+                    <p className="hidden text-[11px] font-extrabold uppercase tracking-[0.16em] text-[hsl(var(--muted-foreground))] sm:block">Fields</p>
+                    <div className="mt-4 space-y-2">
+                      {[['Sign', Fingerprint], ['Initial', FileCheck2], ['Date', History]].map(([label, Icon]) => (
+                        <div key={label as string} className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-2.5 text-xs font-semibold">
+                          <Icon className="h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
+                          <span className="hidden sm:inline">{label as string}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="relative overflow-hidden bg-[hsl(var(--secondary))] p-5 sm:p-8">
+                    <div className="landing-paper relative mx-auto min-h-[385px] max-w-[360px] p-7 sm:p-9">
+                      <div className="mb-8 flex items-center justify-between">
+                        <div className="h-3 w-28 bg-[hsl(var(--foreground))]" />
+                        <div className="h-3 w-10 bg-[hsl(var(--accent-coral))]" />
+                      </div>
+                      <div className="space-y-3">
+                        {[86, 100, 72, 92, 64].map((width, index) => <div key={index} className="h-2 bg-[hsl(var(--border))]" style={{ width: `${width}%` }} />)}
+                      </div>
+                      <motion.div
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute bottom-24 right-6 flex h-14 w-36 items-center justify-center rounded-lg border-2 border-[hsl(var(--accent-coral))] bg-[hsl(var(--background))] text-xs font-extrabold text-[hsl(var(--accent-coral))] shadow-lg sm:right-9"
+                      >
+                        <Fingerprint className="mr-2 h-4 w-4" /> SIGN HERE
+                      </motion.div>
+                      <div className="absolute bottom-10 left-7 right-7 h-px bg-[hsl(var(--border))] sm:left-9 sm:right-9" />
+                    </div>
+                    <motion.div
+                      animate={{ x: [0, 6, 0], y: [0, 4, 0] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute bottom-20 right-9 rounded-full bg-[hsl(var(--foreground))] p-2 text-[hsl(var(--background))] shadow-lg sm:right-14"
+                    >
+                      <MousePointer2 className="h-4 w-4" />
+                    </motion.div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-5 -left-3 hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 shadow-xl sm:flex sm:items-center sm:gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-bold text-white">3</span>
+                <div><p className="text-xs font-bold">Signers ready</p><p className="text-[11px] text-[hsl(var(--muted-foreground))]">Each field is assigned</p></div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <HowItWorks />
+
+        <section id="capabilities" className="border-y border-[hsl(var(--border))] bg-[hsl(var(--muted))] py-24 lg:py-32">
+          <div className="landing-container">
+            <motion.div {...reveal} className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+              <div>
+                <p className="landing-eyebrow">{t('landing.capabilityEyebrow')}</p>
+                <h2 className="landing-section-title mt-4">{t('landing.capabilityTitle')}</h2>
+              </div>
+              <p className="max-w-2xl text-lg leading-8 text-[hsl(var(--muted-foreground))] lg:justify-self-end">{t('landing.capabilityDesc')}</p>
+            </motion.div>
+
+            <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--border))] md:grid-cols-2">
+              {features.map(({ icon: Icon, title, copy, tone }, index) => (
+                <motion.article key={title} {...reveal} transition={{ ...reveal.transition, delay: index * 0.06 }} className="group min-h-64 bg-[hsl(var(--background))] p-7 sm:p-9">
+                  <div className={`mb-12 flex h-12 w-12 items-center justify-center rounded-xl ${tone === 'coral' ? 'bg-[hsl(var(--accent-coral))] text-white' : 'bg-[hsl(var(--primary))] text-white'}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
+                  <p className="mt-3 max-w-md leading-7 text-[hsl(var(--muted-foreground))]">{copy}</p>
+                </motion.article>
+              ))}
             </div>
           </div>
+        </section>
+
+        <section id="security" className="py-24 lg:py-32">
+          <div className="landing-container grid gap-12 lg:grid-cols-2 lg:items-center">
+            <motion.div {...reveal}>
+              <p className="landing-eyebrow">{t('landing.securityEyebrow')}</p>
+              <h2 className="landing-section-title mt-4">{t('landing.securityTitle')}</h2>
+              <p className="mt-6 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">{t('landing.securityDesc')}</p>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {[t('landing.securityItem1'), t('landing.securityItem2'), t('landing.securityItem3'), t('landing.securityItem4')].map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] p-4 font-semibold">
+                    <Check className="h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />{item}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+            <motion.div {...reveal} className="landing-audit-card">
+              <div className="flex items-center justify-between border-b border-[hsl(var(--border))] p-5">
+                <div className="flex items-center gap-3"><History className="h-5 w-5 text-[hsl(var(--primary))]" /><span className="font-bold">Audit trail</span></div>
+                <span className="text-xs font-bold text-[hsl(var(--primary))]">VERIFIED</span>
+              </div>
+              <div className="space-y-6 p-6 sm:p-8">
+                {[
+                  ['Document created', '09:42'],
+                  ['Invitations delivered', '09:44'],
+                  ['All signatures completed', '10:17'],
+                ].map(([label, time], index) => (
+                  <div key={label} className="grid grid-cols-[20px_1fr_auto] items-start gap-4">
+                    <div className="relative mt-1.5 h-3 w-3 rounded-full bg-[hsl(var(--primary))]">{index < 2 && <span className="absolute left-[5px] top-4 h-10 w-px bg-[hsl(var(--border))]" />}</div>
+                    <div><p className="font-semibold">{label}</p><p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">Agreement.pdf</p></div>
+                    <span className="text-xs text-[hsl(var(--muted-foreground))]">{time}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="landing-container pb-24 lg:pb-32">
+          <motion.div {...reveal} className="relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] px-6 py-16 text-center text-white sm:px-12 lg:py-20">
+            <div className="landing-solid-lines absolute inset-0 opacity-15" aria-hidden="true" />
+            <div className="relative mx-auto max-w-3xl">
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">{t('landing.ctaEyebrow')}</p>
+              <h2 className="mt-5 text-4xl font-bold tracking-[-0.04em] sm:text-5xl lg:text-6xl">{t('landing.ctaNewTitle')}</h2>
+              <p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-white/75">{t('landing.ctaNewDesc')}</p>
+              <Link to="/login?mode=signup" className="mt-8 inline-flex h-13 items-center justify-center rounded-lg bg-white px-7 text-base font-bold text-[hsl(var(--primary))] transition-transform hover:-translate-y-0.5">
+                {t('landing.createFreeAccount')}<ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </div>
+          </motion.div>
+        </section>
+      </main>
+
+      <footer className="border-t border-[hsl(var(--border))] py-9">
+        <div className="landing-container flex flex-col items-center justify-between gap-5 sm:flex-row">
+          <img src={logo} alt="Somadhan Sign" className="h-9 w-auto" />
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">&copy; {new Date().getFullYear()} {t('landing.footer')}</p>
+          <div className="flex items-center gap-5 text-sm font-semibold"><Link to="/login">{t('landing.signIn')}</Link><Link to="/login?mode=signup">{t('nav.getStarted')}</Link></div>
         </div>
       </footer>
     </div>

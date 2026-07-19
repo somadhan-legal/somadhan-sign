@@ -38,7 +38,7 @@ export default function ViewDocumentPage() {
       setLoading(true)
 
       // Fetch document using RPC to bypass RLS
-      const { data: doc, error: docErr } = await (supabase as any)
+      const { data: doc, error: docErr } = await supabase
         .rpc('get_document_for_viewer', { p_document_id: documentId })
 
       if (docErr || !doc || doc.length === 0) {
@@ -56,7 +56,7 @@ export default function ViewDocumentPage() {
       })
 
       // Fetch signers
-      const { data: signersData } = await (supabase as any)
+      const { data: signersData } = await supabase
         .rpc('get_signers_for_viewer', { p_document_id: documentId })
 
       if (signersData) {

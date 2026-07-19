@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { ZoomIn, ZoomOut } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -14,23 +14,25 @@ interface PdfViewerProps {
   onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
   renderPageOverlay?: (pageNumber: number) => React.ReactNode
   scale?: number
-  onPageMouseMove?: (e: React.MouseEvent) => void
+  onPagePointerMove?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number, pointerType: string) => void
   onPageMouseLeave?: () => void
 }
 
 function PageWithOverlay({
   pageNumber,
   scale,
+  width,
   onPageClick,
   renderPageOverlay,
-  onPageMouseMove,
+  onPagePointerMove,
   onPageMouseLeave,
 }: {
   pageNumber: number
   scale: number
+  width: number
   onPageClick?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => void
   renderPageOverlay?: (pageNumber: number) => React.ReactNode
-  onPageMouseMove?: (e: React.MouseEvent) => void
+  onPagePointerMove?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number, pointerType: string) => void
   onPageMouseLeave?: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -46,17 +48,34 @@ function PageWithOverlay({
     [onPageClick, pageNumber]
   )
 
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!onPagePointerMove || !ref.current) return
+      const rect = ref.current.getBoundingClientRect()
+      onPagePointerMove(
+        pageNumber,
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+        rect.width,
+        rect.height,
+        e.pointerType
+      )
+    },
+    [onPagePointerMove, pageNumber]
+  )
+
   return (
     <div
       ref={ref}
       className="relative cursor-crosshair"
       onClick={handleClick}
-      onMouseMove={onPageMouseMove}
-      onMouseLeave={onPageMouseLeave}
-      style={{ userSelect: 'none' }}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={onPageMouseLeave}
+      style={{ userSelect: 'none', touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom' }}
     >
       <Page
         pageNumber={pageNumber}
+        width={width}
         scale={scale}
         renderTextLayer={false}
         renderAnnotationLayer={false}
@@ -78,13 +97,26 @@ export default function PdfViewer({
   onPageClick,
   renderPageOverlay,
   scale: externalScale,
-  onPageMouseMove,
+  onPagePointerMove,
   onPageMouseLeave,
 }: PdfViewerProps) {
   const [totalPages, setTotalPages] = useState(0)
   const [internalScale, setInternalScale] = useState(1.0)
+  const [availableWidth, setAvailableWidth] = useState(680)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const scale = externalScale ?? internalScale
+  const pageWidth = Math.max(260, Math.min(680, availableWidth - 24))
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const updateWidth = () => setAvailableWidth(container.clientWidth)
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [])
 
   const onDocumentLoadSuccess = useCallback(
     ({ numPages }: { numPages: number }) => {
@@ -95,7 +127,7 @@ export default function PdfViewer({
   )
 
   return (
-    <div className="flex flex-col items-center w-full">
+    <div ref={containerRef} className="flex flex-col items-center w-full min-w-0">
       {/* Zoom Controls */}
       <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
         <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
@@ -106,7 +138,7 @@ export default function PdfViewer({
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.max(0.5, s - 0.1))}
-          className="h-8 w-8"
+          className="h-11 w-11"
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
@@ -117,7 +149,7 @@ export default function PdfViewer({
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.min(2, s + 0.1))}
-          className="h-8 w-8"
+          className="h-11 w-11"
         >
           <ZoomIn className="w-4 h-4" />
         </Button>
@@ -129,12 +161,12 @@ export default function PdfViewer({
         onLoadSuccess={onDocumentLoadSuccess}
         onLoadError={(err) => console.error('PdfViewer load error:', err)}
         loading={
-          <div className="w-[600px] h-[800px] flex items-center justify-center">
+          <div className="w-full min-w-[260px] max-w-[680px] h-[70vh] flex items-center justify-center">
             <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
           </div>
         }
         error={
-          <div className="w-[600px] h-[400px] flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
+          <div className="w-full min-w-[260px] max-w-[680px] h-[50vh] px-6 text-center flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
             <p>Failed to load PDF. Make sure you have a valid PDF URL.</p>
           </div>
         }
@@ -145,9 +177,10 @@ export default function PdfViewer({
               <PageWithOverlay
                 pageNumber={pageNum}
                 scale={scale}
+                width={pageWidth}
                 onPageClick={onPageClick}
                 renderPageOverlay={renderPageOverlay}
-                onPageMouseMove={onPageMouseMove}
+                onPagePointerMove={onPagePointerMove}
                 onPageMouseLeave={onPageMouseLeave}
               />
             </div>

@@ -90,6 +90,8 @@ create index if not exists idx_documents_status on public.documents(status);
 create index if not exists idx_signature_fields_document on public.signature_fields(document_id);
 create index if not exists idx_document_signers_document on public.document_signers(document_id);
 create index if not exists idx_document_signers_email on public.document_signers(signer_email);
+create unique index if not exists document_signers_document_email_unique
+  on public.document_signers (document_id, lower(btrim(signer_email)));
 create index if not exists idx_signatures_user on public.signatures(user_id);
 create index if not exists idx_placements_document on public.signature_placements(document_id);
 create index if not exists idx_placements_field on public.signature_placements(field_id);

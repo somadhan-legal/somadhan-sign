@@ -45,7 +45,7 @@ export default function ResetPasswordPage() {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [isRecovery, user, navigate])
+  }, [isRecovery, user, navigate, t])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

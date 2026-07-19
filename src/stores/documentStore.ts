@@ -8,6 +8,7 @@ import type {
   DocumentSigner,
   SignaturePlacement,
   AuditTrailEntry,
+  SignerByTokenResult,
 } from '@/types/database'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
@@ -51,7 +52,7 @@ interface DocumentState {
   fetchPlacements: (documentId: string) => Promise<void>
   addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>) => Promise<void>
 
-  fetchSignerByToken: (token: string) => Promise<(DocumentSigner & { documents: { title: string; original_pdf_url: string; status: string } }) | null>
+  fetchSignerByToken: (token: string) => Promise<SignerByTokenResult | null>
   updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed') => Promise<void>
 
   fetchAuditTrail: (documentId: string) => Promise<void>
@@ -311,18 +312,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   addSigner: async (documentId: string, email: string, name?: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    const duplicate = get().signers.some(
+      (signer) => signer.document_id === documentId && signer.signer_email.trim().toLowerCase() === normalizedEmail
+    )
+    if (duplicate) throw new Error('DUPLICATE_SIGNER_EMAIL')
+
     const { data, error } = await supabase
       .from('document_signers')
       .insert({
         document_id: documentId,
-        signer_email: email,
+        signer_email: normalizedEmail,
         signer_name: name || null,
       })
       .select()
       .single()
     if (error) {
       console.error('Error adding signer:', error)
-      return
+      throw error
     }
     set((state) => ({
       signers: [...state.signers, data as DocumentSigner],
@@ -338,19 +345,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
 
     const oldEmail = currentSigner.signer_email
-    const newEmail = updates.signer_email
+    const newEmail = updates.signer_email?.trim().toLowerCase()
+    if (newEmail && get().signers.some(
+      (signer) => signer.id !== signerId && signer.document_id === currentSigner.document_id && signer.signer_email.trim().toLowerCase() === newEmail
+    )) throw new Error('DUPLICATE_SIGNER_EMAIL')
+
+    const normalizedUpdates = newEmail ? { ...updates, signer_email: newEmail } : updates
 
     // Update the signer
     const { data, error } = await supabase
       .from('document_signers')
-      .update(updates)
+      .update(normalizedUpdates)
       .eq('id', signerId)
       .select()
       .single()
     
     if (error) {
       console.error('Error updating signer:', error)
-      return
+      throw error
     }
 
     // If email changed, update all signature fields assigned to the old email
@@ -425,17 +437,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchSignerByToken: async (token: string) => {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .rpc('get_signer_by_token', { p_token: token })
     if (error || !data) {
       console.error('Error fetching signer by token:', error)
       return null
     }
-    return data as any
+    return data
   },
 
   updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed') => {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .rpc('update_signer_status_by_id', { p_signer_id: signerId, p_status: status })
     if (error) {
       console.error('Error updating signer status:', error)

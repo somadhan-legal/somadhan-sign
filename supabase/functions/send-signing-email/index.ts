@@ -125,7 +125,7 @@ serve(async (req) => {
           <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
-            You are receiving this email because you were added as a viewer (CC) on this document. This is a view-only link — you cannot sign the document.
+            You are receiving this email because you were added as a viewer (CC) on this document. This is a view-only link, so you cannot sign the document.
           </p>
         </div>
         ${footer}
@@ -166,13 +166,20 @@ serve(async (req) => {
 
     // Build email payload - 'to' can be a string or array (array for completion emails)
     const toRecipients = Array.isArray(to) ? to : [to]
-    const emailPayload: any = {
+    const emailPayload: {
+      from: string
+      to: string[]
+      subject: string
+      html: string
+      cc?: string[]
+      attachments?: Array<{ filename: string; content: string }>
+    } = {
       from: 'Somadhan Sign <noreply@somadhan.com>',
       to: toRecipients,
       subject: isCcNotification
-        ? `📄 "${documentTitle}" — Shared with you for viewing`
+        ? `📄 "${documentTitle}" | Shared with you for viewing`
         : isCompletion
-          ? `✓ "${documentTitle}" — All parties have signed`
+          ? `✓ "${documentTitle}" | All parties have signed`
           : `${senderName} has requested your signature on "${documentTitle}"`,
       html: emailHtml,
     }
