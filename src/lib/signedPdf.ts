@@ -1,5 +1,6 @@
 import { PDFDocument, degrees, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import '@fontsource/noto-sans-bengali/bengali-400.css'
+import { formatSigningDate } from '@/lib/utils'
 
 export interface SignedField {
   field_type: string
@@ -189,8 +190,7 @@ export async function generateSignedPdf(
           }
       } else if (placement.field_type === 'date') {
         // Draw date text
-        let dateText = placement.signature_id || new Date().toLocaleDateString()
-        if (dateText.startsWith('date:')) dateText = dateText.replace('date:', '')
+        const dateText = formatSigningDate(placement.signature_id || new Date().toISOString().slice(0, 10))
         await drawFieldText(pdfDoc, page, dateText, font, rect)
       } else if (placement.field_type === 'checkbox') {
         // Draw checkbox

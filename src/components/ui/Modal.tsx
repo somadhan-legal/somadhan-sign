@@ -69,12 +69,12 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
         aria-label={title ? undefined : 'Dialog'}
         tabIndex={-1}
         className={cn(
-          'relative bg-[hsl(var(--card))] rounded-2xl shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto',
+          'relative z-10 max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl bg-[hsl(var(--card))] p-6 shadow-2xl',
           {
-            'w-full max-w-sm': size === 'sm',
-            'w-full max-w-md': size === 'md',
-            'w-full max-w-lg': size === 'lg',
-            'w-full max-w-2xl': size === 'xl',
+            'max-w-sm': size === 'sm',
+            'max-w-md': size === 'md',
+            'max-w-lg': size === 'lg',
+            'max-w-2xl': size === 'xl',
           },
           className
         )}

@@ -44,7 +44,7 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="landing-shell min-h-screen overflow-x-hidden bg-[hsl(var(--background))]">
+    <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[hsl(var(--border))] bg-[hsl(var(--background)/0.94)] backdrop-blur-xl">
         <div className="landing-container flex h-20 items-center justify-between">
           <a href="#top" aria-label="Somadhan Sign home" className="shrink-0">

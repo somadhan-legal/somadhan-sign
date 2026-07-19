@@ -22,6 +22,7 @@ import Badge from '@/components/ui/Badge'
 import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
+import { formatSigningDate } from '@/lib/utils'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -181,7 +182,7 @@ export default function DocumentPreviewPage() {
 
   if (loading && !currentDocument) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -189,7 +190,7 @@ export default function DocumentPreviewPage() {
 
   if (!currentDocument) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <p className="text-[hsl(var(--muted-foreground))]">Document not found</p>
       </div>
     )
@@ -396,10 +397,9 @@ export default function DocumentPreviewPage() {
                   const isSignatureImage = val.startsWith('data:image')
 
                   if (ft === 'date' || val.startsWith('date:')) {
-                    const dateVal = val.startsWith('date:') ? val.replace('date:', '') : val
                     return (
                       <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight">{dateVal}</span>
+                        <span className="text-sm font-bold text-black leading-tight">{formatSigningDate(val)}</span>
                       </div>
                     )
                   }

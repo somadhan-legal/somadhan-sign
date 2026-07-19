@@ -22,3 +22,10 @@ export function formatDate(date: string): string {
     day: 'numeric',
   })
 }
+
+export function formatSigningDate(value: string): string {
+  const dateValue = value.startsWith('date:') ? value.slice(5) : value
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue)
+  if (!match) return dateValue
+  return `${match[3]}/${match[2]}/${match[1]}`
+}

@@ -26,6 +26,7 @@ import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
+import { formatSigningDate } from '@/lib/utils'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 
@@ -603,7 +604,7 @@ export default function InviteSigningPage() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
@@ -617,7 +618,7 @@ export default function InviteSigningPage() {
 
   if (error || !signerData) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
@@ -731,7 +732,7 @@ export default function InviteSigningPage() {
 
   if (finished && showPreview && auditPdfUrl) {
     return (
-      <div className="flex flex-col h-screen bg-[hsl(var(--background))]">
+      <div className="flex h-dvh flex-col bg-[hsl(var(--background))]">
         <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <a href="/">
@@ -763,7 +764,7 @@ export default function InviteSigningPage() {
 
   if (finished) {
     return (
-      <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col bg-[hsl(var(--background))]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
           <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
@@ -831,7 +832,7 @@ export default function InviteSigningPage() {
   }
 
   return (
-    <div className="flex h-screen min-w-0 relative">
+    <div className="relative flex h-dvh min-w-0">
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
@@ -1172,7 +1173,7 @@ export default function InviteSigningPage() {
                       </div>
                     ) : isSigned && placement && (isDate || placement.signature_id.startsWith('date:')) ? (
                       <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight">{placement.signature_id.replace('date:', '')}</span>
+                        <span className="text-sm font-bold text-black leading-tight">{formatSigningDate(placement.signature_id)}</span>
                       </div>
                     ) : isSigned && placement && (isCheckbox || placement.signature_id === 'checkbox:checked') ? (
                       <div className="w-full h-full flex items-center justify-center">
@@ -1224,9 +1225,7 @@ export default function InviteSigningPage() {
                           className="text-[11px] border border-[hsl(var(--primary))] rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
                           onChange={(e) => {
                             if (e.target.value) {
-                              const d = new Date(e.target.value + 'T00:00:00')
-                              const formatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                              handleDateField(field.id, formatted)
+                              handleDateField(field.id, e.target.value)
                             }
                           }}
                           onBlur={() => setDatePickerFieldId(null)}

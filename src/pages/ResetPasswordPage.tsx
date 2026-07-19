@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
+      <div className="min-h-dvh flex items-center justify-center bg-[hsl(var(--background))] p-4">
         <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full text-center shadow-xl">
           <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
+    <div className="min-h-dvh flex items-center justify-center bg-[hsl(var(--background))] p-4">
       <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-md w-full shadow-xl">
         <div className="flex items-center gap-2 mb-8 justify-center">
           <a href="/" aria-label="Somadhan Sign home">

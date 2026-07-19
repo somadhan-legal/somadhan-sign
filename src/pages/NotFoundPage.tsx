@@ -4,7 +4,7 @@ import { buttonStyles } from '@/components/ui/buttonStyles'
 
 export default function NotFoundPage() {
   return (
-    <main className="min-h-screen bg-[hsl(var(--background))] px-6 flex items-center justify-center">
+    <main className="min-h-dvh bg-[hsl(var(--background))] px-6 flex items-center justify-center">
       <div className="max-w-md text-center">
         <div className="mx-auto mb-6 h-16 w-16 rounded-2xl bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] flex items-center justify-center">
           <FileQuestion className="h-8 w-8" />

@@ -516,7 +516,7 @@ export default function DocumentEditorPage() {
 
   if (loading && !currentDocument) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -524,7 +524,7 @@ export default function DocumentEditorPage() {
 
   if (!currentDocument) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <p className="text-[hsl(var(--muted-foreground))]">Document not found</p>
       </div>
     )

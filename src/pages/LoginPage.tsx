@@ -107,7 +107,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex overflow-hidden bg-[hsl(var(--background))]">
+    <div className="flex min-h-dvh overflow-hidden bg-[hsl(var(--background))]">
       {/* Left - Branding */}
       <div className="hidden md:flex md:w-[42%] bg-[#075056] p-8 lg:p-12 flex-col justify-between relative overflow-hidden">
         <div className="landing-solid-lines absolute inset-0 opacity-10" />

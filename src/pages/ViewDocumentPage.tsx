@@ -131,7 +131,7 @@ export default function ViewDocumentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
@@ -143,7 +143,7 @@ export default function ViewDocumentPage() {
 
   if (error || !document) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
@@ -164,7 +164,7 @@ export default function ViewDocumentPage() {
   const totalSigners = signers.length
 
   return (
-    <div className="relative flex h-screen min-w-0">
+    <div className="relative flex h-dvh min-w-0">
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
