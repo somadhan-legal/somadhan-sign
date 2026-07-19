@@ -53,6 +53,18 @@ export interface ViewerSignerResult {
   status: string
 }
 
+export interface SigningPackageResult {
+  signer: SignerByTokenResult
+  fields: Database['public']['Tables']['signature_fields']['Row'][]
+  placements: Database['public']['Tables']['signature_placements']['Row'][]
+  audit_trail: Database['public']['Tables']['audit_trail']['Row'][]
+}
+
+export interface ViewerPackageResult {
+  document: ViewerDocumentResult
+  signers: ViewerSignerResult[]
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -257,6 +269,30 @@ export interface Database {
         }
         Relationships: []
       }
+      document_viewers: {
+        Row: {
+          id: string
+          document_id: string
+          viewer_email: string
+          viewing_token: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          viewer_email: string
+          viewing_token?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          viewer_email?: string
+          viewing_token?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -293,6 +329,46 @@ export interface Database {
       update_signer_status_by_id: {
         Args: { p_signer_id: string; p_status: string }
         Returns: undefined
+      }
+      get_signing_package: {
+        Args: { p_token: string }
+        Returns: SigningPackageResult | null
+      }
+      add_signature_placement_by_token: {
+        Args: { p_token: string; p_field_id: string; p_signature_id: string }
+        Returns: Database['public']['Tables']['signature_placements']['Row']
+      }
+      update_signer_status_by_token: {
+        Args: { p_token: string; p_status: string }
+        Returns: undefined
+      }
+      add_audit_entry_by_token: {
+        Args: { p_token: string; p_action: string; p_metadata?: string | null }
+        Returns: Database['public']['Tables']['audit_trail']['Row']
+      }
+      check_all_signers_signed_by_token: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
+      mark_document_completed_by_token: {
+        Args: { p_token: string }
+        Returns: undefined
+      }
+      get_document_for_completion_by_token: {
+        Args: { p_token: string }
+        Returns: DocumentCompletionResult | null
+      }
+      save_final_pdf_url_by_token: {
+        Args: { p_token: string; p_final_pdf_url: string }
+        Returns: undefined
+      }
+      create_document_viewer: {
+        Args: { p_document_id: string; p_viewer_email: string }
+        Returns: string
+      }
+      get_viewer_package: {
+        Args: { p_token: string }
+        Returns: ViewerPackageResult | null
       }
     }
     Enums: {

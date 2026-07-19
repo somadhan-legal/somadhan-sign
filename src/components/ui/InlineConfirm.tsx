@@ -43,8 +43,9 @@ export default function InlineConfirm({
   return (
     <div
       ref={ref}
+      role="dialog"
+      aria-label="Confirmation"
       className="absolute right-0 top-full mt-1 z-50 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg shadow-xl p-3 min-w-[200px] animate-[fadeIn_0.15s_ease-out]"
-      onClick={(e) => e.stopPropagation()}
     >
       <p className="text-xs text-[hsl(var(--foreground))] mb-3 leading-relaxed">
         {message}

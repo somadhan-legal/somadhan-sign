@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
-import { Moon, Sun, CheckCircle2, Clock, Eye } from 'lucide-react'
+import { Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 
@@ -23,6 +23,9 @@ interface SignerInfo {
   status: string
 }
 
+const isMissingRpc = (error: { code?: string; message?: string } | null) =>
+  error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
+
 export default function ViewDocumentPage() {
   const { documentId } = useParams<{ documentId: string }>()
   const { lang, toggle: toggleLang, t } = useLanguageStore()
@@ -31,13 +34,37 @@ export default function ViewDocumentPage() {
   const [error, setError] = useState<string | null>(null)
   const [document, setDocument] = useState<DocumentData | null>(null)
   const [signers, setSigners] = useState<SignerInfo[]>([])
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024
+  )
 
   useEffect(() => {
     if (!documentId) return
     const load = async () => {
       setLoading(true)
 
-      // Fetch document using RPC to bypass RLS
+      const { data: viewerPackage, error: packageError } = await supabase
+        .rpc('get_viewer_package', { p_token: documentId })
+
+      if (!packageError) {
+        if (!viewerPackage?.document) {
+          setError('Document not found or access denied.')
+          setLoading(false)
+          return
+        }
+        setDocument(viewerPackage.document)
+        setSigners(viewerPackage.signers || [])
+        setLoading(false)
+        return
+      }
+
+      if (!isMissingRpc(packageError)) {
+        setError('Document not found or access denied.')
+        setLoading(false)
+        return
+      }
+
+      // Compatibility for links issued before the secure viewer-token migration.
       const { data: doc, error: docErr } = await supabase
         .rpc('get_document_for_viewer', { p_document_id: documentId })
 
@@ -103,9 +130,10 @@ export default function ViewDocumentPage() {
   const totalSigners = signers.length
 
   return (
-    <div className="flex h-screen">
+    <div className="relative flex h-screen min-w-0">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] overflow-y-auto flex flex-col">
+      {!leftPanelCollapsed && (
+      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
@@ -171,16 +199,34 @@ export default function ViewDocumentPage() {
             ))}
           </div>
         </div>
+        <div className="p-3 border-t border-[hsl(var(--border))]">
+          <Button variant="ghost" className="w-full" onClick={() => setLeftPanelCollapsed(true)}>
+            <PanelLeftClose className="mr-2 h-4 w-4" />
+            Hide details
+          </Button>
+        </div>
       </div>
+      )}
+
+      {leftPanelCollapsed && (
+        <button
+          type="button"
+          onClick={() => setLeftPanelCollapsed(false)}
+          aria-label="Show document details"
+          className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
+        >
+          <PanelLeftOpen className="h-5 w-5" />
+        </button>
+      )}
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center relative">
+      <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center relative">
         {/* Language & Theme toggles */}
         <div className="fixed top-3 right-4 z-40 flex items-center gap-1 bg-[hsl(var(--card))]/90 backdrop-blur rounded-lg border border-[hsl(var(--border))] px-1 py-0.5 shadow-sm">
-          <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
             <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-8 w-8">
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-11 w-11">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </div>

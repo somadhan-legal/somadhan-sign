@@ -50,14 +50,14 @@ interface DocumentState {
   fetchSigners: (documentId: string) => Promise<void>
   removeSigner: (signerId: string) => Promise<void>
 
-  fetchPlacements: (documentId: string) => Promise<void>
-  addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>) => Promise<void>
+  fetchPlacements: (documentId: string, signingToken?: string) => Promise<void>
+  addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>, signingToken?: string) => Promise<void>
 
   fetchSignerByToken: (token: string) => Promise<SignerByTokenResult | null>
-  updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed') => Promise<void>
+  updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => Promise<void>
 
   fetchAuditTrail: (documentId: string) => Promise<void>
-  addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string) => Promise<void>
+  addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => Promise<void>
 
   sendForSigning: (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => Promise<void>
   sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
@@ -65,6 +65,9 @@ interface DocumentState {
 
 let cachedIpAddress: string | null = null
 let ipFetchAttempted = false
+
+const isMissingRpc = (error: { code?: string; message?: string } | null) =>
+  error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   documents: [],
@@ -418,7 +421,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }))
   },
 
-  fetchPlacements: async (documentId: string) => {
+  fetchPlacements: async (documentId: string, signingToken?: string) => {
+    if (signingToken) {
+      const { data: signingPackage, error: packageError } = await supabase
+        .rpc('get_signing_package', { p_token: signingToken })
+      if (!packageError) {
+        set({ placements: signingPackage?.placements || [] })
+        return
+      }
+      if (!isMissingRpc(packageError)) {
+        console.error('Error refreshing signing package:', packageError)
+        return
+      }
+    }
     const { data, error } = await supabase
       .from('signature_placements')
       .select('*')
@@ -430,7 +445,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ placements: (data as SignaturePlacement[]) || [] })
   },
 
-  addPlacement: async (placement) => {
+  addPlacement: async (placement, signingToken) => {
+    if (signingToken) {
+      const { data, error } = await supabase.rpc('add_signature_placement_by_token', {
+        p_token: signingToken,
+        p_field_id: placement.field_id,
+        p_signature_id: placement.signature_id,
+      })
+      if (!error) {
+        set((state) => ({ placements: [...state.placements, data as SignaturePlacement] }))
+        return
+      }
+      if (!isMissingRpc(error)) {
+        console.error('Error adding placement:', error)
+        throw error
+      }
+    }
     const { data, error } = await supabase
       .from('signature_placements')
       .insert(placement)
@@ -438,7 +468,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .single()
     if (error) {
       console.error('Error adding placement:', error)
-      return
+      throw error
     }
     set((state) => ({
       placements: [...state.placements, data as SignaturePlacement],
@@ -446,6 +476,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchSignerByToken: async (token: string) => {
+    const { data: signingPackage, error: packageError } = await supabase
+      .rpc('get_signing_package', { p_token: token })
+    if (!packageError) {
+      if (!signingPackage?.signer) return null
+      set({
+        signatureFields: signingPackage.fields || [],
+        placements: signingPackage.placements || [],
+        auditTrail: signingPackage.audit_trail || [],
+      })
+      return signingPackage.signer
+    }
+    if (!isMissingRpc(packageError)) {
+      console.error('Error fetching signing package:', packageError)
+      return null
+    }
+
     const { data, error } = await supabase
       .rpc('get_signer_by_token', { p_token: token })
     if (error) {
@@ -453,10 +499,26 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return null
     }
     if (!data) return null
+    await Promise.all([
+      get().fetchSignatureFields(data.document_id),
+      get().fetchPlacements(data.document_id),
+      get().fetchAuditTrail(data.document_id),
+    ])
     return data
   },
 
-  updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed') => {
+  updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => {
+    if (signingToken) {
+      const { error } = await supabase.rpc('update_signer_status_by_token', {
+        p_token: signingToken,
+        p_status: status,
+      })
+      if (!error) return
+      if (!isMissingRpc(error)) {
+        console.error('Error updating signer status:', error)
+        throw error
+      }
+    }
     const { error } = await supabase
       .rpc('update_signer_status_by_id', { p_signer_id: signerId, p_status: status })
     if (error) {
@@ -481,7 +543,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ auditTrail: (data as AuditTrailEntry[]) || [] })
   },
 
-  addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string) => {
+  addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => {
+    if (signingToken) {
+      const { data, error } = await supabase.rpc('add_audit_entry_by_token', {
+        p_token: signingToken,
+        p_action: action,
+        p_metadata: metadata || null,
+      })
+      if (!error) {
+        set((state) => ({ auditTrail: [...state.auditTrail, data as AuditTrailEntry] }))
+        return
+      }
+      if (!isMissingRpc(error)) {
+        console.error('Error adding audit entry:', error)
+        throw error
+      }
+    }
     let ipAddress: string | null = cachedIpAddress
     if (ipAddress === null && !ipFetchAttempted) {
       try {
@@ -536,6 +613,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             to: signer.signer_email,
             documentTitle: doc.title,
             signingLink,
+            signingToken: signer.signing_token,
+            documentId,
             senderName: senderName || 'A user',
             message: message || '',
           },
@@ -551,10 +630,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     
     // Send view-only notification emails to CC recipients
     if (ccEmails && ccEmails.length > 0) {
-      const viewLink = `${window.location.origin}/view/${documentId}`
       const signeeEmails = signers.map(s => s.signer_email)
       for (const ccEmail of ccEmails) {
         try {
+          const { data: viewerToken, error: viewerError } = await supabase.rpc('create_document_viewer', {
+            p_document_id: documentId,
+            p_viewer_email: ccEmail,
+          })
+          if (viewerError && !isMissingRpc(viewerError)) throw viewerError
+          const viewLink = `${window.location.origin}/view/${viewerToken || documentId}`
           const { error: ccErr } = await supabase.functions.invoke('send-signing-email', {
             body: {
               to: ccEmail,
@@ -564,6 +648,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
               message: message || '',
               type: 'cc-notification',
               viewLink,
+              viewerToken: viewerToken || null,
+              documentId,
               signeeEmails,
             },
           })
@@ -608,6 +694,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             to: signer.signer_email,
             documentTitle: doc.title,
             signingLink,
+            signingToken: signer.signing_token,
+            documentId,
             senderName: senderName || 'A user',
             message: 'This is a friendly reminder to sign the document. Please review and sign at your earliest convenience.',
             ccEmails: [],

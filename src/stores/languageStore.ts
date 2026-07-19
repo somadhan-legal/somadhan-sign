@@ -16,6 +16,7 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.documents': { en: 'Documents', bn: 'ডকুমেন্টস' },
   'nav.lightMode': { en: 'Light mode', bn: 'লাইট মোড' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
+  'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
 
   // ─── Landing Page ───
   'landing.heroTitle1': { en: 'Sign documents with', bn: 'ডকুমেন্ট  সাইন  করুন' },

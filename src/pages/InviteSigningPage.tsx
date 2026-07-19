@@ -30,6 +30,9 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 
+const isMissingRpc = (error: { code?: string; message?: string } | null) =>
+  error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
+
 const fieldTypeIcons: Record<string, React.ReactNode> = {
   signature: <PenTool className="w-3 h-3" />,
   initials: <Type className="w-3 h-3" />,
@@ -57,7 +60,6 @@ export default function InviteSigningPage() {
   const {
     signatureFields,
     placements,
-    fetchSignatureFields,
     fetchPlacements,
     fetchSignerByToken,
     updateSignerStatus,
@@ -102,8 +104,6 @@ export default function InviteSigningPage() {
         return
       }
       setSignerData(data as unknown as SignerData)
-      await fetchSignatureFields(data.document_id)
-      await fetchPlacements(data.document_id)
 
       // If signer already signed, show finished state
       if (data.status === 'signed') {
@@ -113,20 +113,20 @@ export default function InviteSigningPage() {
       }
 
       if (data.status === 'pending') {
-        await updateSignerStatus(data.id, 'viewed')
+        await updateSignerStatus(data.id, 'viewed', token)
       }
 
       setPageLoading(false)
     }
     load()
-  }, [token, fetchSignerByToken, fetchSignatureFields, fetchPlacements, updateSignerStatus])
+  }, [token, fetchSignerByToken, updateSignerStatus])
 
   useEffect(() => {
     if (signerData && !hasLoggedView.current) {
       hasLoggedView.current = true
-      addAuditEntry(signerData.document_id, 'Document Viewed', signerData.signer_email, signerData.signer_name)
+      addAuditEntry(signerData.document_id, 'Document Viewed', signerData.signer_email, signerData.signer_name, undefined, token)
     }
-  }, [signerData, addAuditEntry])
+  }, [signerData, addAuditEntry, token])
 
   const userEmail = signerData?.signer_email || ''
   const userName = signerData?.signer_name || null
@@ -190,11 +190,11 @@ export default function InviteSigningPage() {
         signer_id: null,
         signer_email: userEmail,
         signature_id: data,
-      })
+      }, token)
     }
     setSignatureData(data)
-    await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`)
-    await fetchPlacements(documentId)
+    await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
+    await fetchPlacements(documentId, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -210,11 +210,11 @@ export default function InviteSigningPage() {
         signer_id: null,
         signer_email: userEmail,
         signature_id: data,
-      })
+      }, token)
     }
     setInitialsData(data)
-    await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`)
-    await fetchPlacements(documentId)
+    await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
+    await fetchPlacements(documentId, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -235,15 +235,15 @@ export default function InviteSigningPage() {
       signer_id: null,
       signer_email: userEmail,
       signature_id: dataToUse,
-    })
+    }, token)
 
-    await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`)
+    await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`, token)
 
     setTappedFieldId(null)
     setSubmitting(false)
 
     // Re-fetch placements to find accurate next unsigned
-    await fetchPlacements(documentId)
+    await fetchPlacements(documentId, token)
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remainingUnsigned = myFields.filter((f) => !latestSignedIds.has(f.id) && f.field_type === 'signature')
@@ -266,9 +266,9 @@ export default function InviteSigningPage() {
       signer_id: null,
       signer_email: userEmail,
       signature_id: dateValue,
-    })
+    }, token)
     const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`)
+    await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -282,9 +282,9 @@ export default function InviteSigningPage() {
       signer_id: null,
       signer_email: userEmail,
       signature_id: 'checkbox:checked',
-    })
+    }, token)
     const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`)
+    await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -299,9 +299,9 @@ export default function InviteSigningPage() {
       signer_id: null,
       signer_email: userEmail,
       signature_id: textInputValue.trim(),
-    })
+    }, token)
     const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`)
+    await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
     setTextInputValue('')
     setSubmitting(false)
     await checkCompletion()
@@ -310,21 +310,27 @@ export default function InviteSigningPage() {
   const checkCompletion = async () => {
     if (!documentId || !signerData) return
     // Re-fetch placements to get accurate count
-    await fetchPlacements(documentId)
+    await fetchPlacements(documentId, token)
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
     if (remaining.length === 0) {
-      await updateSignerStatus(signerData.id, 'signed')
-      await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName)
+      await updateSignerStatus(signerData.id, 'signed', token)
+      await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName, undefined, token)
       
       // Use RPC to check if all signers signed (bypasses RLS — unauthenticated signers can't read document_signers)
       // Retry up to 3 times with increasing delay to handle race conditions
       let allSigned = false
       for (let attempt = 1; attempt <= 3; attempt++) {
         await new Promise(r => setTimeout(r, attempt * 1500))
-        const { data, error: checkErr } = await supabase
-          .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
+        let { data, error: checkErr } = await supabase
+          .rpc('check_all_signers_signed_by_token', { p_token: token || '' })
+        if (isMissingRpc(checkErr)) {
+          const legacyResult = await supabase
+            .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
+          data = legacyResult.data
+          checkErr = legacyResult.error
+        }
         if (data) {
           allSigned = true
           break
@@ -341,25 +347,37 @@ export default function InviteSigningPage() {
       
       if (allSigned) {
         // Mark document as completed (bypasses RLS)
-        const { error: rpcError } = await supabase
-          .rpc('mark_document_completed', { p_document_id: documentId })
+        let { error: rpcError } = await supabase
+          .rpc('mark_document_completed_by_token', { p_token: token || '' })
+        if (isMissingRpc(rpcError)) {
+          const legacyResult = await supabase
+            .rpc('mark_document_completed', { p_document_id: documentId })
+          rpcError = legacyResult.error
+        }
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
         }
-        await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed')
+        await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed', token)
         
         // Get all document data via RPC (bypasses RLS)
         let completionData: DocumentCompletionResult | null = null
         try {
-          const { data } = await supabase
-            .rpc('get_document_for_completion', { p_document_id: documentId })
+          let { data, error: completionError } = await supabase
+            .rpc('get_document_for_completion_by_token', { p_token: token || '' })
+          if (isMissingRpc(completionError)) {
+            const legacyResult = await supabase
+              .rpc('get_document_for_completion', { p_document_id: documentId })
+            data = legacyResult.data
+            completionError = legacyResult.error
+          }
+          if (completionError) throw completionError
           completionData = data
         } catch (rpcErr) {
           console.error('[completion] RPC get_document_for_completion failed:', rpcErr)
         }
         
-        let downloadUrl = ''
+        const downloadUrl = ''
         let pdfBase64 = ''
         
         // Generate signed PDF + audit trail combined (non-blocking for email)
@@ -388,25 +406,6 @@ export default function InviteSigningPage() {
               } finally {
                 URL.revokeObjectURL(signedUrl)
               }
-            }
-            
-            const fileName = `signed/${documentId}_${Date.now()}.pdf`
-            const { error: uploadError } = await supabase.storage
-              .from('documents')
-              .upload(fileName, finalBlob, { contentType: 'application/pdf', upsert: true })
-            
-            if (!uploadError) {
-              const { data: urlData } = supabase.storage
-                .from('documents')
-                .getPublicUrl(fileName)
-              downloadUrl = urlData?.publicUrl || ''
-              
-              await supabase.rpc('save_final_pdf_url', {
-                p_document_id: documentId,
-                p_final_pdf_url: downloadUrl,
-              })
-            } else {
-              console.error('[completion] Upload error:', uploadError)
             }
             
             const arrayBuffer = await finalBlob.arrayBuffer()
@@ -454,6 +453,7 @@ export default function InviteSigningPage() {
                 to: uniqueRecipients,
                 documentTitle: completionData?.title || 'Document',
                 signingLink: '',
+                signingToken: token,
                 senderName: 'SomadhanSign',
                 type: 'completion',
                 downloadUrl,
@@ -464,7 +464,7 @@ export default function InviteSigningPage() {
             if (emailFnErr) {
               console.error('[completion] Edge function error:', emailFnErr)
             }
-            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`)
+            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`, token)
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)
@@ -529,31 +529,10 @@ export default function InviteSigningPage() {
     )
   }
 
-  const fetchSignedFields = async (): Promise<SignedField[]> => {
+  const fetchSignedFields = (): SignedField[] => {
     if (!documentId) return []
-    
-    // Fetch placements
-    const { data: placementsData, error: pErr } = await supabase
-      .from('signature_placements')
-      .select('*')
-      .eq('document_id', documentId)
-    
-    if (pErr) { console.error('Error fetching placements:', pErr); return [] }
-    if (!placementsData || placementsData.length === 0) return []
-
-    // Fetch corresponding fields
-    const fieldIds = placementsData.map(p => p.field_id)
-    const { data: fieldsData, error: fErr } = await supabase
-      .from('signature_fields')
-      .select('*')
-      .in('id', fieldIds)
-
-    if (fErr) { console.error('Error fetching fields:', fErr); return [] }
-    if (!fieldsData) return []
-
-    const fieldsMap = new Map(fieldsData.map(f => [f.id, f]))
-
-    return placementsData
+    const fieldsMap = new Map(signatureFields.map(f => [f.id, f]))
+    return placements
       .filter(p => fieldsMap.has(p.field_id))
       .map(p => {
         const field = fieldsMap.get(p.field_id)!
@@ -570,33 +549,19 @@ export default function InviteSigningPage() {
   }
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
-    const docId = signerData!.document_id
-    const { data: freshDoc } = await supabase
-      .rpc('get_document_for_viewer', { p_document_id: docId })
-
-    const documentRow = freshDoc?.[0]
-    const pdfUrl = documentRow?.original_pdf_url || signerData!.documents.original_pdf_url
-    const title = documentRow?.title || signerData!.documents.title
+    const pdfUrl = signerData!.documents.original_pdf_url
+    const title = signerData!.documents.title
 
     // Step 1: Generate signed PDF with overlays
-    const signedFields = await fetchSignedFields()
+    const signedFields = fetchSignedFields()
     let basePdfUrl = pdfUrl
     if (signedFields.length > 0) {
       const signedBlob = await generateSignedPdf(pdfUrl, signedFields)
       basePdfUrl = URL.createObjectURL(signedBlob)
     }
 
-    // Step 2: Fetch audit trail for THIS document ONLY using the exact document ID
-    const { data: auditData, error: auditErr } = await supabase
-      .from('audit_trail')
-      .select('*')
-      .eq('document_id', docId)
-      .order('created_at', { ascending: true })
-
-    if (auditErr) console.error('Audit trail error:', auditErr)
-
-    // EXTRA SAFETY: Filter client-side in case Supabase RLS returns extra rows
-    const filteredAudit = (auditData || []).filter(e => e.document_id === docId)
+    const filteredAudit = useDocumentStore.getState().auditTrail
+      .filter(entry => entry.document_id === signerData!.document_id)
 
     // Step 3: Append audit trail pages to the signed PDF
     const finalBlob = await generateAuditPdf(basePdfUrl, filteredAudit, title)
@@ -986,6 +951,27 @@ export default function InviteSigningPage() {
                 const isSignatureType = field.field_type === 'signature' || isInitials
 
                 const sigData = isInitials ? initialsData : signatureData
+                const activateUnsignedField = () => {
+                  if (!isMine || isSigned || submitting) return
+                  if (isCheckbox) {
+                    handleCheckboxField(field.id)
+                  } else if (isDate) {
+                    setDatePickerFieldId(field.id)
+                  } else if (isText) {
+                    setTextInputFieldId(field.id)
+                    setTextInputValue('')
+                  } else if (isInitials && initialsData) {
+                    setTappedFieldId(field.id)
+                  } else if (isInitials) {
+                    setTappedFieldId(field.id)
+                    setShowInitialsModal(true)
+                  } else if (signatureData) {
+                    setTappedFieldId(field.id)
+                  } else {
+                    setTappedFieldId(field.id)
+                    setShowSignatureModal(true)
+                  }
+                }
 
                 return (
                   <div
@@ -1020,7 +1006,7 @@ export default function InviteSigningPage() {
 
                     ) : isTapped && isSignatureType && sigData ? (
                       /* === TAPPED SIGNATURE/INITIALS — Apply to this / Apply to All popover === */
-                      <div className="relative w-full h-full" onClick={(e) => e.stopPropagation()}>
+                      <div className="relative w-full h-full">
                         {/* Field highlight with signature preview */}
                         <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
                           <img src={sigData} alt="Preview" className="max-w-full max-h-full object-contain opacity-40" />
@@ -1055,7 +1041,7 @@ export default function InviteSigningPage() {
                       <div className="w-full h-full flex items-center justify-center">
                         <input
                           type="date"
-                          autoFocus
+                          aria-label="Signing date"
                           className="text-[11px] border border-[hsl(var(--primary))] rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
                           onChange={(e) => {
                             if (e.target.value) {
@@ -1073,7 +1059,7 @@ export default function InviteSigningPage() {
                       <div className="w-full h-full flex items-center">
                         <input
                           type="text"
-                          autoFocus
+                          aria-label="Field text"
                           value={textInputValue}
                           onChange={(e) => setTextInputValue(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
@@ -1102,27 +1088,16 @@ export default function InviteSigningPage() {
                             : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100/60 dark:bg-gray-800/30 opacity-40'
                         }`}
                         style={undefined}
-                        onClick={() => {
-                          if (!isMine || isSigned || submitting) return
-                          if (isCheckbox) {
-                            handleCheckboxField(field.id)
-                          } else if (isDate) {
-                            setDatePickerFieldId(field.id)
-                          } else if (isText) {
-                            setTextInputFieldId(field.id)
-                            setTextInputValue('')
-                          } else if (isInitials && initialsData) {
-                            setTappedFieldId(field.id)
-                          } else if (isInitials && !initialsData) {
-                            setTappedFieldId(field.id)
-                            setShowInitialsModal(true)
-                          } else if (!isInitials && signatureData) {
-                            setTappedFieldId(field.id)
-                          } else if (!isInitials && !signatureData) {
-                            setTappedFieldId(field.id)
-                            setShowSignatureModal(true)
+                        onClick={activateUnsignedField}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            activateUnsignedField()
                           }
                         }}
+                        role={isMine && !isSigned ? 'button' : undefined}
+                        tabIndex={isMine && !isSigned ? 0 : undefined}
+                        aria-label={isMine && !isSigned ? `${field.field_type} field. Activate to complete.` : undefined}
                       >
                         {isMine ? (
                           isCheckbox ? (

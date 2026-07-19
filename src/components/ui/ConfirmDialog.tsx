@@ -50,7 +50,7 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-label="Close confirmation" className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} />
       <div
         ref={dialogRef}
         role="alertdialog"

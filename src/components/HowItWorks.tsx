@@ -60,6 +60,7 @@ export default function HowItWorks() {
                     <button
                       key={step.label}
                       onClick={() => setActiveStep(index)}
+                      aria-label={`${step.label}: ${step.caption}`}
                       className={`min-w-[180px] rounded-2xl border p-4 text-left transition-colors lg:min-w-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white' : 'border-transparent hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'}`}
                       aria-pressed={active}
                     >

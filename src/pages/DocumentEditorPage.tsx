@@ -591,6 +591,15 @@ export default function DocumentEditorPage() {
                       borderColor: isActive ? color : 'transparent',
                     }}
                     onClick={() => setSelectedSignerIdx(idx)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        setSelectedSignerIdx(idx)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isActive}
                   >
                     <div
                       className="w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0"
@@ -837,6 +846,16 @@ export default function DocumentEditorPage() {
                         color: color,
                       }}
                       onClick={(e) => { e.stopPropagation(); if (!isLocked) setSelectedField(field.id) }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          if (!isLocked) setSelectedField(field.id)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${ftLabel} field assigned to ${sName}`}
                     >
                       <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
                       <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
@@ -916,6 +935,7 @@ export default function DocumentEditorPage() {
                     return (
                       <button
                         key={signer.id}
+                        aria-label={`Assign field to ${signer.signer_name || signer.signer_email}`}
                         onClick={() => { updateSignatureField(field.id, { assigned_to_email: signer.signer_email }); setSelectedSignerIdx(idx) }}
                         className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-left transition-all cursor-pointer ${
                           isAssigned ? 'shadow-sm' : 'hover:bg-[hsl(var(--muted))]/50'

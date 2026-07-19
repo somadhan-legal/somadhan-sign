@@ -3,10 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
-import LandingPage from '@/pages/LandingPage'
-import LoginPage from '@/pages/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
+const LandingPage = lazy(() => import('@/pages/LandingPage'))
+const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'))
 const DocumentPreviewPage = lazy(() => import('@/pages/DocumentPreviewPage'))
@@ -38,7 +38,7 @@ function HomeRedirect() {
   if (user) return <Navigate to="/dashboard" replace />
   
   // Show landing page for non-authenticated users
-  return <LandingPage />
+  return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
 }
 
 export default function App() {
@@ -55,7 +55,7 @@ export default function App() {
         <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />
         {/* Public view-only route for CC recipients — no auth required */}
         <Route path="/view/:documentId" element={<Suspense fallback={<PageLoader />}><ViewDocumentPage /></Suspense>} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
         <Route path="/" element={<HomeRedirect />} />
 
         <Route element={<Layout />}>

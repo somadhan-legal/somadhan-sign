@@ -1,18 +1,18 @@
 # Database Setup
 
-## Quick Setup (Recommended)
+## Quick Setup
 
-Run **`000_complete_setup.sql`** in the Supabase SQL Editor. This single file creates all tables, indexes, RLS policies, storage bucket, and RPC functions. It is idempotent — safe to re-run.
+Run **`000_complete_setup.sql`** in the Supabase SQL Editor, then run the timestamped migrations in chronological order. The timestamped migrations contain current duplicate-signer and token-scoped security protections that are intentionally newer than the consolidated baseline.
 
-## Legacy Migrations (Reference Only)
+## Legacy Migrations
 
-The individual migration files (001–011) are kept for historical reference. They were the incremental steps that led to the consolidated setup. **Do not run them separately** — use `000_complete_setup.sql` instead.
+The numbered migration files (001–011) are historical reference and must not be run after `000_complete_setup.sql`. New timestamped migrations must be run after the consolidated setup.
 
 ## What Gets Created
 
-- **6 tables**: documents, signature_fields, document_signers, signatures, signature_placements, audit_trail
+- **7 tables** after current migrations: documents, signature_fields, document_signers, signatures, signature_placements, audit_trail, document_viewers
 - **11 indexes** for performance
-- **RLS policies** on all tables (owner-only for documents, public read for signing flow)
+- **RLS policies** on all tables, with public signing and viewing access scoped to unguessable invitation tokens
 - **Storage bucket** `documents` with upload policies
 - **9 RPC functions** (all `SECURITY DEFINER`, `search_path = public`):
   - `get_signer_by_token` — lookup signer by signing token
@@ -30,5 +30,5 @@ The individual migration files (001–011) are kept for historical reference. Th
 
 - All RPC functions use `SECURITY DEFINER` with `search_path = public`
 - `cleanup_old_documents()` and `rls_auto_enable()` have EXECUTE revoked from anon/authenticated
-- Unauthenticated signers access data via token-based RPCs, not direct table access
+- Unauthenticated signers and viewers access data via token-based RPCs, not direct table access
 - The Edge Function `send-signing-email` handles email delivery via Resend

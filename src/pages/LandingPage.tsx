@@ -58,10 +58,10 @@ export default function LandingPage() {
           </nav>
 
           <div className="hidden items-center gap-2 sm:flex">
-            <button onClick={toggleLang} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
+            <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
               {lang === 'en' ? 'বাংলা' : 'EN'}
             </button>
-            <button onClick={toggleTheme} className="landing-icon-button" title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+            <button onClick={toggleTheme} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="landing-icon-button" title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <Link to="/login"><Button variant="ghost" size="sm">{t('landing.signIn')}</Button></Link>
@@ -93,8 +93,8 @@ export default function LandingPage() {
                 <Link to="/login?mode=signup"><Button className="w-full">{t('nav.getStarted')}</Button></Link>
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={toggleLang} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
-                <button onClick={toggleTheme} className="landing-icon-button flex-1">
+                <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
+                <button onClick={toggleTheme} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="landing-icon-button flex-1">
                   {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </button>
               </div>

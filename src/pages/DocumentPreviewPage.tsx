@@ -11,6 +11,8 @@ import {
   SquareCheck,
   History,
   Download,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import PdfViewer from '@/components/PdfViewer'
@@ -52,6 +54,9 @@ export default function DocumentPreviewPage() {
 
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024
+  )
 
   useEffect(() => {
     if (id) {
@@ -190,9 +195,10 @@ export default function DocumentPreviewPage() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-full min-w-0">
       {/* Left Sidebar */}
-      <div className="w-80 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] flex flex-col">
+      {!leftPanelCollapsed && (
+      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
         <div className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
@@ -321,11 +327,27 @@ export default function DocumentPreviewPage() {
             <Download className="w-4 h-4 mr-2" />
             {downloadingPdf ? 'Generating...' : 'Download with Audit Trail'}
           </Button>
+          <Button variant="ghost" className="w-full" onClick={() => setLeftPanelCollapsed(true)}>
+            <PanelLeftClose className="w-4 h-4 mr-2" />
+            Hide details
+          </Button>
         </div>
       </div>
+      )}
+
+      {leftPanelCollapsed && (
+        <button
+          type="button"
+          onClick={() => setLeftPanelCollapsed(false)}
+          aria-label="Show document details"
+          className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
+        >
+          <PanelLeftOpen className="w-5 h-5" />
+        </button>
+      )}
 
       {/* PDF Viewer with field overlays */}
-      <div className="flex-1 overflow-auto bg-[hsl(var(--muted))] p-6 flex justify-center">
+      <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
           renderPageOverlay={(pageNumber) => {

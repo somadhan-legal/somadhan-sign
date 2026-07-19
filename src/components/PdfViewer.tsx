@@ -64,13 +64,27 @@ function PageWithOverlay({
     [onPagePointerMove, pageNumber]
   )
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!onPageClick || !ref.current || (e.key !== 'Enter' && e.key !== ' ')) return
+      e.preventDefault()
+      const rect = ref.current.getBoundingClientRect()
+      onPageClick(pageNumber, rect.width / 2, rect.height / 2, rect.width, rect.height)
+    },
+    [onPageClick, pageNumber]
+  )
+
   return (
     <div
       ref={ref}
       className="relative cursor-crosshair"
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       onPointerMove={handlePointerMove}
       onPointerLeave={onPageMouseLeave}
+      role={onPageClick ? 'button' : undefined}
+      tabIndex={onPageClick ? 0 : undefined}
+      aria-label={onPageClick ? `PDF page ${pageNumber}. Press Enter to place the selected field in the center.` : undefined}
       style={{ userSelect: 'none', touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom' }}
     >
       <Page
@@ -138,6 +152,7 @@ export default function PdfViewer({
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.max(0.5, s - 0.1))}
+          aria-label="Zoom out"
           className="h-11 w-11"
         >
           <ZoomOut className="w-4 h-4" />
@@ -149,6 +164,7 @@ export default function PdfViewer({
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.min(2, s + 0.1))}
+          aria-label="Zoom in"
           className="h-11 w-11"
         >
           <ZoomIn className="w-4 h-4" />

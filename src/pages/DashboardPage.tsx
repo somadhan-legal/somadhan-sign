@@ -540,7 +540,7 @@ export default function DashboardPage() {
             required
           />
           <div>
-            <label className="block text-sm font-medium mb-1.5">PDF File</label>
+            <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">PDF File</label>
             <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-lg p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
               <input
                 type="file"
