@@ -1,4 +1,5 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
+import '@fontsource/noto-sans-bengali/bengali-400.css'
 import somadhanLogo from '@/assets/somadhan.png'
 
 export interface AuditEntry {
@@ -8,6 +9,48 @@ export interface AuditEntry {
   created_at: string
   metadata?: string | null
   ip_address?: string | null
+}
+
+const isBengaliCharacter = (character: string) => /[\u0980-\u09FF]/.test(character)
+
+const drawUserText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, options: {
+  x: number
+  y: number
+  size: number
+  latinFont: PDFFont
+  color: ReturnType<typeof rgb>
+  maxWidth: number
+}) => {
+  const safeValue = String(value || '').replace(/[\r\n\t]+/g, ' ')
+  if (![...safeValue].some(isBengaliCharacter)) {
+    let text = safeValue.replace(/[^\x20-\x7E]/g, '')
+    while (text.length > 0 && options.latinFont.widthOfTextAtSize(text, options.size) > options.maxWidth) text = text.slice(0, -1)
+    if (text) page.drawText(text, { x: options.x, y: options.y, size: options.size, font: options.latinFont, color: options.color })
+    return
+  }
+
+  const renderScale = 4
+  await document.fonts?.load(`${options.size * renderScale}px "Noto Sans Bengali"`).catch(() => undefined)
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) return
+  context.font = `${options.size * renderScale}px "Noto Sans Bengali", sans-serif`
+  let text = safeValue
+  while (text.length > 0 && context.measureText(text).width > options.maxWidth * renderScale) text = text.slice(0, -1)
+  if (!text) return
+  canvas.width = Math.max(1, Math.ceil(context.measureText(text).width + renderScale * 2))
+  canvas.height = Math.max(1, Math.ceil(options.size * renderScale * 1.6))
+  context.font = `${options.size * renderScale}px "Noto Sans Bengali", sans-serif`
+  context.fillStyle = `rgb(${options.color.red * 255}, ${options.color.green * 255}, ${options.color.blue * 255})`
+  context.textBaseline = 'alphabetic'
+  context.fillText(text, renderScale, options.size * renderScale * 1.2)
+  const image = await pdfDoc.embedPng(await fetch(canvas.toDataURL('image/png')).then(response => response.arrayBuffer()))
+  page.drawImage(image, {
+    x: options.x,
+    y: options.y - options.size * 0.25,
+    width: canvas.width / renderScale,
+    height: canvas.height / renderScale,
+  })
 }
 
 /**
@@ -129,12 +172,13 @@ export async function generateAuditPdf(
     font: fontBold,
     color: rgb(0.2, 0.2, 0.2),
   })
-  page.drawText(documentTitle, {
+  await drawUserText(pdfDoc, page, documentTitle, {
     x: margin + 70,
     y: yPos,
     size: 10,
-    font: font,
+    latinFont: font,
     color: rgb(0.2, 0.2, 0.2),
+    maxWidth: pageWidth - margin * 2 - 70,
   })
   yPos -= lineHeight
 
@@ -148,6 +192,7 @@ export async function generateAuditPdf(
   page.drawText(new Date().toLocaleString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    timeZone: 'UTC',
   }) + ' UTC', {
     x: margin + 70,
     y: yPos,
@@ -169,8 +214,8 @@ export async function generateAuditPdf(
   const legalText = [
     'This document was electronically signed using SomadhanSign. All parties listed below',
     'have agreed to use electronic signatures pursuant to applicable electronic signature',
-    'laws. Each action below was logged with a timestamp for legal verification purposes.',
-    'This audit trail provides a tamper-evident record of all signing activity.',
+    'laws. Each action below was recorded with a timestamp as part of the signing activity.',
+    'This certificate summarizes the activity recorded for this document.',
   ]
   for (const line of legalText) {
     page.drawText(line, {
@@ -280,8 +325,8 @@ export async function generateAuditPdf(
     }
 
     const dt = new Date(entry.created_at)
-    const dateStr = dt.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
-    const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    const dateStr = dt.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    const timeStr = dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'UTC' })
 
     // Helper function to sanitize text for WinAnsi encoding
     const sanitize = (text: string) => text
@@ -302,12 +347,13 @@ export async function generateAuditPdf(
 
     // User
     const userName = entry.user_name || entry.user_email.split('@')[0]
-    page.drawText(sanitize(userName), {
+    await drawUserText(pdfDoc, page, userName, {
       x: 220,
       y: yPos,
       size: 9,
-      font: fontBold,
+      latinFont: fontBold,
       color: rgb(0.15, 0.15, 0.15),
+      maxWidth: 165,
     })
     page.drawText(sanitize(entry.user_email), {
       x: 220,
@@ -346,14 +392,14 @@ export async function generateAuditPdf(
 
     // Metadata
     if (entry.metadata) {
-      const sanitized = sanitize(entry.metadata)
-      if (sanitized.trim()) {
-        page.drawText(sanitized, {
+      if (entry.metadata.trim()) {
+        await drawUserText(pdfDoc, page, entry.metadata, {
           x: margin + 10,
           y: yPos - smallLine,
           size: 8,
-          font: font,
+          latinFont: font,
           color: rgb(0.5, 0.5, 0.5),
+          maxWidth: 150,
         })
       }
     }

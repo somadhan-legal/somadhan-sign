@@ -21,8 +21,7 @@ import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { supabase } from '@/lib/supabase'
-import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
-import { generateAuditPdf } from '@/lib/auditPdf'
+import type { SignedField } from '@/lib/signedPdf'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
@@ -52,6 +51,12 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
+  const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
+
+  const showNotice = (message: string, kind: 'success' | 'error' | 'info' = 'info') => {
+    setNotice({ message, kind })
+    window.setTimeout(() => setNotice(null), 4500)
+  }
 
   // Reset upload form state
   const resetUploadForm = () => {
@@ -172,6 +177,7 @@ export default function DashboardPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
           <input
             type="text"
+            aria-label={t('dashboard.searchDocs')}
             placeholder={t('dashboard.searchDocs')}
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
@@ -186,7 +192,9 @@ export default function DashboardPage() {
             { status: 'completed', labelKey: 'dashboard.completed' },
           ].map((item) => (
             <button
+              type="button"
               key={item.status}
+              aria-pressed={filterStatus === item.status}
               onClick={() => { setFilterStatus(item.status); setCurrentPage(1) }}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 filterStatus === item.status
@@ -247,6 +255,8 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3">
                     {doc.status !== 'draft' && (
                       <button
+                        type="button"
+                        aria-label={expandedDoc === doc.id ? `Hide signers for ${doc.title}` : `Show signers for ${doc.title}`}
                         onClick={() => {
                           if (expandedDoc === doc.id) {
                             setExpandedDoc(null)
@@ -268,6 +278,8 @@ export default function DashboardPage() {
                     </Badge>
                     <div className="relative" data-menu-container>
                       <button
+                        type="button"
+                        aria-label={`Open actions for ${doc.title}`}
                         onClick={() => setMenuOpen(menuOpen === doc.id ? null : doc.id)}
                         className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
                       >
@@ -306,9 +318,9 @@ export default function DashboardPage() {
                                   await addAuditEntry(doc.id, 'Reminder Sent', user.email, user.user_metadata?.full_name, `Reminder sent to ${result.sent} signer(s)`)
                                 }
                                 if (result.sent > 0) {
-                                  alert(`Reminder sent to ${result.sent} pending signer(s).`)
+                                  showNotice(`Reminder sent to ${result.sent} pending signer(s).${result.failed > 0 ? ` ${result.failed} failed.` : ''}`, result.failed > 0 ? 'info' : 'success')
                                 } else {
-                                  alert('No pending signers to remind.')
+                                  showNotice(result.failed > 0 ? 'The reminder could not be sent. Please try again.' : 'No pending signers to remind.', result.failed > 0 ? 'error' : 'info')
                                 }
                               }}
                             >
@@ -376,6 +388,7 @@ export default function DashboardPage() {
                                   })
 
                                 // Generate signed PDF
+                                const { generateSignedPdf } = await import('@/lib/signedPdf')
                                 const signedBlob = await generateSignedPdf(currentDoc.original_pdf_url, signedFields)
                                 const signedUrl = URL.createObjectURL(signedBlob)
 
@@ -390,6 +403,7 @@ export default function DashboardPage() {
                                 const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
 
                                 // Append audit trail
+                                const { generateAuditPdf } = await import('@/lib/auditPdf')
                                 const finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)
                                 URL.revokeObjectURL(signedUrl)
 
@@ -403,7 +417,7 @@ export default function DashboardPage() {
                                 URL.revokeObjectURL(url)
                               } catch (error) {
                                 console.error('Error generating signed PDF:', error)
-                                alert('Error generating PDF. Downloading original instead.')
+                                showNotice('The completed PDF could not be generated. The original PDF is downloading instead.', 'error')
                                 window.open(currentDoc.original_pdf_url, '_blank')
                               }
                             }}
@@ -486,6 +500,9 @@ export default function DashboardPage() {
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
+                    type="button"
+                    aria-label={`Go to page ${page}`}
+                    aria-current={currentPage === page ? 'page' : undefined}
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
@@ -538,6 +555,7 @@ export default function DashboardPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            maxLength={160}
           />
           <div>
             <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">PDF File</label>
@@ -608,6 +626,21 @@ export default function DashboardPage() {
         confirmText="OK"
         cancelText="Cancel"
       />
+
+      {notice && (
+        <div
+          role={notice.kind === 'error' ? 'alert' : 'status'}
+          className={`fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${
+            notice.kind === 'success'
+              ? 'border-[hsl(var(--success))]/30 bg-[hsl(var(--success))] text-white'
+              : notice.kind === 'error'
+                ? 'border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))] text-white'
+                : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]'
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
     </div>
   )
 }

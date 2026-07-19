@@ -13,6 +13,7 @@ interface AuditTrailModalProps {
   isOpen: boolean
   onClose: () => void
   documentId: string
+  signingToken?: string
 }
 
 const actionConfig: Record<string, { icon: React.ReactNode; color: string }> = {
@@ -33,25 +34,26 @@ const actionConfig: Record<string, { icon: React.ReactNode; color: string }> = {
 function formatDateTime(dateStr: string) {
   const d = new Date(dateStr)
   return {
-    date: d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }),
-    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC',
+    date: d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }),
+    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC',
   }
 }
 
-export default function AuditTrailModal({ isOpen, onClose, documentId }: AuditTrailModalProps) {
-  const { auditTrail, fetchAuditTrail } = useDocumentStore()
+export default function AuditTrailModal({ isOpen, onClose, documentId, signingToken }: AuditTrailModalProps) {
+  const { auditTrail, fetchAuditTrail, fetchPlacements } = useDocumentStore()
 
   useEffect(() => {
     if (isOpen && documentId) {
-      fetchAuditTrail(documentId)
+      if (signingToken) fetchPlacements(documentId, signingToken)
+      else fetchAuditTrail(documentId)
     }
-  }, [isOpen, documentId, fetchAuditTrail])
+  }, [isOpen, documentId, signingToken, fetchAuditTrail, fetchPlacements])
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="AUDIT TRAIL" size="xl">
       <div className="max-h-[70vh] overflow-y-auto">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-2 border-b border-[hsl(var(--border))] text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
+        <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-2 border-b border-[hsl(var(--border))] text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
           <span>Trail</span>
           <span>User</span>
           <span>Time & Location</span>
@@ -69,7 +71,7 @@ export default function AuditTrailModal({ isOpen, onClose, documentId }: AuditTr
               const { date, time } = formatDateTime(entry.created_at)
 
               return (
-                <div key={entry.id} className="grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-3 hover:bg-[hsl(var(--muted))]/50 transition-colors">
+                <div key={entry.id} className="grid grid-cols-1 gap-3 px-4 py-4 hover:bg-[hsl(var(--muted))]/50 transition-colors sm:grid-cols-[1fr_1fr_1fr] sm:gap-4 sm:py-3">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${config.color}`}>
                       {config.icon}

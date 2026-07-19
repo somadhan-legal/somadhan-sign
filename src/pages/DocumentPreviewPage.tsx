@@ -19,8 +19,7 @@ import PdfViewer from '@/components/PdfViewer'
 import AuditTrailModal from '@/components/AuditTrailModal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
-import { generateAuditPdf } from '@/lib/auditPdf'
-import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
+import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
 
 const SIGNER_COLORS = [
@@ -46,14 +45,12 @@ export default function DocumentPreviewPage() {
     signers,
     placements,
     fetchDocument,
-    fetchSigners,
-    fetchPlacements,
-    fetchSignatureFields,
     loading,
   } = useDocumentStore()
 
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 1024
   )
@@ -61,11 +58,8 @@ export default function DocumentPreviewPage() {
   useEffect(() => {
     if (id) {
       fetchDocument(id)
-      fetchSigners(id)
-      fetchPlacements(id)
-      fetchSignatureFields(id)
     }
-  }, [id, fetchDocument, fetchSigners, fetchPlacements, fetchSignatureFields])
+  }, [id, fetchDocument])
 
   const getSignerColor = (email: string) => {
     const idx = signers.findIndex((s) => s.signer_email === email)
@@ -88,6 +82,7 @@ export default function DocumentPreviewPage() {
 
   const handleDownloadWithAudit = async () => {
     if (!id) return
+    setDownloadError('')
     setDownloadingPdf(true)
     try {
       // Fetch the document fresh to avoid stale store data
@@ -98,7 +93,7 @@ export default function DocumentPreviewPage() {
         .single()
 
       if (docErr || !docData) {
-        alert('Could not find document.')
+        setDownloadError('The document could not be found or is no longer available.')
         return
       }
 
@@ -138,6 +133,7 @@ export default function DocumentPreviewPage() {
               }
             })
 
+          const { generateSignedPdf } = await import('@/lib/signedPdf')
           const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
           pdfUrl = URL.createObjectURL(signedBlob)
         }
@@ -154,6 +150,7 @@ export default function DocumentPreviewPage() {
       const filteredAudit = (auditData || []).filter(e => e.document_id === id)
 
       // Generate audit trail PDF
+      const { generateAuditPdf } = await import('@/lib/auditPdf')
       const blob = await generateAuditPdf(
         pdfUrl,
         filteredAudit,
@@ -172,7 +169,7 @@ export default function DocumentPreviewPage() {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Error generating PDF:', err)
-      alert('Error generating PDF. Please try again.')
+      setDownloadError('The completed PDF could not be generated. Please try again.')
     } finally {
       setDownloadingPdf(false)
     }
@@ -364,7 +361,7 @@ export default function DocumentPreviewPage() {
 
                 const renderContent = () => {
                   if (!isSigned || !placement) {
-                    // Unsigned field — show colored box with signer info
+                    // Unsigned field: show a colored box with signer information.
                     return (
                       <div
                         className="w-full h-full rounded border-2 border-dashed flex items-center justify-center text-xs font-medium"
@@ -417,7 +414,7 @@ export default function DocumentPreviewPage() {
                       </div>
                     )
                   }
-                  // Signature/initials image — clean, no border
+                  // Signature or initials image without a border.
                   return (
                     <div className="w-full h-full flex items-center justify-center overflow-hidden">
                       <img src={val} alt="Signed" className="max-w-full max-h-full object-contain" />
@@ -449,6 +446,11 @@ export default function DocumentPreviewPage() {
       {/* Audit Trail Modal */}
       {id && (
         <AuditTrailModal isOpen={showAuditTrail} onClose={() => setShowAuditTrail(false)} documentId={id} />
+      )}
+      {downloadError && (
+        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+          {downloadError}
+        </div>
       )}
     </div>
   )

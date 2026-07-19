@@ -102,6 +102,18 @@ export default function LoginPage() {
     }
   }
 
+  const handleGoogleSignIn = async () => {
+    if (submitting) return
+    setError('')
+    setSubmitting(true)
+    try {
+      await signInWithGoogle()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google sign-in could not be started.')
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex overflow-hidden bg-[hsl(var(--background))]">
       {/* Left - Branding */}
@@ -163,12 +175,12 @@ export default function LoginPage() {
               </p>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
+                <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
+                <div role="status" className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -176,6 +188,8 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   label={t('login.email')}
+                  name="email"
+                  autoComplete="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -212,12 +226,12 @@ export default function LoginPage() {
               </p>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
+                <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
+                <div role="status" className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -225,6 +239,9 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   label="6-digit OTP"
+                  name="one-time-code"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
                   type="text"
                   placeholder="123456"
                   value={otpCode}
@@ -313,7 +330,8 @@ export default function LoginPage() {
               {/* Google Sign In */}
               <Button
                 variant="outline"
-                onClick={() => signInWithGoogle()}
+                onClick={handleGoogleSignIn}
+                disabled={submitting}
                 className="w-full h-11 mb-4"
                 type="button"
               >
@@ -338,12 +356,12 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
+                <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
                   {error}
                 </div>
               )}
               {message && (
-                <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
+                <div role="status" className="mb-4 p-3 rounded-lg bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] text-sm">
                   {message}
                 </div>
               )}
@@ -462,12 +480,12 @@ export default function LoginPage() {
 
       {/* Account Verified Popup */}
       {showVerifiedPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="verified-title">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
             <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
             </div>
-            <h3 className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
+            <h3 id="verified-title" className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">
               {t('login.accountVerifiedDesc')}
             </p>

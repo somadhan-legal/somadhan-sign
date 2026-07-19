@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { PDFDocument, degrees, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 
 export interface SignedField {
   field_type: string
@@ -8,6 +8,66 @@ export interface SignedField {
   width_percent: number  // percentage 0-100
   height_percent: number  // percentage 0-100
   signature_id: string
+}
+
+interface PdfPlacementRect {
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: 0 | 90 | 180 | 270
+}
+
+const normalizeRotation = (angle: number): 0 | 90 | 180 | 270 => {
+  const normalized = ((angle % 360) + 360) % 360
+  return normalized === 90 || normalized === 180 || normalized === 270 ? normalized : 0
+}
+
+export const getPlacementRect = (page: PDFPage, placement: SignedField): PdfPlacementRect => {
+  const crop = page.getCropBox()
+  const rotation = normalizeRotation(page.getRotation().angle)
+  const displayWidth = rotation === 90 || rotation === 270 ? crop.height : crop.width
+  const displayHeight = rotation === 90 || rotation === 270 ? crop.width : crop.height
+  const left = (placement.x_percent / 100) * displayWidth
+  const top = (placement.y_percent / 100) * displayHeight
+  const width = (placement.width_percent / 100) * displayWidth
+  const height = (placement.height_percent / 100) * displayHeight
+
+  switch (rotation) {
+    case 90:
+      return { x: crop.x + top + height, y: crop.y + left, width, height, rotation }
+    case 180:
+      return { x: crop.x + crop.width - left, y: crop.y + top + height, width, height, rotation }
+    case 270:
+      return { x: crop.x + crop.width - top - height, y: crop.y + crop.height - left, width, height, rotation }
+    default:
+      return { x: crop.x + left, y: crop.y + crop.height - top - height, width, height, rotation }
+  }
+}
+
+const fitText = (text: string, font: PDFFont, maxWidth: number, preferredSize: number) => {
+  const safeText = text.replace(/[\r\n\t]+/g, ' ').trim()
+  let size = Math.max(6, preferredSize)
+  while (size > 6 && font.widthOfTextAtSize(safeText, size) > maxWidth) size -= 0.5
+  if (font.widthOfTextAtSize(safeText, size) <= maxWidth) return { text: safeText, size }
+  let fitted = safeText
+  while (fitted.length > 1 && font.widthOfTextAtSize(`${fitted}...`, size) > maxWidth) fitted = fitted.slice(0, -1)
+  return { text: `${fitted}...`, size }
+}
+
+const drawFieldText = (page: PDFPage, value: string, font: PDFFont, rect: PdfPlacementRect) => {
+  const padding = Math.min(5, rect.width * 0.08)
+  const preferredSize = Math.min(11, Math.max(7, rect.height * 0.55))
+  const fitted = fitText(value, font, Math.max(rect.width - padding * 2, 8), preferredSize)
+  page.drawText(fitted.text, {
+    x: rect.x,
+    y: rect.y,
+    size: fitted.size,
+    font,
+    color: rgb(0, 0, 0),
+    rotate: degrees(rect.rotation),
+    maxWidth: Math.max(rect.width - padding * 2, 8),
+  })
 }
 
 /**
@@ -37,15 +97,15 @@ export async function generateSignedPdf(
 
   // Overlay placements on each page
   for (const [pageNum, pagePlacements] of placementsByPage) {
+    if (!Number.isInteger(pageNum) || pageNum < 1 || pageNum > pdfDoc.getPageCount()) {
+      console.warn(`Skipping placement on invalid page ${pageNum}`)
+      continue
+    }
     const page = pdfDoc.getPage(pageNum - 1) // 0-indexed
-    const { width: pageWidth, height } = page.getSize()
 
     for (const placement of pagePlacements) {
-      // Convert percentage coordinates to actual PDF pixel coordinates
-      const x = (placement.x_percent / 100) * pageWidth
-      const w = (placement.width_percent / 100) * pageWidth
-      const h = (placement.height_percent / 100) * height
-      const y = height - (placement.y_percent / 100) * height - h // PDF coordinates are bottom-up
+      if (![placement.x_percent, placement.y_percent, placement.width_percent, placement.height_percent].every(Number.isFinite)) continue
+      const rect = getPlacementRect(page, placement)
 
       if (placement.field_type === 'signature' || placement.field_type === 'initials') {
         // Draw signature/initials image
@@ -89,66 +149,36 @@ export async function generateSignedPdf(
             
             if (img) {
               page.drawImage(img, {
-                x,
-                y,
-                width: w,
-                height: h,
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height,
+                rotate: degrees(rect.rotation),
               })
             } else {
-              page.drawText(placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', {
-                x: x + 5,
-                y: y + h / 2 - 5,
-                size: 10,
-                font: fontBold,
-                color: rgb(0, 0, 0),
-              })
+              drawFieldText(page, placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', fontBold, rect)
             }
           } catch (error) {
             console.error('Error embedding signature image:', error)
-            page.drawText(placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', {
-              x: x + 5,
-              y: y + h / 2 - 5,
-              size: 10,
-              font: fontBold,
-              color: rgb(0, 0, 0),
-            })
+            drawFieldText(page, placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', fontBold, rect)
           }
         }
       } else if (placement.field_type === 'date') {
         // Draw date text
         let dateText = placement.signature_id || new Date().toLocaleDateString()
         if (dateText.startsWith('date:')) dateText = dateText.replace('date:', '')
-        page.drawText(dateText, {
-          x: x + 5,
-          y: y + h / 2 - 5,
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        })
+        drawFieldText(page, dateText, font, rect)
       } else if (placement.field_type === 'checkbox') {
         // Draw checkbox
         const isChecked = placement.signature_id === 'checked' || placement.signature_id === 'checkbox:checked'
         
         if (isChecked) {
-          // Draw a tick/checkmark using two lines (short leg + long leg)
-          const cx = x + w / 2
-          const cy = y + h / 2
-          const s = Math.min(w, h) * 0.3
-          // Short leg: bottom-left to bottom-center
-          page.drawLine({ start: { x: cx - s, y: cy }, end: { x: cx - s * 0.3, y: cy - s * 0.7 }, thickness: 2.5, color: rgb(0, 0, 0) })
-          // Long leg: bottom-center to top-right
-          page.drawLine({ start: { x: cx - s * 0.3, y: cy - s * 0.7 }, end: { x: cx + s, y: cy + s * 0.8 }, thickness: 2.5, color: rgb(0, 0, 0) })
+          drawFieldText(page, 'X', fontBold, rect)
         }
       } else if (placement.field_type === 'text') {
         // Draw text field content
         const textContent = placement.signature_id || ''
-        page.drawText(textContent, {
-          x: x + 5,
-          y: y + h / 2 - 5,
-          size: 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        })
+        drawFieldText(page, textContent, font, rect)
       }
     }
   }

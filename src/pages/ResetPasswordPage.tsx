@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
         </p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
+          <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
             {error}
             {error.includes('expired') || error.includes('invalid') ? (
               <div className="mt-3">
@@ -133,6 +133,8 @@ export default function ResetPasswordPage() {
           <div className="relative">
             <Input
               label={t('reset.newPassword')}
+              name="new-password"
+              autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
@@ -143,7 +145,8 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 bottom-[10px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -151,6 +154,8 @@ export default function ResetPasswordPage() {
 
           <Input
             label={t('reset.confirmPassword')}
+            name="confirm-password"
+            autoComplete="new-password"
             type="password"
             placeholder="••••••••"
             value={confirmPassword}

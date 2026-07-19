@@ -34,14 +34,19 @@ create policy "Owner can manage placements"
   );
 
 drop policy if exists "Owner can manage audit trail" on public.audit_trail;
-create policy "Owner can manage audit trail"
-  on public.audit_trail for all
+drop policy if exists "Owner can view audit trail" on public.audit_trail;
+create policy "Owner can view audit trail"
+  on public.audit_trail for select
   using (
     exists (
       select 1 from public.documents d
       where d.id = document_id and d.created_by = auth.uid()
     )
-  )
+  );
+
+drop policy if exists "Owner can add audit entries" on public.audit_trail;
+create policy "Owner can add audit entries"
+  on public.audit_trail for insert
   with check (
     exists (
       select 1 from public.documents d
@@ -155,6 +160,65 @@ begin
   where ds.signing_token = p_token;
 
   return result;
+end;
+$$;
+
+create or replace function public.replace_signature_fields(p_document_id uuid, p_fields jsonb)
+returns setof public.signature_fields
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  inserted_count integer;
+begin
+  if not exists (
+    select 1 from public.documents d
+    where d.id = p_document_id and d.created_by = auth.uid()
+  ) then raise exception 'Document access denied'; end if;
+  if jsonb_typeof(p_fields) <> 'array' then raise exception 'Fields must be an array'; end if;
+
+  delete from public.signature_fields where document_id = p_document_id;
+  if jsonb_array_length(p_fields) = 0 then return; end if;
+
+  return query
+  insert into public.signature_fields (
+    document_id, page_number, x, y, width, height,
+    assigned_to_email, field_type, field_order, label
+  )
+  select
+    p_document_id, item.page_number, item.x, item.y, item.width, item.height,
+    lower(btrim(item.assigned_to_email)), item.field_type, item.field_order, item.label
+  from jsonb_to_recordset(p_fields) as item(
+    page_number integer,
+    x numeric,
+    y numeric,
+    width numeric,
+    height numeric,
+    assigned_to_email text,
+    field_type text,
+    field_order integer,
+    label text
+  )
+  where item.page_number > 0
+    and item.x between 0 and 100
+    and item.y between 0 and 100
+    and item.width > 0 and item.width <= 100
+    and item.height > 0 and item.height <= 100
+    and item.x + item.width <= 100
+    and item.y + item.height <= 100
+    and item.field_type in ('signature', 'initials', 'date', 'text', 'checkbox')
+    and exists (
+      select 1 from public.document_signers signer
+      where signer.document_id = p_document_id
+        and lower(signer.signer_email) = lower(item.assigned_to_email)
+    )
+  returning *;
+
+  get diagnostics inserted_count = row_count;
+  if inserted_count <> jsonb_array_length(p_fields) then
+    raise exception 'One or more signature fields are invalid';
+  end if;
 end;
 $$;
 
@@ -428,6 +492,7 @@ revoke execute on function public.get_document_for_viewer(uuid) from public, ano
 revoke execute on function public.get_signers_for_viewer(uuid) from public, anon, authenticated;
 
 revoke execute on function public.get_signing_package(text) from public;
+revoke execute on function public.replace_signature_fields(uuid, jsonb) from public;
 revoke execute on function public.add_signature_placement_by_token(text, uuid, text) from public;
 revoke execute on function public.update_signer_status_by_token(text, text) from public;
 revoke execute on function public.add_audit_entry_by_token(text, text, text) from public;
@@ -439,6 +504,7 @@ revoke execute on function public.create_document_viewer(uuid, text) from public
 revoke execute on function public.get_viewer_package(text) from public;
 
 grant execute on function public.get_signing_package(text) to anon, authenticated;
+grant execute on function public.replace_signature_fields(uuid, jsonb) to authenticated;
 grant execute on function public.add_signature_placement_by_token(text, uuid, text) to anon, authenticated;
 grant execute on function public.update_signer_status_by_token(text, text) to anon, authenticated;
 grant execute on function public.add_audit_entry_by_token(text, text, text) to anon, authenticated;

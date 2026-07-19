@@ -20,8 +20,7 @@ import AuditTrailModal from '@/components/AuditTrailModal'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Modal from '@/components/ui/Modal'
-import { generateAuditPdf } from '@/lib/auditPdf'
-import { generateSignedPdf, type SignedField } from '@/lib/signedPdf'
+import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
@@ -78,6 +77,7 @@ export default function InviteSigningPage() {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0)
   const [tappedFieldId, setTappedFieldId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [actionError, setActionError] = useState('')
   const [datePickerFieldId, setDatePickerFieldId] = useState<string | null>(null)
   const [textInputFieldId, setTextInputFieldId] = useState<string | null>(null)
   const [textInputValue, setTextInputValue] = useState('')
@@ -86,6 +86,7 @@ export default function InviteSigningPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [auditPdfUrl, setAuditPdfUrl] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
   const hasLoggedView = useRef(false)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
@@ -171,7 +172,7 @@ export default function InviteSigningPage() {
   const handleSaveInitials = (dataUrl: string) => {
     setInitialsData(dataUrl)
     setShowInitialsModal(false)
-    // If tapping a specific field, just set data — UI will show ADD THIS / ADD EVERYWHERE
+    // If tapping a specific field, just set data. UI will show ADD THIS / ADD EVERYWHERE.
     // If drawing from sidebar (no tappedFieldId), also just set data and let user choose
   }
 
@@ -181,16 +182,23 @@ export default function InviteSigningPage() {
   const handleAutoFillSignatures = async (data: string) => {
     if (!documentId || !signerData) return
     setSubmitting(true)
+    setActionError('')
     setShowSignatureModal(false)
     setTappedFieldId(null)
     for (const field of myUnsignedSignatureFields) {
-      await addPlacement({
+      const saved = await addPlacement({
         document_id: documentId,
         field_id: field.id,
         signer_id: null,
         signer_email: userEmail,
         signature_id: data,
       }, token)
+      if (!saved) {
+        setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+        await fetchPlacements(documentId, token)
+        setSubmitting(false)
+        return
+      }
     }
     setSignatureData(data)
     await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
@@ -202,15 +210,22 @@ export default function InviteSigningPage() {
   const handleAutoFillInitials = async (data: string) => {
     if (!documentId || !signerData) return
     setSubmitting(true)
+    setActionError('')
     setTappedFieldId(null)
     for (const field of myUnsignedInitialsFields) {
-      await addPlacement({
+      const saved = await addPlacement({
         document_id: documentId,
         field_id: field.id,
         signer_id: null,
         signer_email: userEmail,
         signature_id: data,
       }, token)
+      if (!saved) {
+        setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+        await fetchPlacements(documentId, token)
+        setSubmitting(false)
+        return
+      }
     }
     setInitialsData(data)
     await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
@@ -228,14 +243,21 @@ export default function InviteSigningPage() {
       return
     }
     setSubmitting(true)
+    setActionError('')
 
-    await addPlacement({
+    const saved = await addPlacement({
       document_id: documentId,
       field_id: fieldId,
       signer_id: null,
       signer_email: userEmail,
       signature_id: dataToUse,
     }, token)
+    if (!saved) {
+      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      await fetchPlacements(documentId, token)
+      setSubmitting(false)
+      return
+    }
 
     await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`, token)
 
@@ -259,14 +281,21 @@ export default function InviteSigningPage() {
   const handleDateField = async (fieldId: string, dateValue: string) => {
     if (!documentId || !signerData || !dateValue) return
     setSubmitting(true)
+    setActionError('')
     setDatePickerFieldId(null)
-    await addPlacement({
+    const saved = await addPlacement({
       document_id: documentId,
       field_id: fieldId,
       signer_id: null,
       signer_email: userEmail,
       signature_id: dateValue,
     }, token)
+    if (!saved) {
+      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      await fetchPlacements(documentId, token)
+      setSubmitting(false)
+      return
+    }
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
     setSubmitting(false)
@@ -276,13 +305,20 @@ export default function InviteSigningPage() {
   const handleCheckboxField = async (fieldId: string) => {
     if (!documentId || !signerData) return
     setSubmitting(true)
-    await addPlacement({
+    setActionError('')
+    const saved = await addPlacement({
       document_id: documentId,
       field_id: fieldId,
       signer_id: null,
       signer_email: userEmail,
       signature_id: 'checkbox:checked',
     }, token)
+    if (!saved) {
+      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      await fetchPlacements(documentId, token)
+      setSubmitting(false)
+      return
+    }
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
     setSubmitting(false)
@@ -292,14 +328,21 @@ export default function InviteSigningPage() {
   const handleTextFieldSubmit = async (fieldId: string) => {
     if (!documentId || !signerData || !textInputValue.trim()) return
     setSubmitting(true)
+    setActionError('')
     setTextInputFieldId(null)
-    await addPlacement({
+    const saved = await addPlacement({
       document_id: documentId,
       field_id: fieldId,
       signer_id: null,
       signer_email: userEmail,
       signature_id: textInputValue.trim(),
     }, token)
+    if (!saved) {
+      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      await fetchPlacements(documentId, token)
+      setSubmitting(false)
+      return
+    }
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
     setTextInputValue('')
@@ -315,10 +358,14 @@ export default function InviteSigningPage() {
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
     if (remaining.length === 0) {
-      await updateSignerStatus(signerData.id, 'signed', token)
+      const statusUpdated = await updateSignerStatus(signerData.id, 'signed', token)
+      if (!statusUpdated) {
+        setActionError('Your fields were saved, but completion could not be confirmed. Please check your connection and try again.')
+        return
+      }
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName, undefined, token)
       
-      // Use RPC to check if all signers signed (bypasses RLS — unauthenticated signers can't read document_signers)
+      // Use RPC because unauthenticated signers cannot read document_signers through RLS.
       // Retry up to 3 times with increasing delay to handle race conditions
       let allSigned = false
       for (let attempt = 1; attempt <= 3; attempt++) {
@@ -342,11 +389,10 @@ export default function InviteSigningPage() {
       }
       
       if (!allSigned) {
-        console.warn('[checkCompletion] All retries exhausted — other signers may not have completed yet')
+        console.warn('[checkCompletion] All retries exhausted. Other signers may not have completed yet.')
       }
       
       if (allSigned) {
-        // Mark document as completed (bypasses RLS)
         let { error: rpcError } = await supabase
           .rpc('mark_document_completed_by_token', { p_token: token || '' })
         if (isMissingRpc(rpcError)) {
@@ -396,12 +442,14 @@ export default function InviteSigningPage() {
               }
             })
             
+            const { generateSignedPdf } = await import('@/lib/signedPdf')
             const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
             
             let finalBlob = signedBlob
             if (completionData.audit_trail && completionData.audit_trail.length > 0) {
               const signedUrl = URL.createObjectURL(signedBlob)
               try {
+                const { generateAuditPdf } = await import('@/lib/auditPdf')
                 finalBlob = await generateAuditPdf(signedUrl, completionData.audit_trail, completionData.title || 'Document')
               } finally {
                 URL.revokeObjectURL(signedUrl)
@@ -420,7 +468,7 @@ export default function InviteSigningPage() {
           }
         }
         
-        // Send completion email — always attempt even if PDF failed
+        // Attempt the completion email even if PDF generation failed.
         try {
           const directRecipients: string[] = []
           
@@ -463,8 +511,9 @@ export default function InviteSigningPage() {
             })
             if (emailFnErr) {
               console.error('[completion] Edge function error:', emailFnErr)
+            } else {
+              await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`, token)
             }
-            await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`, token)
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)
@@ -556,6 +605,7 @@ export default function InviteSigningPage() {
     const signedFields = fetchSignedFields()
     let basePdfUrl = pdfUrl
     if (signedFields.length > 0) {
+      const { generateSignedPdf } = await import('@/lib/signedPdf')
       const signedBlob = await generateSignedPdf(pdfUrl, signedFields)
       basePdfUrl = URL.createObjectURL(signedBlob)
     }
@@ -564,6 +614,7 @@ export default function InviteSigningPage() {
       .filter(entry => entry.document_id === signerData!.document_id)
 
     // Step 3: Append audit trail pages to the signed PDF
+    const { generateAuditPdf } = await import('@/lib/auditPdf')
     const finalBlob = await generateAuditPdf(basePdfUrl, filteredAudit, title)
 
     // Cleanup temp blob URL
@@ -575,6 +626,7 @@ export default function InviteSigningPage() {
   const handleViewDocument = async () => {
     if (!signerData || !documentId) return
     setGeneratingPdf(true)
+    setPdfError('')
     try {
       const blob = await buildSignedAuditPdf()
       const url = URL.createObjectURL(blob)
@@ -582,7 +634,7 @@ export default function InviteSigningPage() {
       setShowPreview(true)
     } catch (err) {
       console.error('Error generating PDF:', err)
-      alert('Error generating document. Please try again.')
+      setPdfError('The signed document could not be generated. Please try again.')
     } finally {
       setGeneratingPdf(false)
     }
@@ -590,6 +642,7 @@ export default function InviteSigningPage() {
 
   const handleDownloadPdf = async () => {
     if (!signerData || !documentId) return
+    setPdfError('')
     try {
       const blob = await buildSignedAuditPdf()
       const url = URL.createObjectURL(blob)
@@ -602,22 +655,27 @@ export default function InviteSigningPage() {
       URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Error generating signed PDF:', err)
-      alert('Error generating PDF. Please try again.')
+      setPdfError('The signed PDF could not be generated. Please try again.')
     }
   }
 
+  const pdfErrorNotice = pdfError ? (
+    <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+      {pdfError}
+    </div>
+  ) : null
 
   if (finished && showPreview && auditPdfUrl) {
     return (
       <div className="flex flex-col h-screen bg-[hsl(var(--background))]">
-        <div className="flex items-center justify-between px-6 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
               <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
             </a>
             <div className="w-px h-6 bg-[hsl(var(--border))]" />
             <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))]" />
-            <h2 className="font-semibold">{signerData?.documents.title} | Signed</h2>
+            <h2 className="truncate font-semibold">{signerData?.documents.title} | Signed</h2>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
@@ -629,11 +687,12 @@ export default function InviteSigningPage() {
             </Button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto flex justify-center p-6">
+        <div className="flex-1 overflow-auto flex justify-center p-3 sm:p-6">
           <PdfViewer
             fileUrl={auditPdfUrl}
           />
         </div>
+        {pdfErrorNotice}
       </div>
     )
   }
@@ -646,10 +705,10 @@ export default function InviteSigningPage() {
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'}>
+            <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'}>
               <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
           </div>
@@ -686,6 +745,7 @@ export default function InviteSigningPage() {
             </div>
           </div>
         </div>
+        {pdfErrorNotice}
       </div>
     )
   }
@@ -704,7 +764,9 @@ export default function InviteSigningPage() {
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg truncate">{signerData.documents.title}</h2>
             <button
+              type="button"
               onClick={() => setShowAuditTrail(true)}
+              aria-label="Open audit trail"
               className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
               title="Audit Trail"
             >
@@ -986,7 +1048,7 @@ export default function InviteSigningPage() {
                       zIndex: isTapped ? 50 : isCurrentNav ? 20 : 10,
                     }}
                   >
-                    {/* === SIGNED STATES — no borders, raw content === */}
+                    {/* Signed states use raw content without borders. */}
                     {isSigned && placement && (isSignatureType || placement.signature_id.startsWith('data:image')) ? (
                       <div className="w-full h-full flex items-center justify-center overflow-hidden">
                         <img src={placement.signature_id} alt="Signed" className="max-w-full max-h-full object-contain" />
@@ -1005,7 +1067,7 @@ export default function InviteSigningPage() {
                       </div>
 
                     ) : isTapped && isSignatureType && sigData ? (
-                      /* === TAPPED SIGNATURE/INITIALS — Apply to this / Apply to All popover === */
+                      /* Tapped signature or initials: Apply to this / Apply to All popover. */
                       <div className="relative w-full h-full">
                         {/* Field highlight with signature preview */}
                         <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
@@ -1157,7 +1219,18 @@ export default function InviteSigningPage() {
 
       {/* Audit Trail */}
       {documentId && (
-        <AuditTrailModal isOpen={showAuditTrail} onClose={() => setShowAuditTrail(false)} documentId={documentId} />
+        <AuditTrailModal isOpen={showAuditTrail} onClose={() => setShowAuditTrail(false)} documentId={documentId} signingToken={token} />
+      )}
+      {pdfErrorNotice}
+      {actionError && (
+        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+          <span>{actionError}</span>
+          {allMyUnsigned.length === 0 && (
+            <button type="button" onClick={checkCompletion} className="shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
+              Try again
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

@@ -20,7 +20,7 @@ type TabType = 'draw' | 'type' | 'upload'
 export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel, saveLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
-  const [activeTab, setActiveTab] = useState<TabType>('upload')
+  const [activeTab, setActiveTab] = useState<TabType>('draw')
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
@@ -30,17 +30,35 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   useEffect(() => {
     if (canvasRef.current && activeTab === 'draw') {
       const canvas = canvasRef.current
-      canvas.width = canvas.offsetWidth * 2
-      canvas.height = canvas.offsetHeight * 2
-      const ctx = canvas.getContext('2d')
-      if (ctx) ctx.scale(2, 2)
+      const resizeCanvas = (preserveStrokes = true) => {
+        const pad = padRef.current
+        const strokes = preserveStrokes && pad ? pad.toData() : []
+        const ratio = Math.max(window.devicePixelRatio || 1, 1)
+        const width = Math.max(Math.round(canvas.offsetWidth * ratio), 1)
+        const height = Math.max(Math.round(canvas.offsetHeight * ratio), 1)
+        if (canvas.width === width && canvas.height === height) return
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')?.scale(ratio, ratio)
+        if (strokes.length > 0) pad?.fromData(strokes)
+      }
 
-      padRef.current = new SignaturePadLib(canvas, {
+      resizeCanvas(false)
+      const pad = new SignaturePadLib(canvas, {
         backgroundColor: 'rgba(255, 255, 255, 0)',
         penColor: isDark ? '#ffffff' : '#1e293b',
         minWidth: 1.5,
         maxWidth: 3,
       })
+      padRef.current = pad
+      const resizeObserver = new ResizeObserver(() => resizeCanvas())
+      resizeObserver.observe(canvas)
+
+      return () => {
+        resizeObserver.disconnect()
+        pad.off()
+        if (padRef.current === pad) padRef.current = null
+      }
     }
 
     return () => {
@@ -52,7 +70,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     padRef.current?.clear()
   }
 
-  // Convert drawn signature to black ink (for PDF — paper is always white)
+  // Convert the drawn signature to black ink because PDF paper is always white.
   const getBlackInkDataUrl = (): string | null => {
     if (activeTab === 'draw') {
       if (padRef.current?.isEmpty() || !canvasRef.current) return null
@@ -140,6 +158,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       <div className="flex gap-1 bg-[hsl(var(--muted))] rounded-lg p-1">
         {tabs.map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
@@ -158,10 +177,13 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
         <div className="relative">
           <canvas
             ref={canvasRef}
-            className="w-full h-48 border-2 border-dashed border-[hsl(var(--border))] rounded-lg cursor-crosshair"
+            aria-label="Draw your signature"
+            className="w-full h-48 touch-none border-2 border-dashed border-[hsl(var(--border))] rounded-lg cursor-crosshair"
           />
           <button
+            type="button"
             onClick={handleClear}
+            aria-label="Clear drawn signature"
             className="absolute top-2 right-2 p-1.5 rounded-md bg-[hsl(var(--card))]/80 hover:bg-[hsl(var(--card))] shadow-sm cursor-pointer"
             title="Clear"
           >
@@ -179,6 +201,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
             placeholder="Type your full name"
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
+            maxLength={80}
           />
           {typedName && (
             <div className="mt-3 p-4 border border-[hsl(var(--border))] rounded-lg text-center">

@@ -171,7 +171,7 @@ export default function PdfViewer({
         </Button>
       </div>
 
-      {/* PDF Pages — continuous scroll */}
+      {/* PDF pages in a continuous scroll. */}
       <Document
         file={fileUrl}
         onLoadSuccess={onDocumentLoadSuccess}

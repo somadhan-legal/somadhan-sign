@@ -18,6 +18,13 @@ interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> 
   isNew?: boolean
 }
 
+export interface SendForSigningResult {
+  sent: number
+  failed: number
+  ccSent: number
+  ccFailed: number
+}
+
 interface DocumentState {
   documents: Document[]
   currentDocument: Document | null
@@ -51,15 +58,15 @@ interface DocumentState {
   removeSigner: (signerId: string) => Promise<void>
 
   fetchPlacements: (documentId: string, signingToken?: string) => Promise<void>
-  addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>, signingToken?: string) => Promise<void>
+  addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>, signingToken?: string) => Promise<boolean>
 
   fetchSignerByToken: (token: string) => Promise<SignerByTokenResult | null>
-  updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => Promise<void>
+  updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => Promise<boolean>
 
   fetchAuditTrail: (documentId: string) => Promise<void>
-  addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => Promise<void>
+  addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => Promise<boolean>
 
-  sendForSigning: (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => Promise<void>
+  sendForSigning: (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => Promise<SendForSigningResult>
   sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
 }
 
@@ -248,7 +255,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .eq('id', id)
     if (error) {
       console.error('Error updating document status:', error)
-      return
+      throw error
     }
     set((state) => ({
       documents: state.documents.map((d) =>
@@ -286,13 +293,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       (f) => f.document_id === documentId
     )
 
-    await supabase
-      .from('signature_fields')
-      .delete()
-      .eq('document_id', documentId)
-
-    if (fields.length === 0) return
-
     const inserts: SignatureFieldInsert[] = fields.map((f, index) => ({
       document_id: f.document_id,
       page_number: f.page_number,
@@ -306,8 +306,38 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       label: f.label,
     }))
 
+    const { data: replacedFields, error: replaceError } = await supabase.rpc('replace_signature_fields', {
+      p_document_id: documentId,
+      p_fields: inserts,
+    })
+    if (!replaceError) {
+      set({ signatureFields: (replacedFields as SignatureFieldLocal[]) || [] })
+      return
+    }
+    if (!isMissingRpc(replaceError)) throw replaceError
+
+    const { data: previousFields, error: backupError } = await supabase
+      .from('signature_fields')
+      .select('*')
+      .eq('document_id', documentId)
+    if (backupError) throw backupError
+
+    const { error: deleteError } = await supabase
+      .from('signature_fields')
+      .delete()
+      .eq('document_id', documentId)
+    if (deleteError) throw deleteError
+
+    if (fields.length === 0) return
+
     const { error } = await supabase.from('signature_fields').insert(inserts)
-    if (error) console.error('Error saving fields:', error)
+    if (error) {
+      console.error('Error saving fields:', error)
+      if (previousFields && previousFields.length > 0) {
+        await supabase.from('signature_fields').insert(previousFields)
+      }
+      throw error
+    }
   },
 
   fetchSignatureFields: async (documentId: string) => {
@@ -426,7 +456,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const { data: signingPackage, error: packageError } = await supabase
         .rpc('get_signing_package', { p_token: signingToken })
       if (!packageError) {
-        set({ placements: signingPackage?.placements || [] })
+        set({
+          signatureFields: signingPackage?.fields || [],
+          placements: signingPackage?.placements || [],
+          auditTrail: signingPackage?.audit_trail || [],
+        })
         return
       }
       if (!isMissingRpc(packageError)) {
@@ -454,11 +488,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       })
       if (!error) {
         set((state) => ({ placements: [...state.placements, data as SignaturePlacement] }))
-        return
+        return true
       }
       if (!isMissingRpc(error)) {
         console.error('Error adding placement:', error)
-        throw error
+        return false
       }
     }
     const { data, error } = await supabase
@@ -468,11 +502,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .single()
     if (error) {
       console.error('Error adding placement:', error)
-      throw error
+      return false
     }
     set((state) => ({
       placements: [...state.placements, data as SignaturePlacement],
     }))
+    return true
   },
 
   fetchSignerByToken: async (token: string) => {
@@ -513,17 +548,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         p_token: signingToken,
         p_status: status,
       })
-      if (!error) return
+      if (!error) return true
       if (!isMissingRpc(error)) {
         console.error('Error updating signer status:', error)
-        throw error
+        return false
       }
     }
     const { error } = await supabase
       .rpc('update_signer_status_by_id', { p_signer_id: signerId, p_status: status })
     if (error) {
       console.error('Error updating signer status:', error)
+      return false
     }
+    return true
   },
 
   fetchAuditTrail: async (documentId: string) => {
@@ -552,11 +589,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       })
       if (!error) {
         set((state) => ({ auditTrail: [...state.auditTrail, data as AuditTrailEntry] }))
-        return
+        return true
       }
       if (!isMissingRpc(error)) {
         console.error('Error adding audit entry:', error)
-        throw error
+        return false
       }
     }
     let ipAddress: string | null = cachedIpAddress
@@ -586,11 +623,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .single()
     if (error) {
       console.error('Error adding audit entry:', error)
-      return
+      return false
     }
     set((state) => ({
       auditTrail: [...state.auditTrail, data as AuditTrailEntry],
     }))
+    return true
   },
 
   sendForSigning: async (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => {
@@ -601,7 +639,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const signers = get().signers
     const doc = get().currentDocument
     
-    if (!doc) return
+    if (!doc) throw new Error('The document could not be loaded.')
+
+    let sent = 0
+    let failed = 0
+    let ccSent = 0
+    let ccFailed = 0
     
     for (const signer of signers) {
       try {
@@ -621,9 +664,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         })
 
         if (error) {
+          failed++
           console.error(`Failed to send email to ${signer.signer_email}:`, error)
+        } else {
+          sent++
         }
       } catch (error) {
+        failed++
         console.error(`Error sending email to ${signer.signer_email}:`, error)
       }
     }
@@ -654,13 +701,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             },
           })
           if (ccErr) {
+            ccFailed++
             console.error(`Failed to send CC notification to ${ccEmail}:`, ccErr)
+          } else {
+            ccSent++
           }
         } catch (err) {
+          ccFailed++
           console.error(`Error sending CC notification to ${ccEmail}:`, err)
         }
       }
     }
+
+    if (sent === 0) {
+      await get().updateDocumentStatus(documentId, 'draft')
+      throw new Error('No invitation emails could be sent. Check the email service and try again.')
+    }
+
+    return { sent, failed, ccSent, ccFailed }
   },
 
   sendReminder: async (documentId: string, senderName?: string) => {

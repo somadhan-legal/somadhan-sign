@@ -426,6 +426,13 @@ serve(async (req) => {
 
     if (!res.ok) {
       console.error('Resend API Error:', data)
+      return new Response(
+        JSON.stringify({ error: 'The email provider rejected the message' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 502,
+        },
+      )
     }
 
     return new Response(

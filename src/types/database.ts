@@ -334,6 +334,10 @@ export interface Database {
         Args: { p_token: string }
         Returns: SigningPackageResult | null
       }
+      replace_signature_fields: {
+        Args: { p_document_id: string; p_fields: unknown }
+        Returns: Database['public']['Tables']['signature_fields']['Row'][]
+      }
       add_signature_placement_by_token: {
         Args: { p_token: string; p_field_id: string; p_signature_id: string }
         Returns: Database['public']['Tables']['signature_placements']['Row']

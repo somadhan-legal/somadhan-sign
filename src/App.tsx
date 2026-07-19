@@ -51,9 +51,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public signing route — no auth required */}
+        {/* Public signing route. No account authentication is required. */}
         <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />
-        {/* Public view-only route for CC recipients — no auth required */}
+        {/* Public view-only route for CC recipients. No account authentication is required. */}
         <Route path="/view/:documentId" element={<Suspense fallback={<PageLoader />}><ViewDocumentPage /></Suspense>} />
         <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
         <Route path="/" element={<HomeRedirect />} />

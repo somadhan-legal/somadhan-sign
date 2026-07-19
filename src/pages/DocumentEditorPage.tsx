@@ -130,6 +130,7 @@ export default function DocumentEditorPage() {
   const [selectedSignerIdx, setSelectedSignerIdx] = useState(0)
   const [savedToast, setSavedToast] = useState(false)
   const [sentToast, setSentToast] = useState(false)
+  const [sendSummary, setSendSummary] = useState('')
   const [ccEmails, setCcEmails] = useState('')
   const [showSendConfirm, setShowSendConfirm] = useState(false)
   const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
@@ -389,10 +390,21 @@ export default function DocumentEditorPage() {
   const handleSave = async () => {
     if (!id) return
     setSaving(true)
-    await saveSignatureFields(id)
-    setSaving(false)
-    setSavedToast(true)
-    setTimeout(() => setSavedToast(false), 2500)
+    try {
+      await saveSignatureFields(id)
+      setSavedToast(true)
+      setTimeout(() => setSavedToast(false), 2500)
+    } catch (err: unknown) {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Could not save fields',
+        message: err instanceof Error ? err.message : 'Your changes could not be saved. Please try again.',
+        onConfirm: () => {},
+        variant: 'warning',
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handlePreSend = () => {
@@ -460,39 +472,48 @@ export default function DocumentEditorPage() {
       ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
     )).filter((email) => !signerEmailSet.has(email))
     
-    // Log document creation (first time sending)
-    if (currentDocument?.status === 'draft' && user.email) {
-      await addAuditEntry(id, 'Document Created', user.email, user.user_metadata?.full_name, `Document "${currentDocument.title}" created with ${signers.length} signer(s)`)
-    }
-    
-    await sendForSigning(id, senderName, sendMessage, ccEmailsList)
-    
-    // Log document sent (store CC emails in metadata for completion emails)
-    if (user.email) {
-      const metadata = ccEmailsList.length > 0 ? JSON.stringify({ ccEmails: ccEmailsList }) : `Sent to ${signers.length} signer(s)`
-      await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, metadata)
-    }
-    
-    await fetchSigners(id)
-    await fetchDocument(id) // Refresh to get updated status
-    setSaving(false)
-    
-    // Show success toast with countdown
-    setSentToast(true)
-    setCountdown(5)
-    
-    // Countdown timer — navigates to dashboard when countdown reaches 0
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          setSentToast(false)
-          navigate('/dashboard')
-          return 0
-        }
-        return prev - 1
+    try {
+      if (currentDocument?.status === 'draft' && user.email) {
+        await addAuditEntry(id, 'Document Created', user.email, user.user_metadata?.full_name, `Document "${currentDocument.title}" created with ${signers.length} signer(s)`)
+      }
+
+      const result = await sendForSigning(id, senderName, sendMessage, ccEmailsList)
+
+      if (user.email) {
+        const metadata = ccEmailsList.length > 0 ? JSON.stringify({ ccEmails: ccEmailsList }) : `Sent to ${signers.length} signer(s)`
+        await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, metadata)
+      }
+
+      await Promise.all([fetchSigners(id), fetchDocument(id)])
+      const failedTotal = result.failed + result.ccFailed
+      setSendSummary(failedTotal > 0
+        ? `${result.sent} signer invitation${result.sent === 1 ? '' : 's'} sent. ${failedTotal} email${failedTotal === 1 ? '' : 's'} could not be delivered.`
+        : t('editor.signersWillReceive'))
+      setSentToast(true)
+      setCountdown(5)
+
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            setSentToast(false)
+            navigate('/dashboard')
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } catch (err: unknown) {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Could not send document',
+        message: err instanceof Error ? err.message : 'The document could not be sent. Please try again.',
+        onConfirm: () => {},
+        variant: 'warning',
       })
-    }, 1000)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleFieldDragStop = (fieldId: string, _e: unknown, data: { x: number; y: number }) => {
@@ -1147,7 +1168,7 @@ export default function DocumentEditorPage() {
               </div>
               <h3 className="text-xl font-bold mb-2">{t('editor.documentSent')}</h3>
               <p className="text-[hsl(var(--muted-foreground))] mb-3">
-                {t('editor.signersWillReceive')}
+                {sendSummary || t('editor.signersWillReceive')}
               </p>
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
                 {t('editor.redirecting')} <span className="font-bold text-[hsl(var(--primary))]">{countdown}</span>s...
