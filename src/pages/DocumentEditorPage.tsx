@@ -43,12 +43,12 @@ const fieldTypeIcons: Record<FieldType, React.ReactNode> = {
   checkbox: <SquareCheck className="w-4 h-4" />,
 }
 
-const fieldTypeOptions: { type: FieldType; label: string }[] = [
-  { type: 'signature', label: 'Signature' },
-  { type: 'initials', label: 'Initials' },
-  { type: 'date', label: 'Date' },
-  { type: 'checkbox', label: 'Checkbox' },
-  { type: 'text', label: 'Text' },
+const fieldTypeOptions: { type: FieldType }[] = [
+  { type: 'signature' },
+  { type: 'initials' },
+  { type: 'date' },
+  { type: 'checkbox' },
+  { type: 'text' },
 ]
 
 function DraggableField({ children, onStop, bounds, style, className, fieldId }: {
@@ -99,7 +99,9 @@ export default function DocumentEditorPage() {
   const [signerEmail, setSignerEmail] = useState('')
   const [signerFormError, setSignerFormError] = useState('')
   const [selectedField, setSelectedField] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [savingSigner, setSavingSigner] = useState(false)
+  const [sending, setSending] = useState(false)
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
   const [selectedSignerIdx, setSelectedSignerIdx] = useState(0)
   const [savedToast, setSavedToast] = useState(false)
@@ -154,6 +156,7 @@ export default function DocumentEditorPage() {
   const docFields = signatureFields.filter((f) => f.document_id === id)
 
   const isInteracting = useRef(false)
+  const getFieldTypeLabel = (fieldType: FieldType) => t(`editor.${fieldType}`)
 
   const handleResizeStart = useCallback((fieldId: string, corner: 'nw' | 'ne' | 'sw' | 'se', e: React.PointerEvent) => {
     e.stopPropagation()
@@ -262,15 +265,15 @@ export default function DocumentEditorPage() {
         label: null,
         isNew: true,
       })
-      // Auto-select the newly placed field in the right panel
-      setSelectedField(fieldId)
+      // Keep the PDF visible on tablets and phones. A placed field can still be tapped to edit it.
+      setSelectedField(window.innerWidth >= 1024 ? fieldId : null)
     },
     [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx, currentDocument?.status, t]
   )
 
   const handleSaveSigner = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!id) return
+    if (!id || savingSigner) return
     const fullName = [signerFirstName.trim(), signerLastName.trim()].filter(Boolean).join(' ')
     const normalizedEmail = signerEmail.trim().toLowerCase()
     const duplicate = signers.some(
@@ -281,6 +284,7 @@ export default function DocumentEditorPage() {
       return
     }
     setSignerFormError('')
+    setSavingSigner(true)
 
     try {
       if (editingSignerId) {
@@ -324,6 +328,8 @@ export default function DocumentEditorPage() {
         onConfirm: () => {},
         variant: 'danger'
       })
+    } finally {
+      setSavingSigner(false)
     }
   }
 
@@ -347,8 +353,8 @@ export default function DocumentEditorPage() {
   }
 
   const handleSave = async () => {
-    if (!id) return
-    setSaving(true)
+    if (!id || savingDraft || sending) return
+    setSavingDraft(true)
     try {
       await saveSignatureFields(id)
       setSelectedField(null)
@@ -357,18 +363,18 @@ export default function DocumentEditorPage() {
     } catch (err: unknown) {
       setConfirmDialog({
         isOpen: true,
-        title: 'Could not save fields',
-        message: err instanceof Error ? err.message : 'Your changes could not be saved. Please try again.',
+        title: t('editor.couldNotSaveFields'),
+        message: err instanceof Error ? err.message : t('editor.changesSaveFailed'),
         onConfirm: () => {},
         variant: 'warning',
       })
     } finally {
-      setSaving(false)
+      setSavingDraft(false)
     }
   }
 
   const handlePreSend = () => {
-    if (!id || !user) return
+    if (!id || !user || savingDraft || sending) return
     const signerEmails = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
     const orphaned = docFields.filter((field) =>
       field.assigned_to_email.trim() && !signerEmails.has(field.assigned_to_email.trim().toLowerCase())
@@ -377,7 +383,7 @@ export default function DocumentEditorPage() {
       setConfirmDialog({
         isOpen: true,
         title: t('editor.validation'),
-        message: 'One or more fields belong to a signer who is no longer on this document. Remove or reassign those fields before sending.',
+        message: t('editor.orphanedFields'),
         onConfirm: () => {},
         variant: 'warning',
       })
@@ -436,18 +442,18 @@ export default function DocumentEditorPage() {
   }
 
   const handleSendForSigning = async () => {
-    if (!id || !user) return
+    if (!id || !user || sending || savingDraft) return
     const senderName = user.user_metadata?.full_name || user.email || 'A user'
     const enteredCcEmails = ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
     const invalidCcEmails = enteredCcEmails.filter((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     if (invalidCcEmails.length > 0) {
-      setSendFormError(`Check these CC addresses: ${invalidCcEmails.join(', ')}`)
+      setSendFormError(`${t('editor.invalidCcPrefix')}: ${invalidCcEmails.join(', ')}`)
       return
     }
 
     setSendFormError('')
     setShowSendConfirm(false)
-    setSaving(true)
+    setSending(true)
 
     const signerEmailSet = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
     if (user.email) signerEmailSet.add(user.email.trim().toLowerCase())
@@ -466,7 +472,7 @@ export default function DocumentEditorPage() {
       await Promise.all([fetchSigners(id), fetchDocument(id)])
       const failedTotal = result.failed + result.ccFailed
       setSendSummary(failedTotal > 0
-        ? `${result.sent} signer invitation${result.sent === 1 ? '' : 's'} sent. ${failedTotal} email${failedTotal === 1 ? '' : 's'} could not be delivered.`
+        ? `${result.sent} ${t(result.sent === 1 ? 'editor.invitationSent' : 'editor.invitationsSent')} ${failedTotal} ${t(failedTotal === 1 ? 'editor.emailFailed' : 'editor.emailsFailed')}`
         : t('editor.signersWillReceive'))
       setSentToast(true)
       setCountdown(5)
@@ -485,13 +491,13 @@ export default function DocumentEditorPage() {
     } catch (err: unknown) {
       setConfirmDialog({
         isOpen: true,
-        title: 'Could not send document',
-        message: err instanceof Error ? err.message : 'The document could not be sent. Please try again.',
+        title: t('editor.couldNotSendDocument'),
+        message: err instanceof Error ? err.message : t('editor.documentSendFailed'),
         onConfirm: () => {},
         variant: 'warning',
       })
     } finally {
-      setSaving(false)
+      setSending(false)
     }
   }
 
@@ -526,7 +532,7 @@ export default function DocumentEditorPage() {
   if (!currentDocument) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
-        <p className="text-[hsl(var(--muted-foreground))]">Document not found</p>
+        <p className="text-[hsl(var(--muted-foreground))]">{t('signee.docNotFound')}</p>
       </div>
     )
   }
@@ -543,7 +549,7 @@ export default function DocumentEditorPage() {
         <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
           <h2 className="font-semibold text-sm truncate">{currentDocument.title}</h2>
           {isLocked && (
-            <p className="text-[10px] text-[hsl(var(--warning))] mt-1">🔒 Document sent - editing locked</p>
+            <p className="text-[10px] text-[hsl(var(--warning))] mt-1">🔒 {t('editor.locked')}</p>
           )}
         </div>
 
@@ -650,7 +656,7 @@ export default function DocumentEditorPage() {
                               setConfirmDialog({
                                 isOpen: true,
                                 title: t('editor.error'),
-                                message: removeError instanceof Error ? removeError.message : 'The signer could not be removed. Please try again.',
+                                message: removeError instanceof Error ? removeError.message : t('editor.removeSignerFailed'),
                                 onConfirm: () => {},
                                 variant: 'danger',
                               })
@@ -678,7 +684,7 @@ export default function DocumentEditorPage() {
               )}
             </>
           ) : (
-            <p className="py-2 text-center text-xs text-[hsl(var(--muted-foreground))]">No signers</p>
+            <p className="py-2 text-center text-xs text-[hsl(var(--muted-foreground))]">{t('editor.noSigners')}</p>
           )}
         </div>
 
@@ -690,7 +696,10 @@ export default function DocumentEditorPage() {
               {fieldTypeOptions.map((opt) => (
                 <button
                   key={opt.type}
-                  onClick={() => setSelectedFieldType(opt.type)}
+                  onClick={() => {
+                    setSelectedFieldType(opt.type)
+                    if (window.innerWidth < 1024) setLeftPanelCollapsed(true)
+                  }}
                   className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     selectedFieldType === opt.type
                       ? 'bg-[hsl(var(--primary))] text-white shadow-md ring-2 ring-[hsl(var(--primary))]/50 ring-offset-1'
@@ -728,11 +737,11 @@ export default function DocumentEditorPage() {
         <div className="px-2.5 py-2 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-1">
           {!isLocked && (
             <>
-              <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleSave} disabled={saving}>
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleSave} disabled={savingDraft || sending}>
                 <Save className="w-3.5 h-3.5 mr-1.5" />
-                {saving ? t('editor.saving') : t('editor.saveDraft')}
+                {savingDraft ? t('editor.saving') : t('editor.saveDraft')}
               </Button>
-              <Button size="sm" className="w-full text-xs" onClick={handlePreSend} disabled={saving}>
+              <Button size="sm" className="w-full text-xs" onClick={handlePreSend} disabled={savingDraft || sending}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />
                 {t('editor.sendForSigning')}
                 <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
@@ -741,10 +750,10 @@ export default function DocumentEditorPage() {
           )}
           <button
             type="button"
-            aria-label="Collapse field panel"
+            aria-label={t('editor.collapsePanel')}
             onClick={() => setLeftPanelCollapsed(true)}
             className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer"
-            title="Collapse panel"
+            title={t('editor.collapsePanel')}
           >
             <PanelLeftClose className="w-5 h-5" />
           </button>
@@ -756,10 +765,10 @@ export default function DocumentEditorPage() {
       {leftPanelCollapsed && (
         <button
           type="button"
-          aria-label="Expand field panel"
+          aria-label={t('editor.expandPanel')}
           onClick={() => setLeftPanelCollapsed(false)}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
-          title="Expand panel"
+          title={t('editor.expandPanel')}
         >
           <PanelLeftOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
         </button>
@@ -787,7 +796,7 @@ export default function DocumentEditorPage() {
             const pageFields = getPageFields(pageNumber)
             const previewColor = SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length]
             const previewSigner = signers[selectedSignerIdx]
-            const previewLabel = selectedFieldType === 'signature' ? 'Signature' : selectedFieldType === 'initials' ? 'Initials' : selectedFieldType === 'date' ? 'Date' : selectedFieldType === 'checkbox' ? 'Checkbox' : 'Text'
+            const previewLabel = getFieldTypeLabel(selectedFieldType)
             return (
             <>
               {placementPreview?.pageNumber === pageNumber && !isLocked && previewSigner && (
@@ -818,10 +827,10 @@ export default function DocumentEditorPage() {
               )}
               {pageFields.map((field) => {
                 const color = field.assigned_to_email ? getSignerColor(field.assigned_to_email) : '#9CA3AF'
-                const sName = field.assigned_to_email ? getSignerName(field.assigned_to_email) : 'Unassigned'
+                const sName = field.assigned_to_email ? getSignerName(field.assigned_to_email) : t('editor.unassigned')
                 const ft = (field.field_type || 'signature') as FieldType
                 const isSelected = selectedField === field.id
-                const ftLabel = ft === 'signature' ? 'Signature' : ft === 'initials' ? 'Initials' : ft === 'date' ? 'Date' : ft === 'checkbox' ? 'Checkbox' : 'Text'
+                const ftLabel = getFieldTypeLabel(ft)
 
                 return isLocked ? (
                   <div
@@ -938,7 +947,7 @@ export default function DocumentEditorPage() {
           if (!field) return null
           const ft = (field.field_type || 'signature') as FieldType
           const assignedColor = getSignerColor(field.assigned_to_email)
-          const ftLabel = ft === 'signature' ? 'Signature' : ft === 'initials' ? 'Initials' : ft === 'date' ? 'Date' : ft === 'checkbox' ? 'Checkbox' : 'Text'
+          const ftLabel = getFieldTypeLabel(ft)
           return (
             <>
               <div className="flex justify-end p-2">
@@ -1026,6 +1035,7 @@ export default function DocumentEditorPage() {
       <Modal
         isOpen={showSignerModal}
         onClose={() => {
+          if (savingSigner) return
           setShowSignerModal(false)
           setEditingSignerId(null)
           setSignerFirstName('')
@@ -1034,6 +1044,7 @@ export default function DocumentEditorPage() {
           setSignerFormError('')
         }}
         title={editingSignerId ? t('editor.editSigner') : t('editor.addSigner')}
+        closeDisabled={savingSigner}
       >
             <form onSubmit={handleSaveSigner} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -1069,12 +1080,13 @@ export default function DocumentEditorPage() {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => { setShowSignerModal(false); setEditingSignerId(null); setSignerFormError('') }}
+                  onClick={() => { if (!savingSigner) { setShowSignerModal(false); setEditingSignerId(null); setSignerFormError('') } }}
+                  disabled={savingSigner}
                 >
                   {t('editor.cancel')}
                 </Button>
-                <Button type="submit" className="flex-1">
-                  {editingSignerId ? t('editor.saveChanges') : t('editor.addSigner')}
+                <Button type="submit" className="flex-1" disabled={savingSigner}>
+                  {savingSigner ? t('editor.saving') : editingSignerId ? t('editor.saveChanges') : t('editor.addSigner')}
                 </Button>
               </div>
             </form>
@@ -1123,9 +1135,9 @@ export default function DocumentEditorPage() {
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setShowSendConfirm(false)}>
                   {t('editor.cancel')}
                 </Button>
-                <Button className="flex-1" onClick={handleSendForSigning} disabled={saving}>
+                <Button className="flex-1" onClick={handleSendForSigning} disabled={sending || savingDraft}>
                   <Send className="w-4 h-4 mr-1.5" />
-                  {saving ? t('editor.sending') : t('editor.send')}
+                  {sending ? t('editor.sending') : t('editor.send')}
                 </Button>
               </div>
             </div>
@@ -1140,7 +1152,7 @@ export default function DocumentEditorPage() {
       )}
 
       {/* Loading Overlay - While Sending */}
-      {saving && !sentToast && (
+      {sending && !sentToast && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
             <div className="flex flex-col items-center text-center">
