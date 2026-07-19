@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 import { formatSigningDate } from '@/lib/utils'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
+import { useLanguageStore } from '@/stores/languageStore'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -42,6 +43,7 @@ const fieldTypeSmallIcons: Record<string, React.ReactNode> = {
 export default function DocumentPreviewPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t } = useLanguageStore()
   const {
     currentDocument,
     signatureFields,
@@ -96,7 +98,7 @@ export default function DocumentPreviewPage() {
         .single()
 
       if (docErr || !docData) {
-        setDownloadError('The document could not be found or is no longer available.')
+        setDownloadError(t('dashboard.documentUnavailable'))
         return
       }
 
@@ -173,7 +175,9 @@ export default function DocumentPreviewPage() {
       }
     } catch (err) {
       console.error('Error generating PDF:', err)
-      setDownloadError('The completed PDF could not be generated. Please try again.')
+      setDownloadError(currentDocument?.status === 'completed'
+        ? t('dashboard.signedDownloadFailed')
+        : t('dashboard.originalDownloadFailed'))
     } finally {
       setDownloadingPdf(false)
     }
@@ -190,7 +194,7 @@ export default function DocumentPreviewPage() {
   if (!currentDocument) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
-        <p className="text-[hsl(var(--muted-foreground))]">Document not found</p>
+        <p className="text-[hsl(var(--muted-foreground))]">{t('signee.docNotFound')}</p>
       </div>
     )
   }
@@ -208,7 +212,7 @@ export default function DocumentPreviewPage() {
             className="flex items-center gap-1 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] mb-2 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            {t('dashboard.backToDashboard')}
           </button>
           <h2 className="font-semibold text-lg truncate">{currentDocument.title}</h2>
           <div className="flex items-center gap-2 mt-2">
@@ -222,15 +226,15 @@ export default function DocumentPreviewPage() {
               }
             >
               {currentDocument.status === 'completed' ? (
-                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Completed</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t('dashboard.completed')}</span>
               ) : currentDocument.status === 'pending' ? (
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {t('dashboard.pending')}</span>
               ) : (
                 currentDocument.status.charAt(0).toUpperCase() + currentDocument.status.slice(1)
               )}
             </Badge>
             {allSigned && (
-              <span className="text-xs text-[hsl(var(--success))] font-medium">All signers done</span>
+              <span className="text-xs text-[hsl(var(--success))] font-medium">{t('dashboard.allSignersDone')}</span>
             )}
           </div>
         </div>
@@ -238,7 +242,7 @@ export default function DocumentPreviewPage() {
         {/* Signers */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-3">
-            Signers ({signers.filter((s) => s.status === 'signed').length}/{signers.length})
+            {t('dashboard.signers')} ({signers.filter((s) => s.status === 'signed').length}/{signers.length})
           </h3>
           <div className="space-y-2">
             {signers.map((signer, idx) => {
@@ -279,17 +283,17 @@ export default function DocumentPreviewPage() {
                       {signer.status === 'signed' ? (
                         <div className="flex items-center gap-1 text-[hsl(var(--success))]">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span className="text-[10px] font-medium">Signed</span>
+                          <span className="text-[10px] font-medium">{t('dashboard.signed')}</span>
                         </div>
                       ) : signer.status === 'viewed' ? (
                         <div className="flex items-center gap-1 text-[hsl(var(--warning))]">
                           <Eye className="w-4 h-4" />
-                          <span className="text-[10px] font-medium">Viewed</span>
+                          <span className="text-[10px] font-medium">{t('dashboard.viewed')}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 text-[hsl(var(--muted-foreground))]">
                           <Clock className="w-4 h-4" />
-                          <span className="text-[10px] font-medium">Pending</span>
+                          <span className="text-[10px] font-medium">{t('dashboard.pending')}</span>
                         </div>
                       )}
                     </div>
@@ -322,17 +326,17 @@ export default function DocumentPreviewPage() {
         <div className="p-4 shrink-0 bg-[hsl(var(--card))] border-t border-[hsl(var(--border))] space-y-2">
           <Button variant="outline" className="w-full" onClick={() => setShowAuditTrail(true)}>
             <History className="w-4 h-4 mr-2" />
-            View Audit Trail
+            {t('dashboard.viewAuditTrail')}
           </Button>
           <Button className="w-full" onClick={handleDownloadWithAudit} disabled={downloadingPdf}>
             <Download className="w-4 h-4 mr-2" />
             {downloadingPdf
-              ? currentDocument.status === 'completed' ? 'Preparing...' : 'Downloading...'
-              : currentDocument.status === 'completed' ? 'Download signed PDF' : 'Download original PDF'}
+              ? currentDocument.status === 'completed' ? t('dashboard.preparing') : t('dashboard.downloading')
+              : currentDocument.status === 'completed' ? t('dashboard.downloadSignedPdf') : t('dashboard.downloadOriginalPdf')}
           </Button>
           <Button variant="ghost" className="w-full" onClick={() => setLeftPanelCollapsed(true)}>
             <PanelLeftClose className="w-4 h-4 mr-2" />
-            Hide details
+            {t('viewer.hideDetails')}
           </Button>
         </div>
       </div>
@@ -342,7 +346,7 @@ export default function DocumentPreviewPage() {
         <button
           type="button"
           onClick={() => setLeftPanelCollapsed(false)}
-          aria-label="Show document details"
+          aria-label={t('viewer.showDetails')}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
         >
           <PanelLeftOpen className="w-5 h-5" />
