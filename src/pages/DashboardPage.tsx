@@ -31,6 +31,7 @@ import AuditTrailModal from '@/components/AuditTrailModal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatDate } from '@/lib/utils'
 import type { Document } from '@/types/database'
+import { validatePdfFile } from '@/lib/fileValidation'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -44,6 +45,7 @@ export default function DashboardPage() {
   const [title, setTitle] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
@@ -55,6 +57,7 @@ export default function DashboardPage() {
   const resetUploadForm = () => {
     setTitle('')
     setFile(null)
+    setUploadError('')
     // Reset file input element
     const fileInput = document.getElementById('pdf-upload') as HTMLInputElement
     if (fileInput) fileInput.value = ''
@@ -81,11 +84,13 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!file || !user) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size exceeds 5MB limit. Please upload a smaller PDF.')
+    const validationError = await validatePdfFile(file)
+    if (validationError) {
+      setUploadError(validationError)
       return
     }
 
+    setUploadError('')
     setUploading(true)
     const doc = await createDocument(
       { title, original_pdf_url: '', created_by: user.id },
@@ -97,6 +102,8 @@ export default function DashboardPage() {
       setShowUploadModal(false)
       resetUploadForm()
       navigate(`/document/${doc.id}/edit`)
+    } else {
+      setUploadError('The document could not be uploaded. Check your connection and try again.')
     }
   }
 
@@ -538,7 +545,11 @@ export default function DashboardPage() {
               <input
                 type="file"
                 accept=".pdf"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={async (e) => {
+                  const selectedFile = e.target.files?.[0] || null
+                  setFile(selectedFile)
+                  setUploadError(selectedFile ? (await validatePdfFile(selectedFile)) || '' : '')
+                }}
                 className="hidden"
                 id="pdf-upload"
                 required
@@ -557,6 +568,7 @@ export default function DashboardPage() {
                 )}
               </label>
             </div>
+            {uploadError && <p role="alert" className="mt-2 text-sm text-[hsl(var(--destructive))]">{uploadError}</p>}
           </div>
           <div className="flex gap-3 pt-2">
             <Button

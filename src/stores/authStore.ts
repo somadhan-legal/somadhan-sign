@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
+let initializationPromise: Promise<void> | null = null
+
 interface AuthState {
   user: User | null
   session: Session | null
@@ -36,27 +38,32 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (loading) => set({ loading }),
 
   initialize: async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      set({
-        session,
-        user: session?.user ?? null,
-        loading: false,
-        initialized: true,
-      })
+    if (!initializationPromise) {
+      initializationPromise = (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          set({
+            session,
+            user: session?.user ?? null,
+            loading: false,
+            initialized: true,
+          })
 
-      supabase.auth.onAuthStateChange((event, session) => {
-        set({
-          session,
-          user: session?.user ?? null,
-        })
-        if (event === 'PASSWORD_RECOVERY') {
-          set({ isRecovery: true })
+          supabase.auth.onAuthStateChange((event, nextSession) => {
+            set({
+              session: nextSession,
+              user: nextSession?.user ?? null,
+            })
+            if (event === 'PASSWORD_RECOVERY') {
+              set({ isRecovery: true })
+            }
+          })
+        } catch {
+          set({ loading: false, initialized: true })
         }
-      })
-    } catch {
-      set({ loading: false, initialized: true })
+      })()
     }
+    return initializationPromise
   },
 
   signInWithGoogle: async () => {

@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import LandingPage from '@/pages/LandingPage'
 import LoginPage from '@/pages/LoginPage'
+import NotFoundPage from '@/pages/NotFoundPage'
 
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'))
@@ -84,6 +85,7 @@ export default function App() {
             }
           />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

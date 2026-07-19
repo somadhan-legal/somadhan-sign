@@ -112,7 +112,7 @@ export default function LoginPage() {
           <a href="/">
             <img src={SomadhanLogoDark} alt="SomadhanSign" className="h-11 lg:h-14 cursor-pointer" />
           </a>
-          <button onClick={toggleLang} className="text-white/60 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title={lang === 'en' ? 'বাংলা' : 'English'}>
+          <button type="button" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="min-h-11 min-w-11 text-white/60 hover:text-white text-xs font-bold px-2 py-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer" title={lang === 'en' ? 'বাংলা' : 'English'}>
             {lang === 'en' ? 'বাং' : 'EN'}
           </button>
         </div>
@@ -148,7 +148,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-6 shadow-[0_24px_80px_hsl(var(--foreground)/0.08)] sm:p-8 md:border-0 md:p-0 md:shadow-none">
           <div className="mb-8 flex items-center justify-between md:hidden">
             <a href="/"><img src={SomadhanLogoDark} alt="SomadhanSign" className="h-10 rounded-lg bg-[#075056] px-2 py-1" /></a>
-            <button onClick={toggleLang} className="min-h-11 min-w-11 rounded-xl text-xs font-bold hover:bg-[hsl(var(--muted))]">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
+            <button type="button" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="min-h-11 min-w-11 rounded-xl text-xs font-bold hover:bg-[hsl(var(--muted))]">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
           </div>
 
           {/* Forgot Password Screen */}
@@ -352,6 +352,8 @@ export default function LoginPage() {
                 {mode === 'signup' && (
                   <Input
                     label={t('login.fullName')}
+                    name="name"
+                    autoComplete="name"
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -361,6 +363,8 @@ export default function LoginPage() {
 
                 <Input
                   label={t('login.email')}
+                  name="email"
+                  autoComplete="email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
@@ -372,6 +376,8 @@ export default function LoginPage() {
                   <div className="relative">
                     <Input
                       label={t('login.password')}
+                      name="password"
+                      autoComplete="current-password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       value={password}
@@ -382,6 +388,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -391,6 +398,8 @@ export default function LoginPage() {
                 {mode === 'signup' && (
                   <Input
                     label={t('login.password')}
+                    name="new-password"
+                    autoComplete="new-password"
                     type="password"
                     placeholder="••••••••"
                     value={password}

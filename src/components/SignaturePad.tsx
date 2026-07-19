@@ -5,6 +5,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { validateSignatureImage } from '@/lib/fileValidation'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
@@ -22,6 +23,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   const [activeTab, setActiveTab] = useState<TabType>('upload')
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState('')
   const { t } = useLanguageStore()
   const { isDark } = useThemeStore()
 
@@ -106,8 +108,17 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const validationError = validateSignatureImage(file)
+    if (validationError) {
+      setUploadedImage(null)
+      setUploadError(validationError)
+      e.target.value = ''
+      return
+    }
+    setUploadError('')
     const reader = new FileReader()
     reader.onload = () => setUploadedImage(reader.result as string)
+    reader.onerror = () => setUploadError('The signature image could not be read.')
     reader.readAsDataURL(file)
   }
 
@@ -184,7 +195,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
           <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-lg p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
             <input
               type="file"
-              accept="image/*"
+              accept=".png,.jpg,.jpeg,.webp"
               onChange={handleFileUpload}
               className="hidden"
               id="sig-upload"
@@ -210,6 +221,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
               )}
             </label>
           </div>
+          {uploadError && <p role="alert" className="mt-2 text-sm text-[hsl(var(--destructive))]">{uploadError}</p>}
         </div>
       )}
 

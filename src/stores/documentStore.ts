@@ -10,6 +10,7 @@ import type {
   AuditTrailEntry,
   SignerByTokenResult,
 } from '@/types/database'
+import { validatePdfFile } from '@/lib/fileValidation'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -117,7 +118,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   createDocument: async (doc: DocumentInsert, file: File) => {
     set({ loading: true })
+    let uploadedPath: string | null = null
     try {
+      const validationError = await validatePdfFile(file)
+      if (validationError) throw new Error(validationError)
+
       // Get current user ID for folder organization (required by RLS policy)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
@@ -126,6 +131,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const sanitizedName = file.name.replace(/[|<>:"/\\?*]/g, '_')
       // Organize files by user ID folder to match RLS deletion policy
       const fileName = `${user.id}/${Date.now()}_${sanitizedName}`
+      uploadedPath = fileName
       const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
@@ -150,6 +156,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return newDoc
     } catch (error) {
       console.error('Error creating document:', error)
+      if (uploadedPath) {
+        await supabase.storage.from('documents').remove([uploadedPath])
+      }
       set({ loading: false })
       return null
     }
@@ -439,10 +448,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   fetchSignerByToken: async (token: string) => {
     const { data, error } = await supabase
       .rpc('get_signer_by_token', { p_token: token })
-    if (error || !data) {
+    if (error) {
       console.error('Error fetching signer by token:', error)
       return null
     }
+    if (!data) return null
     return data
   },
 

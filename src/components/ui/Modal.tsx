@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -12,16 +12,49 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, className, size = 'md' }: ModalProps) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (isOpen) {
+      const previouslyFocused = document.activeElement as HTMLElement | null
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+      requestAnimationFrame(() => dialogRef.current?.focus())
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onClose()
+          return
+        }
+        if (event.key !== 'Tab' || !dialogRef.current) return
+        const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ))
+        if (focusable.length === 0) {
+          event.preventDefault()
+          dialogRef.current.focus()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+      document.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+        document.body.style.overflow = ''
+        previouslyFocused?.focus()
+      }
     }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
+    document.body.style.overflow = ''
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -29,6 +62,12 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : 'Dialog'}
+        tabIndex={-1}
         className={cn(
           'relative bg-[hsl(var(--card))] rounded-2xl shadow-2xl p-6 z-10 max-h-[90vh] overflow-y-auto',
           {
@@ -42,10 +81,12 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
       >
         {title && (
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
+              aria-label="Close dialog"
+              className="h-11 w-11 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>
