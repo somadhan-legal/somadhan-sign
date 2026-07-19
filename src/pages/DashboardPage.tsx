@@ -428,18 +428,22 @@ export default function DashboardPage() {
 
                                 if (!placementsArr || placementsArr.length === 0) throw new Error('The completed signature data is unavailable')
 
-                                // Fetch corresponding fields
-                                const fieldIds = placementsArr.map(p => p.field_id)
+                                // Fetch every required field so a partial legacy document is never
+                                // downloaded with a misleading signed filename.
                                 const { data: fieldsArr, error: fErr } = await supabase
                                   .from('signature_fields')
                                   .select('*')
-                                  .in('id', fieldIds)
+                                  .eq('document_id', doc.id)
 
                                 if (fErr) throw fErr
 
                                 if (!fieldsArr || fieldsArr.length === 0) throw new Error('The completed field data is unavailable')
 
                                 const fieldsMap = new Map(fieldsArr.map(f => [f.id, f]))
+                                const placedFieldIds = new Set(placementsArr.map((placement) => placement.field_id))
+                                if (fieldsArr.some((field) => !placedFieldIds.has(field.id))) {
+                                  throw new Error('The completed document is missing one or more signed fields')
+                                }
                                 const signedFields: SignedField[] = placementsArr
                                   .filter(p => fieldsMap.has(p.field_id))
                                   .map(p => {
@@ -459,22 +463,22 @@ export default function DashboardPage() {
                                 const { generateSignedPdf } = await import('@/lib/signedPdf')
                                 const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
                                 const signedUrl = URL.createObjectURL(signedBlob)
+                                let finalBlob: Blob
+                                try {
+                                  // Fetch audit trail for this document only.
+                                  const { data: auditData, error: auditError } = await supabase
+                                    .from('audit_trail')
+                                    .select('*')
+                                    .eq('document_id', doc.id)
+                                    .order('created_at', { ascending: true })
+                                  if (auditError) throw auditError
 
-                                // Fetch audit trail for THIS document only
-                                const { data: auditData, error: auditError } = await supabase
-                                  .from('audit_trail')
-                                  .select('*')
-                                  .eq('document_id', doc.id)
-                                  .order('created_at', { ascending: true })
-                                if (auditError) throw auditError
-
-                                // Client-side safety filter
-                                const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
-
-                                // Append audit trail
-                                const { generateAuditPdf } = await import('@/lib/auditPdf')
-                                const finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)
-                                URL.revokeObjectURL(signedUrl)
+                                  const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
+                                  const { generateAuditPdf } = await import('@/lib/auditPdf')
+                                  finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)
+                                } finally {
+                                  URL.revokeObjectURL(signedUrl)
+                                }
 
                                 const url = URL.createObjectURL(finalBlob)
                                 try {
