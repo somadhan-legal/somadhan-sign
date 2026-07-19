@@ -8,12 +8,11 @@ interface ThemeState {
 
 export const useThemeStore = create<ThemeState>((set) => {
   const stored = localStorage.getItem('theme')
-  const isDark = stored === 'dark'
+  const isDark = stored === 'dark' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   // Apply on load
-  if (isDark) {
-    document.documentElement.classList.add('dark')
-  }
+  document.documentElement.classList.toggle('dark', isDark)
+  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
 
   return {
     isDark,
@@ -22,12 +21,14 @@ export const useThemeStore = create<ThemeState>((set) => {
         const next = !state.isDark
         localStorage.setItem('theme', next ? 'dark' : 'light')
         document.documentElement.classList.toggle('dark', next)
+        document.documentElement.style.colorScheme = next ? 'dark' : 'light'
         return { isDark: next }
       }),
     setDark: (dark: boolean) =>
       set(() => {
         localStorage.setItem('theme', dark ? 'dark' : 'light')
         document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
         return { isDark: dark }
       }),
   }

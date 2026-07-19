@@ -10,6 +10,7 @@ export interface SignerByTokenResult {
     title: string
     original_pdf_url: string
     status: string
+    final_pdf_available?: boolean
   }
 }
 

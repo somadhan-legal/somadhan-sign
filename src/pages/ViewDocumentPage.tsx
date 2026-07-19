@@ -132,7 +132,7 @@ export default function ViewDocumentPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+        <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -144,7 +144,7 @@ export default function ViewDocumentPage() {
   if (error || !document) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+        <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="text-center max-w-md">
@@ -169,7 +169,7 @@ export default function ViewDocumentPage() {
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
-          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
         </div>

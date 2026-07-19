@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       if (!signer) return jsonResponse({ error: 'Document not found or access denied' }, 404)
 
       const [{ data: document, error: documentError }, { data: fields, error: fieldsError }, { data: placements, error: placementsError }, { data: auditTrail, error: auditError }] = await Promise.all([
-        serviceClient.from('documents').select('id, title, original_pdf_url, status').eq('id', signer.document_id).maybeSingle(),
+        serviceClient.from('documents').select('id, title, original_pdf_url, final_pdf_url, status').eq('id', signer.document_id).maybeSingle(),
         serviceClient.from('signature_fields').select('*').eq('document_id', signer.document_id).order('field_order'),
         serviceClient.from('signature_placements').select('*').eq('document_id', signer.document_id),
         serviceClient.from('audit_trail').select('id, document_id, action, user_email, user_name, metadata, created_at').eq('document_id', signer.document_id).order('created_at'),
@@ -68,7 +68,12 @@ Deno.serve(async (req) => {
         signerPackage: {
           signer: {
             ...signer,
-            documents: { title: document.title, original_pdf_url: signedUrl.signedUrl, status: document.status },
+            documents: {
+              title: document.title,
+              original_pdf_url: signedUrl.signedUrl,
+              status: document.status,
+              final_pdf_available: Boolean(document.final_pdf_url),
+            },
           },
           fields: (fields || []).map((field) => ({
             ...field,

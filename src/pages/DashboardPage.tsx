@@ -29,14 +29,14 @@ import Input from '@/components/ui/Input'
 import AuditTrailModal from '@/components/AuditTrailModal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatDate } from '@/lib/utils'
-import type { Document } from '@/types/database'
+import type { Document, DocumentSigner } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { t } = useLanguageStore()
-  const { documents, fetchDocuments, createDocument, deleteDocument, fetchSigners, signers, sendReminder, addAuditEntry, loading } = useDocumentStore()
+  const { documents, fetchDocuments, createDocument, deleteDocument, sendReminder, addAuditEntry, loading } = useDocumentStore()
   const navigate = useNavigate()
 
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -48,12 +48,16 @@ export default function DashboardPage() {
   const [uploadError, setUploadError] = useState('')
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
+  const [expandedSigners, setExpandedSigners] = useState<DocumentSigner[]>([])
+  const [expandedSignersLoading, setExpandedSignersLoading] = useState(false)
+  const [expandedSignersError, setExpandedSignersError] = useState(false)
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
   const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
+  const signerRequestRef = useRef(0)
 
   const showNotice = (message: string, kind: 'success' | 'error' | 'info' = 'info') => {
     setNotice({ message, kind })
@@ -94,6 +98,32 @@ export default function DashboardPage() {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [menuOpen])
+
+  const toggleSignerDetails = async (documentId: string) => {
+    const requestId = ++signerRequestRef.current
+    if (expandedDoc === documentId) {
+      setExpandedDoc(null)
+      setExpandedSigners([])
+      return
+    }
+
+    setExpandedDoc(documentId)
+    setExpandedSigners([])
+    setExpandedSignersError(false)
+    setExpandedSignersLoading(true)
+    const { data, error } = await supabase
+      .from('document_signers')
+      .select('*')
+      .eq('document_id', documentId)
+      .order('created_at')
+    if (requestId !== signerRequestRef.current) return
+    setExpandedSignersLoading(false)
+    if (error) {
+      setExpandedSignersError(true)
+      return
+    }
+    setExpandedSigners((data as DocumentSigner[]) || [])
+  }
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,14 +191,14 @@ export default function DashboardPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-10 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('dashboard.myDocuments')}</h1>
           <p className="text-[hsl(var(--muted-foreground))]">
             {t('dashboard.searchDocs').replace('...', '')}
           </p>
         </div>
-        <Button onClick={() => setShowUploadModal(true)}>
+        <Button className="w-full sm:w-auto" onClick={() => setShowUploadModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
           {t('dashboard.newDocument')}
         </Button>
@@ -205,7 +235,7 @@ export default function DashboardPage() {
             className="w-full h-10 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           {[
             { status: 'all', labelKey: 'dashboard.all' },
             { status: 'draft', labelKey: 'dashboard.draft' },
@@ -256,7 +286,7 @@ export default function DashboardPage() {
                 key={doc.id}
                 className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-3 sm:items-center">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
                       <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
@@ -273,19 +303,14 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                     {doc.status !== 'draft' && (
                       <button
                         type="button"
                         aria-label={expandedDoc === doc.id ? `Hide signers for ${doc.title}` : `Show signers for ${doc.title}`}
-                        onClick={() => {
-                          if (expandedDoc === doc.id) {
-                            setExpandedDoc(null)
-                          } else {
-                            setExpandedDoc(doc.id)
-                            fetchSigners(doc.id)
-                          }
-                        }}
+                        aria-expanded={expandedDoc === doc.id}
+                        aria-controls={`signers-${doc.id}`}
+                        onClick={() => void toggleSignerDetails(doc.id)}
                         className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
                       >
                         {expandedDoc === doc.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -308,14 +333,16 @@ export default function DashboardPage() {
                       </button>
                       {menuOpen === doc.id && (
                         <div className="absolute right-0 top-full mt-1 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
-                          <Link
-                            to={`/document/${doc.id}/edit`}
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
-                            onClick={() => setMenuOpen(null)}
-                          >
-                            <FileText className="w-4 h-4" />
-                            {t('dashboard.edit')}
-                          </Link>
+                          {doc.status === 'draft' && (
+                            <Link
+                              to={`/document/${doc.id}/edit`}
+                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
+                              onClick={() => setMenuOpen(null)}
+                            >
+                              <FileText className="w-4 h-4" />
+                              {t('dashboard.edit')}
+                            </Link>
+                          )}
                           {doc.status === 'draft' && (
                             <button
                               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
@@ -335,8 +362,8 @@ export default function DashboardPage() {
                                 setMenuOpen(null)
                                 const senderName = user?.user_metadata?.full_name || user?.email || 'A user'
                                 const result = await sendReminder(doc.id, senderName)
-                                if (user?.email) {
-                                  await addAuditEntry(doc.id, 'Reminder Sent', user.email, user.user_metadata?.full_name, `Reminder sent to ${result.sent} signer(s)`)
+                                if (user?.email && result.sent > 0) {
+                                  await addAuditEntry(doc.id, 'Reminder Sent', user.email, user.user_metadata?.full_name, JSON.stringify({ sent: result.sent, failed: result.failed }))
                                 }
                                 if (result.sent > 0) {
                                   showNotice(`Reminder sent to ${result.sent} pending signer(s).${result.failed > 0 ? ` ${result.failed} failed.` : ''}`, result.failed > 0 ? 'info' : 'success')
@@ -474,20 +501,24 @@ export default function DashboardPage() {
                 </div>
                 {/* Expandable signer list */}
                 {expandedDoc === doc.id && (
-                  <div className="mt-3 pt-3 border-t border-[hsl(var(--border))]">
-                    {signers.length === 0 ? (
+                  <div id={`signers-${doc.id}`} className="mt-3 pt-3 border-t border-[hsl(var(--border))]">
+                    {expandedSignersLoading ? (
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Loading signers...</p>
+                    ) : expandedSignersError ? (
+                      <p role="alert" className="text-xs text-[hsl(var(--destructive))]">Signer details could not be loaded.</p>
+                    ) : expandedSigners.length === 0 ? (
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">No signers</p>
                     ) : (
                       <div className="space-y-2">
-                        {signers.map((signer) => (
+                        {expandedSigners.map((signer) => (
                           <div key={signer.id} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-[hsl(var(--muted))] flex items-center justify-center text-xs font-bold">
                                 {signer.signer_email[0].toUpperCase()}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-sm font-medium">{signer.signer_name || signer.signer_email.split('@')[0]}</p>
-                                <p className="text-xs text-[hsl(var(--muted-foreground))]">{signer.signer_email}</p>
+                                <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">{signer.signer_email}</p>
                               </div>
                             </div>
                             <Badge variant={signer.status === 'signed' ? 'success' : signer.status === 'viewed' ? 'warning' : 'outline'}>
@@ -506,11 +537,11 @@ export default function DashboardPage() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 px-4">
+          <div className="mt-6 flex flex-col items-center gap-3 px-1 sm:flex-row sm:justify-between sm:px-4">
             <p className="text-sm text-[hsl(var(--muted-foreground))]">
               Showing {startIndex + 1}-{Math.min(endIndex, filteredDocs.length)} of {filteredDocs.length} documents
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -519,24 +550,7 @@ export default function DashboardPage() {
               >
                 Previous
               </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    type="button"
-                    aria-label={`Go to page ${page}`}
-                    aria-current={currentPage === page ? 'page' : undefined}
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                      currentPage === page
-                        ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                        : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
+              <span aria-live="polite" className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
               <Button
                 variant="outline"
                 size="sm"

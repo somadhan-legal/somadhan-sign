@@ -5,6 +5,9 @@ import {
   Eye,
   PenTool,
   Clock,
+  Bell,
+  MailCheck,
+  ShieldCheck,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import Modal from '@/components/ui/Modal'
@@ -29,6 +32,10 @@ const actionConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   'Checkbox Checked': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
   'Text Entered': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
   'Document Completed': { icon: <FileText className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Document Sent for Signing': { icon: <Send className="w-4 h-4" />, color: 'text-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10' },
+  'Reminder Sent': { icon: <Bell className="w-4 h-4" />, color: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10' },
+  'Electronic Signature Consent Given': { icon: <ShieldCheck className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Completion Emails Sent': { icon: <MailCheck className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
 }
 
 function formatDateTime(dateStr: string) {
@@ -50,7 +57,7 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
   }, [isOpen, documentId, signingToken, fetchAuditTrail, fetchPlacements])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="AUDIT TRAIL" size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Audit trail" size="xl">
       <div className="max-h-[70vh] overflow-y-auto">
         {/* Header */}
         <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-2 border-b border-[hsl(var(--border))] text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">

@@ -316,11 +316,36 @@ const translations: Record<string, Record<Language, string>> = {
     bn: 'আপনি যে ডকুমেন্টটি খুঁজছেন তা পাওয়া যায়নি। এটি মুছে ফেলা হয়ে থাকতে পারে অথবা লিঙ্কটি অবৈধ।',
   },
   'signee.signingComplete': { en: 'Signing Complete!', bn: 'স্বাক্ষর সম্পন্ন!' },
+  'signee.yourPartComplete': { en: 'Your Signature Is Complete', bn: 'আপনার স্বাক্ষর সম্পন্ন হয়েছে' },
   'signee.thankYou': { en: 'Thank you,', bn: 'ধন্যবাদ,' },
   'signee.allFieldsSigned': {
     en: 'All your fields have been signed successfully.',
     bn: 'আপনার সকল ক্ষেত্র সফলভাবে স্বাক্ষরিত হয়েছে।',
   },
+  'signee.waitingForOthers': {
+    en: 'Your work is saved. We will send the completed document after every participant has signed.',
+    bn: 'আপনার কাজ সংরক্ষিত হয়েছে। সকল অংশগ্রহণকারী স্বাক্ষর করার পর আমরা সম্পূর্ণ ডকুমেন্ট পাঠাব।',
+  },
+  'signee.consentTitle': { en: 'Electronic signature consent', bn: 'ইলেকট্রনিক স্বাক্ষরের সম্মতি' },
+  'signee.consentDescription': {
+    en: 'I agree to use electronic records and signatures for this document.',
+    bn: 'আমি এই ডকুমেন্টের জন্য ইলেকট্রনিক রেকর্ড ও স্বাক্ষর ব্যবহার করতে সম্মত।',
+  },
+  'signee.savingConsent': { en: 'Saving your consent...', bn: 'আপনার সম্মতি সংরক্ষণ করা হচ্ছে...' },
+  'signee.consentRequired': {
+    en: 'Confirm electronic signature consent before completing any fields.',
+    bn: 'কোনো ক্ষেত্র পূরণ করার আগে ইলেকট্রনিক স্বাক্ষরের সম্মতি নিশ্চিত করুন।',
+  },
+  'signee.consentSaveFailed': {
+    en: 'Your consent could not be saved. Check your connection and try again.',
+    bn: 'আপনার সম্মতি সংরক্ষণ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+  'signee.deliveryNeedsRetry': {
+    en: 'The document is complete, but the final PDF or completion emails still need to be delivered.',
+    bn: 'ডকুমেন্ট সম্পূর্ণ হয়েছে, তবে চূড়ান্ত PDF বা সম্পন্ন হওয়ার ইমেইল এখনও পাঠানো বাকি।',
+  },
+  'signee.retryDelivery': { en: 'Retry final delivery', bn: 'চূড়ান্ত ডেলিভারি আবার চেষ্টা করুন' },
+  'signee.retryingDelivery': { en: 'Retrying delivery...', bn: 'ডেলিভারি আবার চেষ্টা করা হচ্ছে...' },
   'signee.downloadSigned': { en: 'Download Signed Document', bn: 'স্বাক্ষরিত ডকুমেন্ট ডাউনলোড করুন' },
   'signee.viewSigned': { en: 'View Signed Document', bn: 'স্বাক্ষরিত ডকুমেন্ট দেখুন' },
   'signee.downloadIncludesAudit': {
@@ -360,12 +385,12 @@ const translations: Record<string, Record<Language, string>> = {
     bn: '৩. ক্ষেত্রগুলোর মধ্যে নেভিগেট করতে "পরের" / "আগের" বাটন ব্যবহার করুন',
   },
   'signee.help4': {
-    en: '4. Once all fields are signed, click "Finish Signing"',
-    bn: '৪. সব ক্ষেত্র সাইন হলে "স্বাক্ষর সম্পন্ন করুন" ক্লিক করুন',
+    en: '4. Your part completes automatically after every assigned field is filled',
+    bn: '৪. নির্ধারিত সব ক্ষেত্র পূরণ হলে আপনার অংশ স্বয়ংক্রিয়ভাবে সম্পন্ন হবে',
   },
   'signee.help5': {
-    en: '5. Download your signed copy for your records',
-    bn: '৫. আপনার রেকর্ডের জন্য স্বাক্ষরিত কপি ডাউনলোড করুন',
+    en: '5. The final copy becomes available after every participant has signed',
+    bn: '৫. সকল অংশগ্রহণকারী স্বাক্ষর করার পর চূড়ান্ত কপি পাওয়া যাবে',
   },
   'signee.tabUpload': { en: 'Upload', bn: 'আপলোড' },
   'signee.tabDraw': { en: 'Draw', bn: 'আঁকুন' },
@@ -380,16 +405,20 @@ const translations: Record<string, Record<Language, string>> = {
 
 export const useLanguageStore = create<LanguageState>((set, get) => {
   const saved = (typeof window !== 'undefined' ? localStorage.getItem('somadhan-lang') : null) as Language | null
+  const initialLanguage = saved === 'bn' ? 'bn' : 'en'
+  if (typeof document !== 'undefined') document.documentElement.lang = initialLanguage
 
   return {
-    lang: saved || 'en',
+    lang: initialLanguage,
     setLang: (lang) => {
       localStorage.setItem('somadhan-lang', lang)
+      document.documentElement.lang = lang
       set({ lang })
     },
     toggle: () => {
       const next = get().lang === 'en' ? 'bn' : 'en'
       localStorage.setItem('somadhan-lang', next)
+      document.documentElement.lang = next
       set({ lang: next })
     },
     t: (key: string) => {

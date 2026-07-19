@@ -85,7 +85,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true })
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       })
       if (error) throw error
@@ -99,27 +99,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUpWithEmail: async (email: string, password: string, name: string) => {
     set({ loading: true })
     try {
-      const beforeSignup = new Date()
-      const { data, error } = await supabase.auth.signUp({
-        email,
+      const { error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
         password,
         options: {
-          data: { full_name: name },
+          data: { full_name: name.trim() },
           emailRedirectTo: undefined,
         },
       })
       if (error) throw error
-      // Supabase returns a user with empty identities when email already exists (confirmed user)
-      if (data?.user && data.user.identities && data.user.identities.length === 0) {
-        throw new Error('User already exists')
-      }
-      // Also detect existing user: if created_at is well before this signup call, user already existed
-      if (data?.user?.created_at) {
-        const createdAt = new Date(data.user.created_at)
-        if (beforeSignup.getTime() - createdAt.getTime() > 5000) {
-          throw new Error('User already exists')
-        }
-      }
       set({ loading: false })
     } catch (error) {
       set({ loading: false })
@@ -132,7 +120,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email,
+        email: email.trim().toLowerCase(),
       })
       if (error) throw error
       set({ loading: false })
@@ -146,7 +134,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true })
     try {
       const { data, error } = await supabase.auth.verifyOtp({
-        email,
+        email: email.trim().toLowerCase(),
         token,
         type: 'signup',
       })
@@ -161,7 +149,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   resetPassword: async (email: string) => {
     set({ loading: true })
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
       })
       if (error) throw error

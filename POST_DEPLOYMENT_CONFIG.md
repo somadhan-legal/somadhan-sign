@@ -124,7 +124,7 @@ somadhan.com
 
 ### Your New Resend API Key:
 ```
-re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy
+re_your_api_key_here
 ```
 
 ### Option A: Update via Supabase Dashboard (Recommended)
@@ -139,7 +139,7 @@ re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy
 3. **Update Secrets**
    - Click **Settings** or **Secrets** tab
    - Find `RESEND_API_KEY`
-   - Update value to: `re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy`
+   - Update value to a newly generated Resend API key
    - Click **Save**
 
 ### Option B: Update via Supabase CLI
@@ -157,7 +157,7 @@ supabase login
 supabase link --project-ref cfurkapaksdjsqeydhew
 
 # Set the new Resend API key
-supabase secrets set RESEND_API_KEY=re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy
+supabase secrets set RESEND_API_KEY=re_your_api_key_here
 ```
 
 ---
@@ -335,7 +335,7 @@ Make sure your domain is verified in Resend for sending emails from `noreply@som
 2. Check DNS records are correctly configured (SPF, DKIM, DMARC)
 3. Wait 30 minutes for DNS propagation
 4. Check Resend logs: [https://resend.com/logs](https://resend.com/logs)
-5. Verify `RESEND_API_KEY` is set correctly: `re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy`
+5. Verify `RESEND_API_KEY` is set correctly in the Supabase secrets dashboard
 6. Check Supabase Edge Function logs for errors
 
 ### Issue: Edge Function Returns Error
@@ -376,7 +376,7 @@ Make sure your domain is verified in Resend for sending emails from `noreply@som
 - **Supabase URL:** `https://cfurkapaksdjsqeydhew.supabase.co`
 - **Production Domain:** `https://sign.somadhan.com`
 - **Vercel URL:** `https://somadhan-sign-ten.vercel.app`
-- **Resend API Key:** `re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy`
+- **Resend API Key:** Stored only in Supabase secrets
 - **Email Sender:** `noreply@somadhan.com`
 
 ### Google OAuth Console (✅ Already Configured):
@@ -411,7 +411,7 @@ https://somadhan-sign-ten.vercel.app/auth/callback
 
 **Secrets:**
 ```
-RESEND_API_KEY=re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy
+RESEND_API_KEY=re_your_api_key_here
 ```
 
 ### Resend Dashboard (TO DO):
@@ -431,7 +431,7 @@ RESEND_API_KEY=re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy
 
 3. **Update Resend API Key**
    - Go to Supabase Dashboard → Edge Functions → send-signing-email → Secrets
-   - Set `RESEND_API_KEY` to `re_F89ZLkGX_7GVnRgKchRDgZaAgxkiAimLy`
+   - Set `RESEND_API_KEY` to a newly generated Resend API key
 
 4. **Verify Resend Domain**
    - Go to Resend dashboard

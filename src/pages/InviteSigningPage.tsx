@@ -29,6 +29,18 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 
+const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onerror = () => reject(reader.error || new Error('The completed PDF could not be read.'))
+  reader.onload = () => {
+    const result = typeof reader.result === 'string' ? reader.result : ''
+    const separatorIndex = result.indexOf(',')
+    if (separatorIndex < 0) reject(new Error('The completed PDF could not be encoded.'))
+    else resolve(result.slice(separatorIndex + 1))
+  }
+  reader.readAsDataURL(blob)
+})
+
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
@@ -50,6 +62,7 @@ interface SignerData {
     title: string
     original_pdf_url: string
     status: string
+    final_pdf_available?: boolean
   }
 }
 
@@ -83,6 +96,11 @@ export default function InviteSigningPage() {
   const [textInputValue, setTextInputValue] = useState('')
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [finished, setFinished] = useState(false)
+  const [documentCompleted, setDocumentCompleted] = useState(false)
+  const [hasConsented, setHasConsented] = useState(false)
+  const [savingConsent, setSavingConsent] = useState(false)
+  const [completionDeliveryFailed, setCompletionDeliveryFailed] = useState(false)
+  const [retryingCompletion, setRetryingCompletion] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [auditPdfUrl, setAuditPdfUrl] = useState<string | null>(null)
   const [generatingPdf, setGeneratingPdf] = useState(false)
@@ -105,6 +123,22 @@ export default function InviteSigningPage() {
         return
       }
       setSignerData(data as unknown as SignerData)
+      setDocumentCompleted(data.documents.status === 'completed')
+      if (data.documents.status === 'completed' && typeof data.documents.final_pdf_available === 'boolean') {
+        const completionDeliveryRecorded = useDocumentStore.getState().auditTrail.some((entry) => {
+          if (entry.action !== 'Completion Emails Sent') return false
+          try {
+            return JSON.parse(entry.metadata || '{}').source === 'send-signing-email'
+          } catch {
+            return false
+          }
+        })
+        setCompletionDeliveryFailed(!data.documents.final_pdf_available || !completionDeliveryRecorded)
+      }
+      setHasConsented(useDocumentStore.getState().auditTrail.some((entry) =>
+        entry.action === 'Electronic Signature Consent Given'
+        && entry.user_email.trim().toLowerCase() === data.signer_email.trim().toLowerCase()
+      ))
 
       // If signer already signed, show finished state
       if (data.status === 'signed') {
@@ -132,6 +166,30 @@ export default function InviteSigningPage() {
   const userEmail = signerData?.signer_email || ''
   const userName = signerData?.signer_name || null
   const documentId = signerData?.document_id || ''
+
+  const requireConsent = () => {
+    if (hasConsented) return true
+    setActionError(t('signee.consentRequired'))
+    setLeftPanelCollapsed(false)
+    return false
+  }
+
+  const handleConsent = async () => {
+    if (!documentId || !signerData || hasConsented || savingConsent) return
+    setSavingConsent(true)
+    setActionError('')
+    const recorded = await addAuditEntry(
+      documentId,
+      'Electronic Signature Consent Given',
+      userEmail,
+      userName,
+      'Consent captured in the signing interface',
+      token,
+    )
+    if (recorded) setHasConsented(true)
+    else setActionError(t('signee.consentSaveFailed'))
+    setSavingConsent(false)
+  }
 
   const myFields = signatureFields.filter(
     (f) => f.document_id === documentId && f.assigned_to_email === userEmail
@@ -180,7 +238,7 @@ export default function InviteSigningPage() {
   const myUnsignedSignatureFields = mySignatureFields.filter((f) => !signedFieldIds.has(f.id))
 
   const handleAutoFillSignatures = async (data: string) => {
-    if (!documentId || !signerData) return
+    if (!documentId || !signerData || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setShowSignatureModal(false)
@@ -208,7 +266,7 @@ export default function InviteSigningPage() {
   }
 
   const handleAutoFillInitials = async (data: string) => {
-    if (!documentId || !signerData) return
+    if (!documentId || !signerData || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setTappedFieldId(null)
@@ -235,6 +293,7 @@ export default function InviteSigningPage() {
   }
 
   const handleTapToSign = async (fieldId: string) => {
+    if (!requireConsent()) return
     const field = signatureFields.find((f) => f.id === fieldId)
     const isInitials = field?.field_type === 'initials'
     const dataToUse = isInitials ? initialsData : signatureData
@@ -279,7 +338,7 @@ export default function InviteSigningPage() {
   }
 
   const handleDateField = async (fieldId: string, dateValue: string) => {
-    if (!documentId || !signerData || !dateValue) return
+    if (!documentId || !signerData || !dateValue || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setDatePickerFieldId(null)
@@ -303,7 +362,7 @@ export default function InviteSigningPage() {
   }
 
   const handleCheckboxField = async (fieldId: string) => {
-    if (!documentId || !signerData) return
+    if (!documentId || !signerData || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     const saved = await addPlacement({
@@ -326,7 +385,7 @@ export default function InviteSigningPage() {
   }
 
   const handleTextFieldSubmit = async (fieldId: string) => {
-    if (!documentId || !signerData || !textInputValue.trim()) return
+    if (!documentId || !signerData || !textInputValue.trim() || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setTextInputFieldId(null)
@@ -403,9 +462,10 @@ export default function InviteSigningPage() {
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
+          setActionError('Everyone has signed, but the document could not be finalized. Please try again.')
+          return
         }
-        await addAuditEntry(documentId, 'Document Completed', userEmail, userName, 'All signers have signed', token)
-        
+        setDocumentCompleted(true)
         // Get all document data via RPC (bypasses RLS)
         let completionData: DocumentCompletionResult | null = null
         try {
@@ -456,13 +516,7 @@ export default function InviteSigningPage() {
               }
             }
             
-            const arrayBuffer = await finalBlob.arrayBuffer()
-            const uint8Array = new Uint8Array(arrayBuffer)
-            let binaryStr = ''
-            for (let i = 0; i < uint8Array.length; i++) {
-              binaryStr += String.fromCharCode(uint8Array[i])
-            }
-            pdfBase64 = btoa(binaryStr)
+            pdfBase64 = await blobToBase64(finalBlob)
           } catch (pdfErr) {
             console.error('[completion] PDF generation error:', pdfErr)
           }
@@ -511,12 +565,14 @@ export default function InviteSigningPage() {
             })
             if (emailFnErr) {
               console.error('[completion] Edge function error:', emailFnErr)
+              setCompletionDeliveryFailed(true)
             } else {
-              await addAuditEntry(documentId, 'Completion Emails Sent', 'system', null, `Sent to ${uniqueRecipients.length} recipients${ccEmails.length > 0 ? ` (CC: ${ccEmails.length})` : ''}`, token)
+              setCompletionDeliveryFailed(false)
             }
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)
+          setCompletionDeliveryFailed(true)
         }
       }
       
@@ -548,7 +604,7 @@ export default function InviteSigningPage() {
   if (pageLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+        <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="text-center">
@@ -562,7 +618,7 @@ export default function InviteSigningPage() {
   if (error || !signerData) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[hsl(var(--background))]">
-        <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+        <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="text-center max-w-md">
@@ -660,6 +716,13 @@ export default function InviteSigningPage() {
     }
   }
 
+  const handleRetryCompletion = async () => {
+    if (retryingCompletion) return
+    setRetryingCompletion(true)
+    await checkCompletion()
+    setRetryingCompletion(false)
+  }
+
   const pdfErrorNotice = pdfError ? (
     <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
       {pdfError}
@@ -671,7 +734,7 @@ export default function InviteSigningPage() {
       <div className="flex flex-col h-screen bg-[hsl(var(--background))]">
         <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] shadow-sm sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+            <a href="/">
               <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
             </a>
             <div className="w-px h-6 bg-[hsl(var(--border))]" />
@@ -702,7 +765,7 @@ export default function InviteSigningPage() {
     return (
       <div className="min-h-screen flex flex-col bg-[hsl(var(--background))]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[hsl(var(--border))]">
-          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
           <div className="flex items-center gap-2">
@@ -719,11 +782,22 @@ export default function InviteSigningPage() {
             <div className="w-20 h-20 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-12 h-12 text-[hsl(var(--primary))]" />
             </div>
-            <h2 className="text-2xl font-bold text-[hsl(var(--primary))] mb-3">{t('signee.signingComplete')}</h2>
+            <h2 className="text-2xl font-bold text-[hsl(var(--primary))] mb-3">
+              {documentCompleted ? t('signee.signingComplete') : t('signee.yourPartComplete')}
+            </h2>
             <p className="text-[hsl(var(--muted-foreground))] mb-8">
               {t('signee.thankYou')} <strong className="text-[hsl(var(--foreground))]">{userName || userEmail}</strong>. {t('signee.allFieldsSigned')}
             </p>
+            {documentCompleted ? (
             <div className="space-y-3">
+              {completionDeliveryFailed && (
+                <div role="alert" className="rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 p-4 text-sm text-[hsl(var(--foreground))]">
+                  <p className="mb-3">{t('signee.deliveryNeedsRetry')}</p>
+                  <Button variant="outline" className="w-full" onClick={handleRetryCompletion} disabled={retryingCompletion}>
+                    {retryingCompletion ? t('signee.retryingDelivery') : t('signee.retryDelivery')}
+                  </Button>
+                </div>
+              )}
               <Button className="w-full" onClick={handleDownloadPdf} disabled={generatingPdf}>
                 {generatingPdf ? (
                   <>
@@ -744,6 +818,11 @@ export default function InviteSigningPage() {
                 {t('signee.downloadIncludesAudit')}
               </p>
             </div>
+            ) : (
+              <div className="rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/60 p-4 text-sm text-[hsl(var(--muted-foreground))]">
+                {t('signee.waitingForOthers')}
+              </div>
+            )}
           </div>
         </div>
         {pdfErrorNotice}
@@ -757,7 +836,7 @@ export default function InviteSigningPage() {
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
-          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
         </div>
@@ -780,6 +859,25 @@ export default function InviteSigningPage() {
           </div>
         </div>
 
+        <div className="border-b border-[hsl(var(--border))] p-4">
+          <div className="flex items-start gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 text-sm">
+            <input
+              id="electronic-signature-consent"
+              type="checkbox"
+              checked={hasConsented}
+              disabled={hasConsented || savingConsent}
+              onChange={() => void handleConsent()}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[hsl(var(--primary))]"
+            />
+            <label htmlFor="electronic-signature-consent" className="cursor-pointer">
+              <span className="block font-semibold">{t('signee.consentTitle')}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                {savingConsent ? t('signee.savingConsent') : t('signee.consentDescription')}
+              </span>
+            </label>
+          </div>
+        </div>
+
         {/* Signature Setup */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <h3 className="font-medium text-sm mb-3">{t('signee.yourSignature')}</h3>
@@ -792,17 +890,17 @@ export default function InviteSigningPage() {
                 <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allSignaturesFilled') || 'All signatures filled'}</p>
               ) : (
                 <div className="space-y-1.5">
-                  <Button size="sm" className="w-full" onClick={() => handleAutoFillSignatures(signatureData)}>
+                  <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillSignatures(signatureData)}>
                     {t('signee.applyToAll')} ({myUnsignedSignatureFields.length})
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowSignatureModal(true)}>
+                  <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowSignatureModal(true)}>
                     {t('signee.changeSignature')}
                   </Button>
                 </div>
               )}
             </div>
           ) : (
-            <Button className="w-full" onClick={() => setShowSignatureModal(true)}>
+            <Button className="w-full" disabled={!hasConsented} onClick={() => setShowSignatureModal(true)}>
               <PenTool className="w-4 h-4 mr-2" />
               {t('signee.createSignature')}
             </Button>
@@ -827,17 +925,17 @@ export default function InviteSigningPage() {
                   <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allInitialsFilled')}</p>
                 ) : (
                   <div className="space-y-1.5">
-                    <Button size="sm" className="w-full" onClick={() => handleAutoFillInitials(initialsData)}>
+                    <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillInitials(initialsData)}>
                       {t('signee.applyToAll')} ({myUnsignedInitialsFields.length})
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full" onClick={() => setShowInitialsModal(true)}>
+                    <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowInitialsModal(true)}>
                       {t('signee.changeInitials')}
                     </Button>
                   </div>
                 )}
               </div>
             ) : (
-              <Button variant="secondary" className="w-full" onClick={() => setShowInitialsModal(true)}>
+              <Button variant="secondary" className="w-full" disabled={!hasConsented} onClick={() => setShowInitialsModal(true)}>
                 <Type className="w-4 h-4 mr-2" />
                 {t('signee.addInitials')} ({myUnsignedInitialsFields.length} {t('signee.places')})
               </Button>
@@ -880,8 +978,12 @@ export default function InviteSigningPage() {
                       ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))] font-bold animate-field-pulse'
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
-                  onClick={() => {
-                    if (!isSigned) {
+                onClick={() => {
+                  if (!hasConsented) {
+                    requireConsent()
+                    return
+                  }
+                  if (!isSigned) {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
                     }
@@ -1029,6 +1131,7 @@ export default function InviteSigningPage() {
                 const sigData = isInitials ? initialsData : signatureData
                 const activateUnsignedField = () => {
                   if (!isMine || isSigned || submitting) return
+                  if (!requireConsent()) return
                   if (isCheckbox) {
                     handleCheckboxField(field.id)
                   } else if (isDate) {

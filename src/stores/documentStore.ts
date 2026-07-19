@@ -76,8 +76,9 @@ interface DocumentState {
   sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
 }
 
-let cachedIpAddress: string | null = null
-let ipFetchAttempted = false
+let activeDocumentFetch = 0
+let activeDocumentsFetch = 0
+let activeAuditFetch = 0
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
@@ -126,56 +127,61 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setLoading: (loading) => set({ loading }),
 
   fetchDocuments: async () => {
-    set({ loading: true })
+    const requestId = ++activeDocumentsFetch
+    set({ loading: true, documents: [] })
     const { data, error } = await supabase
       .from('documents')
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('Error fetching documents:', error)
-      set({ loading: false })
+      if (requestId === activeDocumentsFetch) set({ loading: false })
       return
     }
-    set({ documents: (data as Document[]) || [], loading: false })
+    if (requestId === activeDocumentsFetch) set({ documents: (data as Document[]) || [], loading: false })
   },
 
   fetchDocument: async (id: string) => {
-    set({ loading: true })
-    const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', id)
-      .single()
-    if (error) {
-      console.error('Error fetching document:', error)
-      set({ loading: false })
-      return
-    }
+    const requestId = ++activeDocumentFetch
+    set({
+      currentDocument: null,
+      signatureFields: [],
+      signers: [],
+      placements: [],
+      auditTrail: [],
+      loading: true,
+    })
     try {
-      const document = data as Document
+      const [documentResult, fieldsResult, signersResult, placementsResult] = await Promise.all([
+        supabase.from('documents').select('*').eq('id', id).single(),
+        supabase.from('signature_fields').select('*').eq('document_id', id).order('field_order'),
+        supabase.from('document_signers').select('*').eq('document_id', id).order('created_at'),
+        supabase.from('signature_placements').select('*').eq('document_id', id),
+      ])
+      const queryError = documentResult.error || fieldsResult.error || signersResult.error || placementsResult.error
+      if (queryError) throw queryError
+
+      const document = documentResult.data as Document
       const [originalPdfUrl, finalPdfUrl] = await Promise.all([
         createOwnerDocumentUrl(document.original_pdf_url),
         document.final_pdf_url ? createOwnerDocumentUrl(document.final_pdf_url) : Promise.resolve(null),
       ])
+      if (requestId !== activeDocumentFetch) return
       set({
         currentDocument: {
           ...document,
           original_pdf_url: originalPdfUrl,
           final_pdf_url: finalPdfUrl,
         },
+        signatureFields: (fieldsResult.data as SignatureFieldLocal[]) || [],
+        signers: (signersResult.data as DocumentSigner[]) || [],
+        placements: (placementsResult.data as SignaturePlacement[]) || [],
         loading: false,
       })
-    } catch (documentUrlError) {
-      console.error('Error creating document access URL:', documentUrlError)
-      set({ currentDocument: null, loading: false })
-      return
+    } catch (documentError) {
+      console.error('Error loading document:', documentError)
+      if (requestId === activeDocumentFetch) set({ currentDocument: null, loading: false })
     }
-
-    await Promise.all([
-      get().fetchSignatureFields(id),
-      get().fetchSigners(id),
-      get().fetchPlacements(id),
-    ])
   },
 
   createDocument: async (doc: DocumentInsert, file: File) => {
@@ -207,6 +213,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       if (error) throw error
 
       const newDoc = data as Document
+      const { error: auditError } = await supabase.from('audit_trail').insert({
+        document_id: newDoc.id,
+        action: 'Document Created',
+        user_email: user.email || 'unknown',
+        user_name: user.user_metadata?.full_name || null,
+        metadata: 'Document uploaded',
+      })
+      if (auditError) console.error('Error recording document creation:', auditError)
       set((state) => ({
         documents: [newDoc, ...state.documents],
         loading: false,
@@ -647,6 +661,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchAuditTrail: async (documentId: string) => {
+    const requestId = ++activeAuditFetch
     // Clear existing audit trail first to avoid stale data
     set({ auditTrail: [] })
     
@@ -660,7 +675,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return
     }
     
-    set({ auditTrail: (data as AuditTrailEntry[]) || [] })
+    if (requestId === activeAuditFetch) set({ auditTrail: (data as AuditTrailEntry[]) || [] })
   },
 
   addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => {
@@ -679,19 +694,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         return false
       }
     }
-    let ipAddress: string | null = cachedIpAddress
-    if (ipAddress === null && !ipFetchAttempted) {
-      try {
-        const res = await fetch('https://api.ipify.org?format=json')
-        const json = await res.json()
-        ipAddress = json.ip || null
-        cachedIpAddress = ipAddress
-      } catch {
-        // silently fail
-      }
-      ipFetchAttempted = true
-    }
-
     const { data, error } = await supabase
       .from('audit_trail')
       .insert({
@@ -699,7 +701,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         action,
         user_email: userEmail,
         user_name: userName || null,
-        ip_address: ipAddress,
+        ip_address: null,
         metadata: metadata || null,
       })
       .select()
@@ -743,6 +745,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             documentId,
             senderName: senderName || 'A user',
             message: message || '',
+            type: 'invitation',
           },
         })
 
@@ -797,8 +800,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
 
     if (sent === 0) {
-      await get().updateDocumentStatus(documentId, 'draft')
-      throw new Error('No invitation emails could be sent. Check the email service and try again.')
+      throw new Error('No invitation emails could be sent. The document remains pending so you can retry from the dashboard.')
     }
 
     return { sent, failed, ccSent, ccFailed }
@@ -847,6 +849,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             senderName: senderName || 'A user',
             message: 'This is a friendly reminder to sign the document. Please review and sign at your earliest convenience.',
             ccEmails: [],
+            type: 'reminder',
           },
         })
 

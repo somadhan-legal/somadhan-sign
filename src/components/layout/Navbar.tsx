@@ -29,7 +29,7 @@ export default function Navbar() {
               <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-10 sm:h-14" />
             </Link>
           ) : (
-            <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
+            <a href="/" className="flex items-center gap-2 no-underline">
               <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-10 sm:h-14 cursor-pointer" />
             </a>
           )}

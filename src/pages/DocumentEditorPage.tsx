@@ -482,14 +482,10 @@ export default function DocumentEditorPage() {
     )).filter((email) => !signerEmailSet.has(email))
     
     try {
-      if (currentDocument?.status === 'draft' && user.email) {
-        await addAuditEntry(id, 'Document Created', user.email, user.user_metadata?.full_name, `Document "${currentDocument.title}" created with ${signers.length} signer(s)`)
-      }
-
       const result = await sendForSigning(id, senderName, sendMessage, ccEmailsList)
 
       if (user.email) {
-        const metadata = ccEmailsList.length > 0 ? JSON.stringify({ ccEmails: ccEmailsList }) : `Sent to ${signers.length} signer(s)`
+        const metadata = JSON.stringify({ ccEmails: ccEmailsList, signerCount: signers.length })
         await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, metadata)
       }
 
@@ -587,7 +583,7 @@ export default function DocumentEditorPage() {
               </button>
             )}
           </div>
-          {signers.length === 0 ? (
+          {signers.length === 0 && !isLocked ? (
             <button
               onClick={openAddSignerModal}
               className="w-full py-2.5 border border-[hsl(var(--border))] rounded-lg text-xs font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
@@ -595,7 +591,7 @@ export default function DocumentEditorPage() {
               <UserPlus className="w-3.5 h-3.5" />
               {t('editor.addSigner')}
             </button>
-          ) : (
+          ) : signers.length > 0 ? (
             <>
               {signers.length > 3 && (
                 <button
@@ -707,6 +703,8 @@ export default function DocumentEditorPage() {
                 </button>
               )}
             </>
+          ) : (
+            <p className="py-2 text-center text-xs text-[hsl(var(--muted-foreground))]">No signers</p>
           )}
         </div>
 

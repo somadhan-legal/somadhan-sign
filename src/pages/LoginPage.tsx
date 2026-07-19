@@ -72,21 +72,11 @@ export default function LoginPage() {
             const remainingMin = Math.ceil((blockedUntil - Date.now()) / 60000)
             throw new Error(`Too many OTP attempts. Please try again in ${remainingMin} minutes.`)
           }
-          try {
-            await signUpWithEmail(email, password, name)
-            setMessage('A 6-digit OTP has been sent to your email.')
-            setMode('verify-otp')
-            setResendTimer(60)
-            setOtpAttempts([Date.now()])
-          } catch (signupError: unknown) {
-            const signupMessage = signupError instanceof Error ? signupError.message : ''
-            if (signupMessage.includes('already registered') || signupMessage.includes('User already exists')) {
-              setMode('login')
-              setError(t('login.alreadyRegistered'))
-            } else {
-              throw signupError
-            }
-          }
+          await signUpWithEmail(email, password, name)
+          setMessage('If this email can be registered, a 6-digit verification code is on its way.')
+          setMode('verify-otp')
+          setResendTimer(60)
+          setOtpAttempts([Date.now()])
           break
         case 'verify-otp':
           await verifySignupOtp(email, otpCode)
@@ -378,6 +368,7 @@ export default function LoginPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    maxLength={100}
                   />
                 )}
 
@@ -416,17 +407,30 @@ export default function LoginPage() {
                   </div>
                 )}
                 {mode === 'signup' && (
-                  <Input
-                    label={t('login.password')}
-                    name="new-password"
-                    autoComplete="new-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={8}
-                  />
+                  <div>
+                    <div className="relative">
+                      <Input
+                        label={t('login.password')}
+                        name="new-password"
+                        autoComplete="new-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">Use at least 8 characters.</p>
+                  </div>
                 )}
 
                 {mode === 'login' && (

@@ -11,6 +11,7 @@ drop policy if exists "Anyone can view documents" on storage.objects;
 update storage.buckets set public = false where id = 'documents';
 
 drop policy if exists "Authenticated users can upload" on storage.objects;
+drop policy if exists "Users can upload own documents" on storage.objects;
 create policy "Users can upload own documents"
   on storage.objects for insert
   to authenticated
@@ -38,17 +39,97 @@ create policy "Users can delete own uploads"
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
-drop policy if exists "Owner can manage placements" on public.signature_placements;
-create policy "Owner can manage placements"
-  on public.signature_placements for all
+drop policy if exists "Owner can manage signature fields" on public.signature_fields;
+drop policy if exists "Owner can view signature fields" on public.signature_fields;
+drop policy if exists "Owner can add draft signature fields" on public.signature_fields;
+drop policy if exists "Owner can update draft signature fields" on public.signature_fields;
+drop policy if exists "Owner can delete draft signature fields" on public.signature_fields;
+create policy "Owner can view signature fields"
+  on public.signature_fields for select
   to authenticated
   using (
     exists (
       select 1 from public.documents d
       where d.id = document_id and d.created_by = auth.uid()
     )
+  );
+create policy "Owner can add draft signature fields"
+  on public.signature_fields for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+create policy "Owner can update draft signature fields"
+  on public.signature_fields for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
   )
   with check (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+create policy "Owner can delete draft signature fields"
+  on public.signature_fields for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+
+drop policy if exists "Owner can add signers" on public.document_signers;
+create policy "Owner can add signers"
+  on public.document_signers for insert
+  to authenticated
+  with check (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+drop policy if exists "Owner can update signers" on public.document_signers;
+create policy "Owner can update signers"
+  on public.document_signers for update
+  to authenticated
+  using (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+drop policy if exists "Owner can delete signers" on public.document_signers;
+create policy "Owner can delete signers"
+  on public.document_signers for delete
+  to authenticated
+  using (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+    )
+  );
+
+drop policy if exists "Owner can manage placements" on public.signature_placements;
+drop policy if exists "Owner can view placements" on public.signature_placements;
+create policy "Owner can view placements"
+  on public.signature_placements for select
+  to authenticated
+  using (
     exists (
       select 1 from public.documents d
       where d.id = document_id and d.created_by = auth.uid()
@@ -76,6 +157,7 @@ create policy "Owner can add audit entries"
       select 1 from public.documents d
       where d.id = document_id and d.created_by = auth.uid()
     )
+    and action in ('Document Created', 'Document Sent for Signing', 'Reminder Sent')
   );
 
 create table if not exists public.document_viewers (
@@ -101,6 +183,100 @@ where placement.id in (
 );
 create unique index if not exists signature_placements_field_unique
   on public.signature_placements (field_id);
+delete from public.audit_trail audit
+where audit.action = 'Document Completed'
+  and audit.id in (
+    select duplicate.id
+    from (
+      select id, row_number() over (partition by document_id order by created_at, id) as row_number
+      from public.audit_trail
+      where action = 'Document Completed'
+    ) duplicate
+    where duplicate.row_number > 1
+  );
+create unique index if not exists audit_trail_document_completed_unique
+  on public.audit_trail (document_id)
+  where action = 'Document Completed';
+
+do $$
+begin
+  alter table public.signature_fields add constraint signature_fields_valid_geometry
+    check (
+      page_number > 0
+      and x between 0 and 100 and y between 0 and 100
+      and width > 0 and width <= 100 and height > 0 and height <= 100
+      and x + width <= 100 and y + height <= 100
+    ) not valid;
+exception when duplicate_object then null;
+end $$;
+
+create or replace function public.protect_document_integrity()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  -- Service-role operations and security-definer signer transactions have no
+  -- authenticated user id and are validated by their own narrow functions.
+  if auth.uid() is null then return new; end if;
+
+  if new.created_by is distinct from old.created_by
+    or new.original_pdf_url is distinct from old.original_pdf_url
+    or new.final_pdf_url is distinct from old.final_pdf_url
+    or new.created_at is distinct from old.created_at
+  then raise exception 'Document file references are immutable'; end if;
+
+  if old.status = 'draft' then
+    if new.status not in ('draft', 'pending', 'cancelled') then
+      raise exception 'Invalid document status transition';
+    end if;
+    return new;
+  end if;
+
+  if new.title is distinct from old.title then
+    raise exception 'A sent document cannot be renamed';
+  end if;
+  if old.status = 'pending' and new.status not in ('pending', 'cancelled') then
+    raise exception 'Invalid document status transition';
+  end if;
+  if old.status in ('completed', 'cancelled') and new.status is distinct from old.status then
+    raise exception 'A closed document cannot be reopened';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_document_integrity_trigger on public.documents;
+create trigger protect_document_integrity_trigger
+before update on public.documents
+for each row execute function public.protect_document_integrity();
+revoke execute on function public.protect_document_integrity() from public, anon, authenticated;
+do $$
+begin
+  alter table public.documents add constraint documents_title_length
+    check (length(btrim(title)) between 1 and 160) not valid;
+exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter table public.document_signers add constraint document_signers_valid_identity
+    check (
+      length(signer_email) <= 320
+      and signer_email ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
+      and length(coalesce(signer_name, '')) <= 200
+    ) not valid;
+exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter table public.audit_trail add constraint audit_trail_bounded_text
+    check (
+      length(action) between 1 and 100
+      and length(user_email) between 1 and 320
+      and length(coalesce(metadata, '')) <= 5000
+    ) not valid;
+exception when duplicate_object then null;
+end $$;
 
 alter table public.document_viewers enable row level security;
 revoke all on table public.document_viewers from anon, authenticated;
@@ -144,7 +320,8 @@ begin
       'documents', json_build_object(
         'title', d.title,
         'original_pdf_url', d.original_pdf_url,
-        'status', d.status
+        'status', d.status,
+        'final_pdf_available', d.final_pdf_url is not null
       )
     ),
     'fields', coalesce((
@@ -212,7 +389,7 @@ declare
 begin
   if not exists (
     select 1 from public.documents d
-    where d.id = p_document_id and d.created_by = auth.uid()
+    where d.id = p_document_id and d.created_by = auth.uid() and d.status = 'draft'
   ) then raise exception 'Document access denied'; end if;
   if jsonb_typeof(p_fields) <> 'array' then raise exception 'Fields must be an array'; end if;
 
@@ -343,9 +520,14 @@ declare
   signer_row public.document_signers;
   field_row public.signature_fields;
   placement_row public.signature_placements;
+  document_status text;
 begin
-  select * into signer_row from public.document_signers where signing_token = p_token;
+  select * into signer_row from public.document_signers where signing_token = p_token for update;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
+  select status into document_status from public.documents where id = signer_row.document_id;
+  if document_status <> 'pending' or signer_row.status = 'signed' then
+    raise exception 'This signing request is no longer active';
+  end if;
 
   select * into field_row
   from public.signature_fields
@@ -355,9 +537,25 @@ begin
   if field_row.id is null or lower(field_row.assigned_to_email) <> lower(signer_row.signer_email) then
     raise exception 'Field is not assigned to this signer';
   end if;
-  if length(p_signature_id) = 0 or length(p_signature_id) > 3000000 then
-    raise exception 'Invalid field value';
+  if not exists (
+    select 1 from public.audit_trail consent
+    where consent.document_id = signer_row.document_id
+      and consent.action = 'Electronic Signature Consent Given'
+      and lower(consent.user_email) = lower(signer_row.signer_email)
+  ) then raise exception 'Electronic signature consent is required'; end if;
+  if field_row.field_type in ('signature', 'initials') and (
+    p_signature_id !~ '^data:image/png;base64,[A-Za-z0-9+/=]+$'
+    or length(p_signature_id) > 3000000
+  ) then raise exception 'Invalid signature image'; end if;
+  if field_row.field_type = 'date' and p_signature_id !~ '^\d{4}-\d{2}-\d{2}$' then
+    raise exception 'Invalid date value';
   end if;
+  if field_row.field_type = 'checkbox' and p_signature_id <> 'checkbox:checked' then
+    raise exception 'Invalid checkbox value';
+  end if;
+  if field_row.field_type = 'text' and (
+    length(btrim(p_signature_id)) = 0 or length(p_signature_id) > 1000
+  ) then raise exception 'Invalid text value'; end if;
   if exists (select 1 from public.signature_placements where field_id = p_field_id) then
     raise exception 'Field has already been completed';
   end if;
@@ -380,10 +578,19 @@ set search_path = public
 as $$
 declare
   signer_row public.document_signers;
+  document_status text;
 begin
-  select * into signer_row from public.document_signers where signing_token = p_token;
+  select * into signer_row from public.document_signers where signing_token = p_token for update;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
   if p_status not in ('viewed', 'signed') then raise exception 'Invalid signer status'; end if;
+  if signer_row.status = 'signed' then return; end if;
+  select status into document_status from public.documents where id = signer_row.document_id;
+  if document_status <> 'pending' then raise exception 'This signing request is no longer active'; end if;
+  if p_status = 'signed' and not exists (
+    select 1 from public.signature_fields f
+    where f.document_id = signer_row.document_id
+      and lower(f.assigned_to_email) = lower(signer_row.signer_email)
+  ) then raise exception 'No fields are assigned to this signer'; end if;
   if p_status = 'signed' and exists (
     select 1
     from public.signature_fields f
@@ -398,6 +605,38 @@ begin
   set status = p_status,
       signed_at = case when p_status = 'signed' then now() else signed_at end
   where id = signer_row.id;
+
+  if p_status = 'signed' then
+    insert into public.audit_trail (
+      document_id, action, user_email, user_name
+    )
+    select signer_row.document_id, 'All Fields Signed', signer_row.signer_email, signer_row.signer_name
+    where not exists (
+      select 1 from public.audit_trail existing
+      where existing.document_id = signer_row.document_id
+        and existing.action = 'All Fields Signed'
+        and lower(existing.user_email) = lower(signer_row.signer_email)
+    );
+
+    if not exists (
+      select 1 from public.document_signers pending
+      where pending.document_id = signer_row.document_id and pending.status <> 'signed'
+    ) then
+      update public.documents
+      set status = 'completed', updated_at = now()
+      where id = signer_row.document_id and status = 'pending';
+
+      insert into public.audit_trail (
+        document_id, action, user_email, user_name, metadata
+      ) values (
+        signer_row.document_id,
+        'Document Completed',
+        signer_row.signer_email,
+        signer_row.signer_name,
+        'All signers have signed'
+      ) on conflict (document_id) where action = 'Document Completed' do nothing;
+    end if;
+  end if;
 end;
 $$;
 
@@ -419,11 +658,33 @@ declare
 begin
   select * into signer_row from public.document_signers where signing_token = p_token;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
+  if length(coalesce(p_metadata, '')) > 2000 then raise exception 'Audit metadata is too long'; end if;
   if p_action not in (
     'Document Viewed', 'Signature Applied', 'Initials Added', 'Date Filled',
-    'Checkbox Checked', 'Text Entered', 'All Fields Signed', 'Document Completed',
-    'Completion Emails Sent'
+    'Checkbox Checked', 'Text Entered', 'All Fields Signed',
+    'Electronic Signature Consent Given'
   ) then raise exception 'Invalid audit action'; end if;
+  if p_action = 'Electronic Signature Consent Given' then
+    select * into audit_row
+    from public.audit_trail existing
+    where existing.document_id = signer_row.document_id
+      and existing.action = 'Electronic Signature Consent Given'
+      and lower(existing.user_email) = lower(signer_row.signer_email)
+    order by existing.created_at
+    limit 1;
+    if audit_row.id is not null then return audit_row; end if;
+  end if;
+  if p_action = 'All Fields Signed' then
+    if signer_row.status <> 'signed' then raise exception 'Signer has not completed all fields'; end if;
+    select * into audit_row
+    from public.audit_trail existing
+    where existing.document_id = signer_row.document_id
+      and existing.action = 'All Fields Signed'
+      and lower(existing.user_email) = lower(signer_row.signer_email)
+    order by existing.created_at
+    limit 1;
+    if audit_row.id is not null then return audit_row; end if;
+  end if;
 
   begin
     request_headers := current_setting('request.headers', true)::json;
@@ -471,8 +732,12 @@ set search_path = public
 as $$
 declare
   target_document_id uuid;
+  completing_signer public.document_signers;
 begin
-  select document_id into target_document_id from public.document_signers where signing_token = p_token;
+  select * into completing_signer
+  from public.document_signers
+  where signing_token = p_token;
+  target_document_id := completing_signer.document_id;
   if target_document_id is null then raise exception 'Invalid signing token'; end if;
   if exists (
     select 1 from public.document_signers
@@ -481,7 +746,17 @@ begin
 
   update public.documents
   set status = 'completed', updated_at = now()
-  where id = target_document_id;
+  where id = target_document_id and status <> 'completed';
+
+  insert into public.audit_trail (
+    document_id, action, user_email, user_name, metadata
+  ) values (
+    target_document_id,
+    'Document Completed',
+    completing_signer.signer_email,
+    completing_signer.signer_name,
+    'All signers have signed'
+  ) on conflict (document_id) where action = 'Document Completed' do nothing;
 end;
 $$;
 
@@ -493,6 +768,7 @@ set search_path = public
 as $$
   select public.get_document_for_completion(ds.document_id)
   from public.document_signers ds
+  join public.documents d on d.id = ds.document_id and d.status = 'completed'
   where ds.signing_token = p_token
     and not exists (
       select 1 from public.document_signers pending
@@ -532,8 +808,11 @@ declare
 begin
   if not exists (
     select 1 from public.documents d
-    where d.id = p_document_id and d.created_by = auth.uid()
+    where d.id = p_document_id and d.created_by = auth.uid() and d.status = 'pending'
   ) then raise exception 'Document access denied'; end if;
+  if length(p_viewer_email) > 320 or p_viewer_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'A valid viewer email is required';
+  end if;
 
   select viewing_token into result_token
   from public.document_viewers
@@ -622,6 +901,5 @@ grant execute on function public.add_audit_entry_by_token(text, text, text) to a
 grant execute on function public.check_all_signers_signed_by_token(text) to anon, authenticated;
 grant execute on function public.mark_document_completed_by_token(text) to anon, authenticated;
 grant execute on function public.get_document_for_completion_by_token(text) to anon, authenticated;
-grant execute on function public.save_final_pdf_url_by_token(text, text) to anon, authenticated;
 grant execute on function public.create_document_viewer(uuid, text) to authenticated;
 grant execute on function public.get_viewer_package(text) to anon, authenticated;

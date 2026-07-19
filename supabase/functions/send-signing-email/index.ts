@@ -27,6 +27,18 @@ const isEmail = (value: unknown): value is string => typeof value === 'string' &
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
+const emailIdempotencyKey = async (scope: string, documentId: string, recipient: string) => {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(recipient.trim().toLowerCase()),
+  )
+  const recipientHash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 24)
+  return `somadhan-${scope}-${documentId}-${recipientHash}`
+}
+
 const storagePath = (reference: string | null): string | null => {
   if (!reference) return null
   if (!reference.includes('://')) return reference.replace(/^\/+/, '') || null
@@ -90,6 +102,13 @@ serve(async (req) => {
     }
     const isCompletion = type === 'completion'
     const isCcNotification = type === 'cc-notification'
+    const isReminder = type === 'reminder'
+    if (type && !['completion', 'cc-notification', 'invitation', 'reminder'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Invalid email type' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
@@ -99,6 +118,10 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
       auth: { persistSession: false },
     })
+    const completionServiceRoleKey = isCompletion ? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') : null
+    const completionServiceClient = completionServiceRoleKey
+      ? createClient(supabaseUrl, completionServiceRoleKey, { auth: { persistSession: false } })
+      : null
 
     let verifiedDocumentTitle = documentTitle
     let allowedCompletionRecipients: Set<string> | null = null
@@ -106,6 +129,7 @@ serve(async (req) => {
     let resolvedDownloadUrl = requestedDownloadUrl
     let resolvedSigningLink = signingLink
     let resolvedViewLink = viewLink
+    let verifiedRecipient: string | null = null
 
     if (isCompletion) {
       if (typeof signingToken !== 'string' || signingToken.length < 32) {
@@ -122,7 +146,8 @@ serve(async (req) => {
           status: 403,
         })
       }
-      verifiedDocumentId = signer.document_id
+      const completionDocumentId = String(signer.document_id)
+      verifiedDocumentId = completionDocumentId
 
       let { data: completionData, error: completionError } = await authClient.rpc(
         'get_document_for_completion_by_token',
@@ -130,7 +155,7 @@ serve(async (req) => {
       )
       if (isMissingRpc(completionError)) {
         const legacyResult = await authClient.rpc('get_document_for_completion', {
-          p_document_id: signer.document_id,
+          p_document_id: completionDocumentId,
         })
         completionData = legacyResult.data
         completionError = legacyResult.error
@@ -159,15 +184,19 @@ serve(async (req) => {
       }
       allowedCompletionRecipients = new Set(allowed.map((email) => email.toLowerCase()))
 
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-      if (!serviceRoleKey) throw new Error('Secure document storage is not configured')
-      const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
-      const { data: existingDocument, error: existingDocumentError } = await serviceClient
+      if (!completionServiceClient) throw new Error('Secure document storage is not configured')
+      const { data: existingDocument, error: existingDocumentError } = await completionServiceClient
         .from('documents')
-        .select('final_pdf_url')
-        .eq('id', verifiedDocumentId)
+        .select('final_pdf_url, status')
+        .eq('id', completionDocumentId)
         .single()
       if (existingDocumentError) throw existingDocumentError
+      if (existingDocument.status !== 'completed') {
+        return new Response(JSON.stringify({ error: 'The document is not complete' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409,
+        })
+      }
 
       let finalPdfReference = existingDocument?.final_pdf_url || null
       if (!finalPdfReference && typeof pdfBase64 === 'string' && pdfBase64.length > 0) {
@@ -178,21 +207,52 @@ serve(async (req) => {
           })
         }
         const pdfBytes = Uint8Array.from(atob(pdfBase64), (character) => character.charCodeAt(0))
-        finalPdfReference = `signed/${verifiedDocumentId}_${Date.now()}.pdf`
-        const { error: uploadError } = await serviceClient.storage
+        if (new TextDecoder().decode(pdfBytes.slice(0, 5)) !== '%PDF-') {
+          return new Response(JSON.stringify({ error: 'The completed PDF is invalid' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400,
+          })
+        }
+        const uploadedReference = `signed/${completionDocumentId}_${crypto.randomUUID()}.pdf`
+        const { error: uploadError } = await completionServiceClient.storage
           .from('documents')
-          .upload(finalPdfReference, pdfBytes, { contentType: 'application/pdf', upsert: false })
+          .upload(uploadedReference, pdfBytes, { contentType: 'application/pdf', upsert: false })
         if (uploadError) throw uploadError
-        const { error: saveError } = await serviceClient
+        const { data: savedDocument, error: saveError } = await completionServiceClient
           .from('documents')
-          .update({ final_pdf_url: finalPdfReference, updated_at: new Date().toISOString() })
-          .eq('id', verifiedDocumentId)
-        if (saveError) throw saveError
+          .update({ final_pdf_url: uploadedReference, updated_at: new Date().toISOString() })
+          .eq('id', completionDocumentId)
+          .is('final_pdf_url', null)
+          .select('final_pdf_url')
+          .maybeSingle()
+        if (saveError) {
+          await completionServiceClient.storage.from('documents').remove([uploadedReference])
+          throw saveError
+        }
+        if (savedDocument?.final_pdf_url) {
+          finalPdfReference = savedDocument.final_pdf_url
+        } else {
+          const { data: winningDocument, error: winningDocumentError } = await completionServiceClient
+            .from('documents')
+            .select('final_pdf_url')
+            .eq('id', completionDocumentId)
+            .single()
+          await completionServiceClient.storage.from('documents').remove([uploadedReference])
+          if (winningDocumentError) throw winningDocumentError
+          finalPdfReference = winningDocument?.final_pdf_url || null
+        }
+      }
+
+      if (!finalPdfReference) {
+        return new Response(JSON.stringify({ error: 'The completed PDF is not available' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 422,
+        })
       }
 
       const finalPath = storagePath(finalPdfReference)
       if (finalPath) {
-        const { data: signedDownload, error: signedDownloadError } = await serviceClient.storage
+        const { data: signedDownload, error: signedDownloadError } = await completionServiceClient.storage
           .from('documents')
           .createSignedUrl(finalPath, 60 * 60 * 24 * 7)
         if (signedDownloadError) throw signedDownloadError
@@ -226,6 +286,7 @@ serve(async (req) => {
           status: 403,
         })
       }
+      verifiedDocumentId = ownedDocument.id
       verifiedDocumentTitle = ownedDocument.title
 
       const recipient = Array.isArray(to) ? to[0] : to
@@ -249,6 +310,7 @@ serve(async (req) => {
             status: 403,
           })
         }
+        verifiedRecipient = recipient.trim()
         const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://sign.somadhan.com'
         resolvedViewLink = `${publicSiteUrl.replace(/\/$/, '')}/view/${viewerToken}`
       } else {
@@ -265,6 +327,7 @@ serve(async (req) => {
             status: 403,
           })
         }
+        verifiedRecipient = recipient.trim()
         const publicSiteUrl = Deno.env.get('PUBLIC_SITE_URL') || 'https://sign.somadhan.com'
         resolvedSigningLink = `${publicSiteUrl.replace(/\/$/, '')}/sign/${signingToken}`
       }
@@ -395,9 +458,11 @@ serve(async (req) => {
     const emailHtml = isCcNotification ? ccNotificationHtml : isCompletion ? completionHtml : invitationHtml
 
     // Build email payload - 'to' can be a string or array (array for completion emails)
-    const toRecipients = (Array.isArray(to) ? to : [to])
-      .filter(isEmail)
-      .filter((email) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
+    const toRecipients = isCompletion
+      ? (Array.isArray(to) ? to : [to])
+          .filter(isEmail)
+          .filter((email) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
+      : verifiedRecipient ? [verifiedRecipient] : []
     if (toRecipients.length === 0) {
       return new Response(JSON.stringify({ error: 'A valid recipient email is required' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -422,13 +487,6 @@ serve(async (req) => {
       html: emailHtml,
     }
 
-    // Add CC recipients to email header (they won't get separate emails)
-    if (ccEmails && Array.isArray(ccEmails) && ccEmails.length > 0) {
-      emailPayload.cc = ccEmails
-        .filter(isEmail)
-        .filter((email: string) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
-    }
-
     // Add PDF attachment for completion emails
     if (isCompletion && pdfBase64) {
       const safeTitle = subjectTitle.replace(/[^a-zA-Z0-9_\- ]/g, '_') || 'document'
@@ -440,28 +498,94 @@ serve(async (req) => {
       ]
     }
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify(emailPayload),
-    })
+    const completionRecipients = isCompletion
+      ? [...new Map([
+          ...toRecipients,
+          ...(Array.isArray(ccEmails) ? ccEmails : []),
+        ]
+          .filter(isEmail)
+          .filter((email) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
+          .map((email) => [email.toLowerCase(), email.trim()])).values()]
+      : []
 
-    const data = await res.json()
-    if (!res.ok) {
-      console.error('Resend API Error:', data)
-      return new Response(
-        JSON.stringify({ error: 'The email provider rejected the message' }),
-        {
+    if (isCompletion && completionServiceClient && verifiedDocumentId) {
+      const { data: priorCompletionNotices } = await completionServiceClient
+        .from('audit_trail')
+        .select('metadata')
+        .eq('document_id', verifiedDocumentId)
+        .eq('action', 'Completion Emails Sent')
+
+      const alreadySent = (priorCompletionNotices || []).some((entry) => {
+        try {
+          const metadata = JSON.parse(entry.metadata || '{}')
+          return metadata.source === 'send-signing-email'
+        } catch {
+          return false
+        }
+      })
+      if (alreadySent) {
+        return new Response(JSON.stringify({ success: true, alreadySent: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 502,
-        },
-      )
+          status: 200,
+        })
+      }
     }
 
-    console.log('Email accepted by provider:', data?.id || 'unknown')
+    const providerIds: string[] = []
+    const recipientsToSend = isCompletion ? completionRecipients : [null]
+    for (const completionRecipient of recipientsToSend) {
+      const payload = completionRecipient
+        ? { ...emailPayload, to: [completionRecipient], cc: undefined }
+        : emailPayload
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+      }
+      if (isCompletion && completionRecipient && verifiedDocumentId) {
+        headers['Idempotency-Key'] = await emailIdempotencyKey('completion', verifiedDocumentId, completionRecipient)
+      } else if (!isReminder && verifiedRecipient && verifiedDocumentId) {
+        headers['Idempotency-Key'] = await emailIdempotencyKey(
+          isCcNotification ? 'viewer' : 'invitation',
+          verifiedDocumentId,
+          verifiedRecipient,
+        )
+      }
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('Resend API rejected an email request with status:', res.status)
+        return new Response(
+          JSON.stringify({ error: 'The email provider rejected the message' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 502,
+          },
+        )
+      }
+      if (data?.id) providerIds.push(data.id)
+    }
+
+    if (isCompletion && completionServiceClient && verifiedDocumentId) {
+      const { error: auditError } = await completionServiceClient.from('audit_trail').insert({
+        document_id: verifiedDocumentId,
+        action: 'Completion Emails Sent',
+        user_email: 'system@somadhan.com',
+        user_name: 'Somadhan Sign',
+        metadata: JSON.stringify({
+          source: 'send-signing-email',
+          recipientCount: completionRecipients.length,
+          providerIds,
+        }),
+      })
+      if (auditError) console.error('Completion email audit error:', auditError)
+    }
+
+    console.log('Email accepted by provider:', providerIds.length || 'single')
 
     return new Response(
       JSON.stringify({ success: true }),
@@ -471,11 +595,12 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Email function error:', error instanceof Error ? error.message : 'Unknown error')
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'The email request could not be processed' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     )
   }
