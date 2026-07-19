@@ -231,6 +231,9 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.newDocument': { en: 'New Document', bn: 'নতুন ডকুমেন্ট' },
   'dashboard.searchDocs': { en: 'Search documents...', bn: 'ডকুমেন্ট খুঁজুন...' },
   'dashboard.noDocuments': { en: 'No documents yet', bn: 'এখনো কোনো ডকুমেন্ট নেই' },
+  'dashboard.noMatches': { en: 'No matching documents', bn: 'মিলে যাওয়া কোনো ডকুমেন্ট নেই' },
+  'dashboard.adjustFilters': { en: 'Try another search or status filter.', bn: 'অন্য কিছু খুঁজুন বা স্ট্যাটাস ফিল্টার পরিবর্তন করুন।' },
+  'dashboard.clearFilters': { en: 'Clear filters', bn: 'ফিল্টার মুছুন' },
   'dashboard.uploadFirst': {
     en: 'Upload your first PDF to get started',
     bn: 'শুরু করতে আপনার প্রথম PDF আপলোড করুন',

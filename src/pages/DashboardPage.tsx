@@ -32,26 +32,7 @@ import { formatDate } from '@/lib/utils'
 import type { Document, DocumentSigner } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
-
-const safePdfFilename = (title: string, suffix = '') => {
-  const printableTitle = Array.from(title).filter((character) => character.charCodeAt(0) >= 32).join('')
-  const safeTitle = printableTitle.replace(/[|<>:"/\\?*]/g, '_').trim() || 'Document'
-  return `${safeTitle}${suffix}.pdf`
-}
-
-const downloadPdfUrl = async (url: string, filename: string) => {
-  const response = await fetch(url)
-  if (!response.ok) throw new Error('The PDF could not be downloaded')
-  const blob = await response.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const link = window.document.createElement('a')
-  link.href = objectUrl
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(objectUrl)
-}
+import { downloadPdfUrl, safePdfFilename } from '@/lib/download'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -78,6 +59,7 @@ export default function DashboardPage() {
   const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
   const signerRequestRef = useRef(0)
+  const uploadValidationRequestRef = useRef(0)
 
   const showNotice = (message: string, kind: 'success' | 'error' | 'info' = 'info') => {
     setNotice({ message, kind })
@@ -94,6 +76,7 @@ export default function DashboardPage() {
 
   // Reset upload form state
   const resetUploadForm = () => {
+    uploadValidationRequestRef.current += 1
     setTitle('')
     setFile(null)
     setUploadError('')
@@ -284,17 +267,27 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : paginatedDocs.length === 0 && filteredDocs.length === 0 ? (
+      ) : filteredDocs.length === 0 ? (
         <div className="text-center py-20">
-          <FileText className="w-16 h-16 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-4" />
-          <h3 className="text-lg font-medium mb-2">{t('dashboard.noDocuments')}</h3>
+          {documents.length === 0
+            ? <FileText className="w-16 h-16 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-4" />
+            : <Search className="w-16 h-16 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-4" />}
+          <h3 className="text-lg font-medium mb-2">
+            {documents.length === 0 ? t('dashboard.noDocuments') : t('dashboard.noMatches')}
+          </h3>
           <p className="text-[hsl(var(--muted-foreground))] mb-4">
-            {t('dashboard.uploadFirst')}
+            {documents.length === 0 ? t('dashboard.uploadFirst') : t('dashboard.adjustFilters')}
           </p>
-          <Button onClick={() => setShowUploadModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('dashboard.uploadPdf')}
-          </Button>
+          {documents.length === 0 ? (
+            <Button onClick={() => setShowUploadModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('dashboard.uploadPdf')}
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => { setSearchQuery(''); setFilterStatus('all') }}>
+              {t('dashboard.clearFilters')}
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -602,11 +595,13 @@ export default function DashboardPage() {
       <Modal
         isOpen={showUploadModal}
         onClose={() => {
+          if (uploading) return
           setShowUploadModal(false)
           resetUploadForm()
         }}
         title="Upload Document"
         size="md"
+        closeDisabled={uploading}
       >
         <form onSubmit={handleUpload} className="space-y-4">
           <Input
@@ -624,9 +619,16 @@ export default function DashboardPage() {
                 type="file"
                 accept=".pdf"
                 onChange={async (e) => {
+                  const requestId = ++uploadValidationRequestRef.current
                   const selectedFile = e.target.files?.[0] || null
                   setFile(selectedFile)
-                  setUploadError(selectedFile ? (await validatePdfFile(selectedFile)) || '' : '')
+                  if (selectedFile && !title.trim()) {
+                    setTitle(selectedFile.name.replace(/\.pdf$/i, ''))
+                  }
+                  const validationError = selectedFile ? await validatePdfFile(selectedFile) : ''
+                  if (requestId === uploadValidationRequestRef.current) {
+                    setUploadError(validationError || '')
+                  }
                 }}
                 className="hidden"
                 id="pdf-upload"
@@ -654,9 +656,11 @@ export default function DashboardPage() {
               variant="outline"
               className="flex-1"
               onClick={() => {
+                if (uploading) return
                 setShowUploadModal(false)
                 resetUploadForm()
               }}
+              disabled={uploading}
             >
               Cancel
             </Button>

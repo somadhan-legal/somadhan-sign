@@ -9,9 +9,10 @@ interface ModalProps {
   children: ReactNode
   className?: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  closeDisabled?: boolean
 }
 
-export default function Modal({ isOpen, onClose, title, children, className, size = 'md' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, className, size = 'md', closeDisabled = false }: ModalProps) {
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -24,7 +25,7 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           event.preventDefault()
-          onClose()
+          if (!closeDisabled) onClose()
           return
         }
         if (event.key !== 'Tab' || !dialogRef.current) return
@@ -54,13 +55,13 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
       }
     }
     document.body.style.overflow = ''
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, closeDisabled])
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button type="button" tabIndex={-1} aria-label="Close dialog" className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-label="Close dialog" className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} disabled={closeDisabled} />
       <div
         ref={dialogRef}
         role="dialog"
@@ -85,8 +86,9 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
             <button
               type="button"
               onClick={onClose}
+              disabled={closeDisabled}
               aria-label="Close dialog"
-              className="h-11 w-11 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center"
+              className="h-11 w-11 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
             >
               <X className="w-5 h-5" />
             </button>
