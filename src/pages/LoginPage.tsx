@@ -6,6 +6,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import Modal from '@/components/ui/Modal'
 
 type AuthMode = 'login' | 'signup' | 'verify-otp' | 'forgot-password'
 
@@ -479,13 +480,19 @@ export default function LoginPage() {
       </div>
 
       {/* Account Verified Popup */}
-      {showVerifiedPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="dialog" aria-modal="true" aria-labelledby="verified-title">
-          <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 text-center shadow-xl">
+      <Modal
+        isOpen={showVerifiedPopup}
+        onClose={() => {
+          setShowVerifiedPopup(false)
+          navigate('/dashboard')
+        }}
+        className="text-center"
+        size="sm"
+      >
             <div className="w-16 h-16 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-9 h-9 text-[hsl(var(--success))]" />
             </div>
-            <h3 id="verified-title" className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
+            <h3 className="text-xl font-bold mb-2">{t('login.accountVerified')}</h3>
             <p className="text-[hsl(var(--muted-foreground))] mb-6">
               {t('login.accountVerifiedDesc')}
             </p>
@@ -498,9 +505,7 @@ export default function LoginPage() {
             >
               {t('login.letsGo')}
             </Button>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

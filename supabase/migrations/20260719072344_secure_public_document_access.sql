@@ -244,6 +244,75 @@ begin
 end;
 $$;
 
+create or replace function public.update_document_signer_with_fields(
+  p_signer_id uuid,
+  p_signer_email text,
+  p_signer_name text default null
+)
+returns public.document_signers
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  signer_row public.document_signers;
+  updated_signer public.document_signers;
+  normalized_email text := lower(btrim(p_signer_email));
+begin
+  select signer.* into signer_row
+  from public.document_signers signer
+  join public.documents document on document.id = signer.document_id
+  where signer.id = p_signer_id
+    and document.created_by = auth.uid()
+    and document.status = 'draft'
+  for update of signer;
+
+  if signer_row.id is null then raise exception 'Signer access denied'; end if;
+  if normalized_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'A valid signer email is required';
+  end if;
+
+  update public.document_signers
+  set signer_email = normalized_email,
+      signer_name = nullif(btrim(p_signer_name), '')
+  where id = p_signer_id
+  returning * into updated_signer;
+
+  update public.signature_fields
+  set assigned_to_email = normalized_email
+  where document_id = signer_row.document_id
+    and lower(assigned_to_email) = lower(signer_row.signer_email);
+
+  return updated_signer;
+end;
+$$;
+
+create or replace function public.remove_document_signer_with_fields(p_signer_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  signer_row public.document_signers;
+begin
+  select signer.* into signer_row
+  from public.document_signers signer
+  join public.documents document on document.id = signer.document_id
+  where signer.id = p_signer_id
+    and document.created_by = auth.uid()
+    and document.status = 'draft'
+  for update of signer;
+
+  if signer_row.id is null then raise exception 'Signer access denied'; end if;
+
+  delete from public.signature_fields
+  where document_id = signer_row.document_id
+    and lower(assigned_to_email) = lower(signer_row.signer_email);
+  delete from public.document_signers where id = p_signer_id;
+end;
+$$;
+
 create or replace function public.add_signature_placement_by_token(
   p_token text,
   p_field_id uuid,
@@ -515,6 +584,8 @@ revoke execute on function public.get_signers_for_viewer(uuid) from public, anon
 
 revoke execute on function public.get_signing_package(text) from public;
 revoke execute on function public.replace_signature_fields(uuid, jsonb) from public;
+revoke execute on function public.update_document_signer_with_fields(uuid, text, text) from public;
+revoke execute on function public.remove_document_signer_with_fields(uuid) from public;
 revoke execute on function public.add_signature_placement_by_token(text, uuid, text) from public;
 revoke execute on function public.update_signer_status_by_token(text, text) from public;
 revoke execute on function public.add_audit_entry_by_token(text, text, text) from public;
@@ -527,6 +598,8 @@ revoke execute on function public.get_viewer_package(text) from public;
 
 grant execute on function public.get_signing_package(text) to anon, authenticated;
 grant execute on function public.replace_signature_fields(uuid, jsonb) to authenticated;
+grant execute on function public.update_document_signer_with_fields(uuid, text, text) to authenticated;
+grant execute on function public.remove_document_signer_with_fields(uuid) to authenticated;
 grant execute on function public.add_signature_placement_by_token(text, uuid, text) to anon, authenticated;
 grant execute on function public.update_signer_status_by_token(text, text) to anon, authenticated;
 grant execute on function public.add_audit_entry_by_token(text, text, text) to anon, authenticated;

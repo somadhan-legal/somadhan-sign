@@ -377,6 +377,26 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
     const normalizedUpdates = newEmail ? { ...updates, signer_email: newEmail } : updates
 
+    if (newEmail) {
+      const { data: updatedSigner, error: transactionError } = await supabase.rpc('update_document_signer_with_fields', {
+        p_signer_id: signerId,
+        p_signer_email: newEmail,
+        p_signer_name: updates.signer_name || null,
+      })
+      if (!transactionError) {
+        set((state) => ({
+          signers: state.signers.map((signer) => signer.id === signerId ? updatedSigner as DocumentSigner : signer),
+          signatureFields: state.signatureFields.map((field) =>
+            field.document_id === currentSigner.document_id && field.assigned_to_email === oldEmail
+              ? { ...field, assigned_to_email: newEmail }
+              : field
+          ),
+        }))
+        return
+      }
+      if (!isMissingRpc(transactionError)) throw transactionError
+    }
+
     // Update the signer
     const { data, error } = await supabase
       .from('document_signers')
@@ -400,6 +420,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
       if (fieldsError) {
         console.error('Error updating signature fields:', fieldsError)
+        await supabase
+          .from('document_signers')
+          .update({ signer_email: oldEmail, signer_name: currentSigner.signer_name })
+          .eq('id', signerId)
+        throw fieldsError
       }
     }
     
@@ -421,16 +446,44 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   removeSigner: async (signerId: string) => {
-    const { error } = await supabase
+    const signer = get().signers.find((candidate) => candidate.id === signerId)
+    if (!signer) return
+
+    const { error: transactionError } = await supabase.rpc('remove_document_signer_with_fields', {
+      p_signer_id: signerId,
+    })
+    if (!transactionError) {
+      set((state) => ({
+        signers: state.signers.filter((candidate) => candidate.id !== signerId),
+        signatureFields: state.signatureFields.filter((field) =>
+          !(field.document_id === signer.document_id && field.assigned_to_email === signer.signer_email)
+        ),
+      }))
+      return
+    }
+    if (!isMissingRpc(transactionError)) throw transactionError
+
+    const { error: signerError } = await supabase
       .from('document_signers')
       .delete()
       .eq('id', signerId)
-    if (error) {
-      console.error('Error removing signer:', error)
-      return
+    if (signerError) throw signerError
+
+    const { error: fieldsError } = await supabase
+      .from('signature_fields')
+      .delete()
+      .eq('document_id', signer.document_id)
+      .eq('assigned_to_email', signer.signer_email)
+    if (fieldsError) {
+      await supabase.from('document_signers').insert(signer)
+      throw fieldsError
     }
+
     set((state) => ({
-      signers: state.signers.filter((s) => s.id !== signerId),
+      signers: state.signers.filter((candidate) => candidate.id !== signerId),
+      signatureFields: state.signatureFields.filter((field) =>
+        !(field.document_id === signer.document_id && field.assigned_to_email === signer.signer_email)
+      ),
     }))
   },
 

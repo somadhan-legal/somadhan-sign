@@ -338,6 +338,14 @@ export interface Database {
         Args: { p_document_id: string; p_fields: unknown }
         Returns: Database['public']['Tables']['signature_fields']['Row'][]
       }
+      update_document_signer_with_fields: {
+        Args: { p_signer_id: string; p_signer_email: string; p_signer_name?: string | null }
+        Returns: Database['public']['Tables']['document_signers']['Row']
+      }
+      remove_document_signer_with_fields: {
+        Args: { p_signer_id: string }
+        Returns: undefined
+      }
       add_signature_placement_by_token: {
         Args: { p_token: string; p_field_id: string; p_signature_id: string }
         Returns: Database['public']['Tables']['signature_placements']['Row']

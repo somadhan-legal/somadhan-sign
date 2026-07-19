@@ -26,6 +26,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import InlineConfirm from '@/components/ui/InlineConfirm'
+import Modal from '@/components/ui/Modal'
 
 type FieldType = 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
 
@@ -393,6 +394,20 @@ export default function DocumentEditorPage() {
 
   const handlePreSend = () => {
     if (!id || !user) return
+    const signerEmails = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
+    const orphaned = docFields.filter((field) =>
+      field.assigned_to_email.trim() && !signerEmails.has(field.assigned_to_email.trim().toLowerCase())
+    )
+    if (orphaned.length > 0) {
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.validation'),
+        message: 'One or more fields belong to a signer who is no longer on this document. Remove or reassign those fields before sending.',
+        onConfirm: () => {},
+        variant: 'warning',
+      })
+      return
+    }
     const unassigned = docFields.filter((f) => !f.assigned_to_email)
     if (unassigned.length > 0) {
       setConfirmDialog({
@@ -641,7 +656,19 @@ export default function DocumentEditorPage() {
                           isOpen={deleteSignerId === signer.id}
                           onClose={() => setDeleteSignerId(null)}
                           onConfirm={async () => {
-                            await removeSigner(signer.id)
+                            try {
+                              await removeSigner(signer.id)
+                              setSelectedField(null)
+                              setSelectedSignerIdx((current) => Math.max(0, Math.min(current, signers.length - 2)))
+                            } catch (removeError) {
+                              setConfirmDialog({
+                                isOpen: true,
+                                title: t('editor.error'),
+                                message: removeError instanceof Error ? removeError.message : 'The signer could not be removed. Please try again.',
+                                onConfirm: () => {},
+                                variant: 'danger',
+                              })
+                            }
                           }}
                           message={t('editor.removeSignerConfirm')}
                           confirmText="OK"
@@ -1002,19 +1029,19 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* Add/Edit Signer Modal */}
-      {showSignerModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
-              <h3 className="font-semibold">{editingSignerId ? t('editor.editSigner') : t('editor.addSigner')}</h3>
-              <button
-                onClick={() => { setShowSignerModal(false); setEditingSignerId(null); setSignerFirstName(''); setSignerLastName(''); setSignerEmail('') }}
-                className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer"
-              >
-                <X className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveSigner} className="p-4 space-y-4">
+      <Modal
+        isOpen={showSignerModal}
+        onClose={() => {
+          setShowSignerModal(false)
+          setEditingSignerId(null)
+          setSignerFirstName('')
+          setSignerLastName('')
+          setSignerEmail('')
+          setSignerFormError('')
+        }}
+        title={editingSignerId ? t('editor.editSigner') : t('editor.addSigner')}
+      >
+            <form onSubmit={handleSaveSigner} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label={t('editor.firstName')}
@@ -1048,7 +1075,7 @@ export default function DocumentEditorPage() {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => { setShowSignerModal(false); setEditingSignerId(null) }}
+                  onClick={() => { setShowSignerModal(false); setEditingSignerId(null); setSignerFormError('') }}
                 >
                   {t('editor.cancel')}
                 </Button>
@@ -1057,21 +1084,11 @@ export default function DocumentEditorPage() {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Send Confirmation Dialog */}
-      {showSendConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[hsl(var(--card))] rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-4 border-b border-[hsl(var(--border))] flex items-center justify-between">
-              <h3 className="font-semibold">{t('editor.sendForSigningTitle')}</h3>
-              <button onClick={() => setShowSendConfirm(false)} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
-                <X className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
+      <Modal isOpen={showSendConfirm} onClose={() => setShowSendConfirm(false)} title={t('editor.sendForSigningTitle')}>
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">{t('editor.documentName')}</label>
                 <div className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]">
@@ -1115,9 +1132,7 @@ export default function DocumentEditorPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Saved Toast */}
       {savedToast && (
