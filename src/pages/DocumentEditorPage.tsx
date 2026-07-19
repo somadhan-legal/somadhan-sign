@@ -351,6 +351,7 @@ export default function DocumentEditorPage() {
     setSaving(true)
     try {
       await saveSignatureFields(id)
+      setSelectedField(null)
       setSavedToast(true)
       setTimeout(() => setSavedToast(false), 2500)
     } catch (err: unknown) {

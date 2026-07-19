@@ -342,9 +342,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .eq('document_id', documentId)
     if (deleteError) throw deleteError
 
-    if (fields.length === 0) return
+    if (fields.length === 0) {
+      set({ signatureFields: [] })
+      return
+    }
 
-    const { error } = await supabase.from('signature_fields').insert(inserts)
+    const { data: insertedFields, error } = await supabase.from('signature_fields').insert(inserts).select('*')
     if (error) {
       console.error('Error saving fields:', error)
       if (previousFields && previousFields.length > 0) {
@@ -352,6 +355,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
       throw error
     }
+    set({ signatureFields: (insertedFields as SignatureFieldLocal[]) || [] })
   },
 
   fetchSignatureFields: async (documentId: string) => {
@@ -469,6 +473,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .from('document_signers')
       .select('*')
       .eq('document_id', documentId)
+      .order('created_at')
     if (error) {
       console.error('Error fetching signers:', error)
       return
