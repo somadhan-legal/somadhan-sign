@@ -9,8 +9,10 @@ import type {
   SignaturePlacement,
   AuditTrailEntry,
   SignerByTokenResult,
+  SigningPackageResult,
 } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
+import { createOwnerDocumentUrl, getDocumentStoragePath } from '@/lib/documentStorage'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -43,7 +45,7 @@ interface DocumentState {
   fetchDocuments: () => Promise<void>
   fetchDocument: (id: string) => Promise<void>
   createDocument: (doc: DocumentInsert, file: File) => Promise<Document | null>
-  deleteDocument: (id: string) => Promise<void>
+  deleteDocument: (id: string) => Promise<boolean>
   updateDocumentStatus: (id: string, status: Document['status']) => Promise<void>
 
   addSignatureField: (field: SignatureFieldLocal) => void
@@ -75,6 +77,21 @@ let ipFetchAttempted = false
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
+
+const isMissingEdgeFunction = (error: unknown) => {
+  const status = (error as { context?: { status?: number } } | null)?.context?.status
+  return status === 404 || (error instanceof Error && /not found/i.test(error.message))
+}
+
+const fetchSigningAccessPackage = async (token: string): Promise<SigningPackageResult | null | undefined> => {
+  const { data, error } = await supabase.functions.invoke('get-document-access', {
+    body: { signingToken: token },
+  })
+  if (!error) return data?.signerPackage || null
+  if (isMissingEdgeFunction(error)) return undefined
+  console.error('Error fetching secure document access:', error)
+  return null
+}
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   documents: [],
@@ -117,7 +134,25 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       set({ loading: false })
       return
     }
-    set({ currentDocument: data as Document, loading: false })
+    try {
+      const document = data as Document
+      const [originalPdfUrl, finalPdfUrl] = await Promise.all([
+        createOwnerDocumentUrl(document.original_pdf_url),
+        document.final_pdf_url ? createOwnerDocumentUrl(document.final_pdf_url) : Promise.resolve(null),
+      ])
+      set({
+        currentDocument: {
+          ...document,
+          original_pdf_url: originalPdfUrl,
+          final_pdf_url: finalPdfUrl,
+        },
+        loading: false,
+      })
+    } catch (documentUrlError) {
+      console.error('Error creating document access URL:', documentUrlError)
+      set({ currentDocument: null, loading: false })
+      return
+    }
 
     await Promise.all([
       get().fetchSignatureFields(id),
@@ -147,13 +182,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
       if (uploadError) throw uploadError
 
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName)
-
       const { data, error } = await supabase
         .from('documents')
-        .insert({ ...doc, original_pdf_url: urlData.publicUrl })
+        .insert({ ...doc, original_pdf_url: fileName })
         .select()
         .single()
       if (error) throw error
@@ -177,75 +208,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   deleteDocument: async (id: string) => {
     const doc = get().documents.find((d) => d.id === id)
     
-    // Helper: extract storage file path from any Supabase storage URL format
-    const extractStoragePath = (rawUrl: string): string | null => {
-      try {
-        const url = new URL(rawUrl)
-        // Handles: /storage/v1/object/public/documents/... AND /storage/v1/object/sign/documents/...
-        const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/documents\/(.+)/)
-        if (match?.[1]) return decodeURIComponent(match[1])
-        return null
-      } catch { return null }
-    }
-
-    // Delete original PDF from storage
-    if (doc?.original_pdf_url) {
-      const filePath = extractStoragePath(doc.original_pdf_url)
-      if (filePath) {
-        const { error: storageError } = await supabase.storage
-          .from('documents')
-          .remove([filePath])
-        if (storageError) console.error('[deleteDocument] Storage delete error:', storageError)
-      } else {
-        console.warn('[deleteDocument] Could not parse file path from URL:', doc.original_pdf_url)
-      }
-    }
-
-    // Delete final signed PDF from storage if it exists
-    if (doc && (doc as Record<string, unknown>).final_pdf_url) {
-      const finalPath = extractStoragePath((doc as Record<string, unknown>).final_pdf_url as string)
-      if (finalPath) {
-        await supabase.storage.from('documents').remove([finalPath])
-      }
-    }
-    
-    // Delete related records explicitly (cascade should handle, but be thorough)
-    await supabase.from('signature_placements').delete().eq('document_id', id)
-    await supabase.from('signature_fields').delete().eq('document_id', id)
-    await supabase.from('audit_trail').delete().eq('document_id', id)
-    await supabase.from('document_signers').delete().eq('document_id', id)
-    
-    // Delete document record (this also cascades all FK references)
+    // Delete the database record first. Related records are removed atomically by FK cascades.
     const { error } = await supabase.from('documents').delete().eq('id', id)
     if (error) {
       console.error('[deleteDocument] Error deleting document:', error)
-      return
+      return false
     }
-    
-    // Check if user folder is empty and delete it
-    if (doc?.original_pdf_url) {
-      const filePath = extractStoragePath(doc.original_pdf_url)
-      if (filePath) {
-        // Extract user folder from path (e.g., "userId/timestamp_file.pdf" -> "userId")
-        const userFolder = filePath.split('/')[0]
-        if (userFolder) {
-          // List all files in user's folder
-          const { data: files } = await supabase.storage
-            .from('documents')
-            .list(userFolder)
-          
-          // If folder is empty, remove it
-          if (files && files.length === 0) {
-            await supabase.storage.from('documents').remove([userFolder])
-          }
-        }
-      }
+
+    const storagePaths = [doc?.original_pdf_url, doc?.final_pdf_url]
+      .filter((url): url is string => Boolean(url))
+      .map(getDocumentStoragePath)
+      .filter((path): path is string => Boolean(path))
+    if (storagePaths.length > 0) {
+      const { error: storageError } = await supabase.storage.from('documents').remove(storagePaths)
+      if (storageError) console.error('[deleteDocument] Storage cleanup error:', storageError)
     }
     
     set((state) => ({
       documents: state.documents.filter((d) => d.id !== id),
       currentDocument: state.currentDocument?.id === id ? null : state.currentDocument,
     }))
+    return true
   },
 
   updateDocumentStatus: async (id: string, status: Document['status']) => {
@@ -453,6 +436,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   fetchPlacements: async (documentId: string, signingToken?: string) => {
     if (signingToken) {
+      const securePackage = await fetchSigningAccessPackage(signingToken)
+      if (securePackage) {
+        set({
+          signatureFields: securePackage.fields || [],
+          placements: securePackage.placements || [],
+          auditTrail: securePackage.audit_trail || [],
+        })
+        return
+      }
+      if (securePackage === null) return
+
       const { data: signingPackage, error: packageError } = await supabase
         .rpc('get_signing_package', { p_token: signingToken })
       if (!packageError) {
@@ -511,6 +505,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchSignerByToken: async (token: string) => {
+    const securePackage = await fetchSigningAccessPackage(token)
+    if (securePackage) {
+      set({
+        signatureFields: securePackage.fields || [],
+        placements: securePackage.placements || [],
+        auditTrail: securePackage.audit_trail || [],
+      })
+      return securePackage.signer
+    }
+    if (securePackage === null) return null
+
     const { data: signingPackage, error: packageError } = await supabase
       .rpc('get_signing_package', { p_token: token })
     if (!packageError) {
@@ -723,22 +728,29 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   sendReminder: async (documentId: string, senderName?: string) => {
     // Fetch signers who haven't completed signing
-    const { data: signersList } = await supabase
+    const { data: signersList, error: signersError } = await supabase
       .from('document_signers')
       .select('*')
       .eq('document_id', documentId)
       .neq('status', 'signed')
 
+    if (signersError) {
+      console.error('Error loading pending signers:', signersError)
+      return { sent: 0, failed: 1 }
+    }
     if (!signersList || signersList.length === 0) return { sent: 0, failed: 0 }
 
     // Get document title
-    const { data: doc } = await supabase
+    const { data: doc, error: documentError } = await supabase
       .from('documents')
       .select('title')
       .eq('id', documentId)
       .single()
 
-    if (!doc) return { sent: 0, failed: 0 }
+    if (documentError || !doc) {
+      console.error('Error loading document for reminder:', documentError)
+      return { sent: 0, failed: signersList.length }
+    }
 
     let sent = 0
     let failed = 0

@@ -427,7 +427,7 @@ export default function InviteSigningPage() {
         let pdfBase64 = ''
         
         // Generate signed PDF + audit trail combined (non-blocking for email)
-        if (completionData?.original_pdf_url && completionData?.fields && completionData?.placements) {
+        if (signerData.documents.original_pdf_url && completionData?.fields && completionData?.placements) {
           try {
             const signedFields: SignedField[] = completionData.placements.map((p) => {
               const field = completionData.fields?.find((candidate) => candidate.id === p.field_id)
@@ -443,7 +443,7 @@ export default function InviteSigningPage() {
             })
             
             const { generateSignedPdf } = await import('@/lib/signedPdf')
-            const signedBlob = await generateSignedPdf(completionData.original_pdf_url, signedFields)
+            const signedBlob = await generateSignedPdf(signerData.documents.original_pdf_url, signedFields)
             
             let finalBlob = signedBlob
             if (completionData.audit_trail && completionData.audit_trail.length > 0) {

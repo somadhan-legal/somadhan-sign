@@ -1,4 +1,5 @@
 import { PDFDocument, degrees, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
+import '@fontsource/noto-sans-bengali/bengali-400.css'
 
 export interface SignedField {
   field_type: string
@@ -55,9 +56,36 @@ const fitText = (text: string, font: PDFFont, maxWidth: number, preferredSize: n
   return { text: `${fitted}...`, size }
 }
 
-const drawFieldText = (page: PDFPage, value: string, font: PDFFont, rect: PdfPlacementRect) => {
+const drawFieldText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, font: PDFFont, rect: PdfPlacementRect) => {
   const padding = Math.min(5, rect.width * 0.08)
   const preferredSize = Math.min(11, Math.max(7, rect.height * 0.55))
+  if (/[^\x20-\x7E]/.test(value)) {
+    const scale = 4
+    await document.fonts?.load(`${preferredSize * scale}px "Noto Sans Bengali"`).catch(() => undefined)
+    const canvas = document.createElement('canvas')
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Text rendering is unavailable')
+    context.font = `${preferredSize * scale}px "Noto Sans Bengali", sans-serif`
+    let text = value.replace(/[\r\n\t]+/g, ' ').trim()
+    const maxWidth = Math.max(rect.width - padding * 2, 8) * scale
+    while (text.length > 0 && context.measureText(text).width > maxWidth) text = text.slice(0, -1)
+    if (!text) return
+    canvas.width = Math.max(1, Math.ceil(context.measureText(text).width + scale * 2))
+    canvas.height = Math.max(1, Math.ceil(preferredSize * scale * 1.6))
+    context.font = `${preferredSize * scale}px "Noto Sans Bengali", sans-serif`
+    context.fillStyle = '#000000'
+    context.textBaseline = 'alphabetic'
+    context.fillText(text, scale, preferredSize * scale * 1.2)
+    const image = await pdfDoc.embedPng(await fetch(canvas.toDataURL('image/png')).then(response => response.arrayBuffer()))
+    page.drawImage(image, {
+      x: rect.x,
+      y: rect.y,
+      width: canvas.width / scale,
+      height: canvas.height / scale,
+      rotate: degrees(rect.rotation),
+    })
+    return
+  }
   const fitted = fitText(value, font, Math.max(rect.width - padding * 2, 8), preferredSize)
   page.drawText(fitted.text, {
     x: rect.x,
@@ -108,9 +136,8 @@ export async function generateSignedPdf(
       const rect = getPlacementRect(page, placement)
 
       if (placement.field_type === 'signature' || placement.field_type === 'initials') {
-        // Draw signature/initials image
-        if (placement.signature_id) {
-          try {
+        if (!placement.signature_id) throw new Error(`Missing ${placement.field_type} value on page ${pageNum}`)
+        try {
             let imgBytes: ArrayBuffer
             let isJpeg = false
             
@@ -125,9 +152,10 @@ export async function generateSignedPdf(
               }
               imgBytes = bytes.buffer
             } else {
-              // It's a URL, fetch it
               isJpeg = /\.(jpe?g)$/i.test(placement.signature_id)
-              imgBytes = await fetch(placement.signature_id).then((r) => r.arrayBuffer())
+              const imageResponse = await fetch(placement.signature_id)
+              if (!imageResponse.ok) throw new Error(`Image request failed with status ${imageResponse.status}`)
+              imgBytes = await imageResponse.arrayBuffer()
             }
             
             // Try PNG first, fall back to JPEG
@@ -147,38 +175,34 @@ export async function generateSignedPdf(
               }
             }
             
-            if (img) {
-              page.drawImage(img, {
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height,
-                rotate: degrees(rect.rotation),
-              })
-            } else {
-              drawFieldText(page, placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', fontBold, rect)
-            }
+            if (!img) throw new Error('The signature image format is not supported')
+            page.drawImage(img, {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+              rotate: degrees(rect.rotation),
+            })
           } catch (error) {
             console.error('Error embedding signature image:', error)
-            drawFieldText(page, placement.field_type === 'signature' ? '[Signed]' : '[Initialed]', fontBold, rect)
+            throw new Error(`Could not embed the ${placement.field_type} on page ${pageNum}`)
           }
-        }
       } else if (placement.field_type === 'date') {
         // Draw date text
         let dateText = placement.signature_id || new Date().toLocaleDateString()
         if (dateText.startsWith('date:')) dateText = dateText.replace('date:', '')
-        drawFieldText(page, dateText, font, rect)
+        await drawFieldText(pdfDoc, page, dateText, font, rect)
       } else if (placement.field_type === 'checkbox') {
         // Draw checkbox
         const isChecked = placement.signature_id === 'checked' || placement.signature_id === 'checkbox:checked'
         
         if (isChecked) {
-          drawFieldText(page, 'X', fontBold, rect)
+          await drawFieldText(pdfDoc, page, 'X', fontBold, rect)
         }
       } else if (placement.field_type === 'text') {
         // Draw text field content
         const textContent = placement.signature_id || ''
-        drawFieldText(page, textContent, font, rect)
+        await drawFieldText(pdfDoc, page, textContent, font, rect)
       }
     }
   }

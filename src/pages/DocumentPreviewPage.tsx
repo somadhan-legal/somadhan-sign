@@ -21,6 +21,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
+import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -98,23 +99,25 @@ export default function DocumentPreviewPage() {
       }
 
       const docTitle = docData.title
-      const originalPdfUrl = docData.original_pdf_url
+      const originalPdfUrl = await createOwnerDocumentUrl(docData.original_pdf_url)
 
       // Fetch placements for THIS document
-      const { data: placementsData } = await supabase
+      const { data: placementsData, error: placementsError } = await supabase
         .from('signature_placements')
         .select('*')
         .eq('document_id', id)
+      if (placementsError) throw placementsError
 
       let pdfUrl = originalPdfUrl
 
       // If there are placements, generate signed PDF first
       if (placementsData && placementsData.length > 0) {
         const fieldIds = placementsData.map(p => p.field_id)
-        const { data: fieldsData } = await supabase
+        const { data: fieldsData, error: fieldsError } = await supabase
           .from('signature_fields')
           .select('*')
           .in('id', fieldIds)
+        if (fieldsError) throw fieldsError
 
         if (fieldsData && fieldsData.length > 0) {
           const fieldsMap = new Map(fieldsData.map(f => [f.id, f]))
@@ -140,11 +143,12 @@ export default function DocumentPreviewPage() {
       }
 
       // Fetch audit trail for THIS document ONLY
-      const { data: auditData } = await supabase
+      const { data: auditData, error: auditError } = await supabase
         .from('audit_trail')
         .select('*')
         .eq('document_id', id)
         .order('created_at', { ascending: true })
+      if (auditError) throw auditError
 
       // Client-side safety filter
       const filteredAudit = (auditData || []).filter(e => e.document_id === id)

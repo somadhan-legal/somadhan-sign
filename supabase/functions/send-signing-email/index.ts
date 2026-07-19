@@ -27,13 +27,23 @@ const isEmail = (value: unknown): value is string => typeof value === 'string' &
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
-const logoUrl = 'https://cfurkapaksdjsqeydhew.supabase.co/storage/v1/object/public/documents/branding/sign-somadhan-mail.png'
+const storagePath = (reference: string | null): string | null => {
+  if (!reference) return null
+  if (!reference.includes('://')) return reference.replace(/^\/+/, '') || null
+  try {
+    const url = new URL(reference)
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/documents\/(.+)/)
+    return match?.[1] ? decodeURIComponent(match[1]) : null
+  } catch {
+    return null
+  }
+}
 
-// Header with logo image
+// Text branding keeps email rendering independent from private document storage.
 const headerLogo = (afterLogo: string) => `
   <div style="background-color: #075056; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <div>
-      <img src="${logoUrl}" alt="SomadhanSign" style="height: 40px; width: auto; display: inline-block;" />
+    <div style="color: white; font-family: Arial, sans-serif; font-size: 25px; font-weight: 700; letter-spacing: -0.5px;">
+      Somadhan<span style="color: #F95943; font-style: italic; font-weight: 500;">Sign</span>
     </div>
     ${afterLogo}
   </div>`
@@ -137,37 +147,46 @@ serve(async (req) => {
       }
       allowedCompletionRecipients = new Set(allowed.map((email) => email.toLowerCase()))
 
-      if (typeof pdfBase64 === 'string' && pdfBase64.length > 0) {
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (!serviceRoleKey) throw new Error('Secure document storage is not configured')
+      const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
+      const { data: existingDocument, error: existingDocumentError } = await serviceClient
+        .from('documents')
+        .select('final_pdf_url')
+        .eq('id', verifiedDocumentId)
+        .single()
+      if (existingDocumentError) throw existingDocumentError
+
+      let finalPdfReference = existingDocument?.final_pdf_url || null
+      if (!finalPdfReference && typeof pdfBase64 === 'string' && pdfBase64.length > 0) {
         if (pdfBase64.length > 28_000_000) {
           return new Response(JSON.stringify({ error: 'The completed PDF is too large' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 413,
           })
         }
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-        if (!serviceRoleKey) throw new Error('Secure document storage is not configured')
-        const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } })
-        const { data: existingDocument } = await serviceClient
+        const pdfBytes = Uint8Array.from(atob(pdfBase64), (character) => character.charCodeAt(0))
+        finalPdfReference = `signed/${verifiedDocumentId}_${Date.now()}.pdf`
+        const { error: uploadError } = await serviceClient.storage
           .from('documents')
-          .select('final_pdf_url')
+          .upload(finalPdfReference, pdfBytes, { contentType: 'application/pdf', upsert: false })
+        if (uploadError) throw uploadError
+        const { error: saveError } = await serviceClient
+          .from('documents')
+          .update({ final_pdf_url: finalPdfReference, updated_at: new Date().toISOString() })
           .eq('id', verifiedDocumentId)
-          .single()
-        if (existingDocument?.final_pdf_url) {
-          resolvedDownloadUrl = existingDocument.final_pdf_url
-        } else {
-          const pdfBytes = Uint8Array.from(atob(pdfBase64), (character) => character.charCodeAt(0))
-          const fileName = `signed/${verifiedDocumentId}_${Date.now()}.pdf`
-          const { error: uploadError } = await serviceClient.storage
-            .from('documents')
-            .upload(fileName, pdfBytes, { contentType: 'application/pdf', upsert: false })
-          if (uploadError) throw uploadError
-          resolvedDownloadUrl = serviceClient.storage.from('documents').getPublicUrl(fileName).data.publicUrl
-          const { error: saveError } = await serviceClient
-            .from('documents')
-            .update({ final_pdf_url: resolvedDownloadUrl, updated_at: new Date().toISOString() })
-            .eq('id', verifiedDocumentId)
-          if (saveError) throw saveError
-        }
+        if (saveError) throw saveError
+      }
+
+      const finalPath = storagePath(finalPdfReference)
+      if (finalPath) {
+        const { data: signedDownload, error: signedDownloadError } = await serviceClient.storage
+          .from('documents')
+          .createSignedUrl(finalPath, 60 * 60 * 24 * 7)
+        if (signedDownloadError) throw signedDownloadError
+        resolvedDownloadUrl = signedDownload?.signedUrl || ''
+      } else {
+        resolvedDownloadUrl = ''
       }
     } else {
       const { data: authData, error: authError } = await authClient.auth.getUser()

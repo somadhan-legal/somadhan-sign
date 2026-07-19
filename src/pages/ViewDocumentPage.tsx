@@ -9,6 +9,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
+import type { ViewerPackageResult } from '@/types/database'
 
 interface DocumentData {
   id: string
@@ -26,6 +27,11 @@ interface SignerInfo {
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
+const isMissingEdgeFunction = (error: unknown) => {
+  const status = (error as { context?: { status?: number } } | null)?.context?.status
+  return status === 404 || (error instanceof Error && /not found/i.test(error.message))
+}
+
 export default function ViewDocumentPage() {
   const { documentId } = useParams<{ documentId: string }>()
   const { lang, toggle: toggleLang, t } = useLanguageStore()
@@ -42,6 +48,28 @@ export default function ViewDocumentPage() {
     if (!documentId) return
     const load = async () => {
       setLoading(true)
+      setError(null)
+
+      const { data: accessData, error: accessError } = await supabase.functions.invoke('get-document-access', {
+        body: { viewerToken: documentId },
+      })
+      if (!accessError) {
+        const securePackage = accessData?.viewerPackage as ViewerPackageResult | undefined
+        if (!securePackage?.document) {
+          setError('Document not found or access denied.')
+          setLoading(false)
+          return
+        }
+        setDocument(securePackage.document)
+        setSigners(securePackage.signers || [])
+        setLoading(false)
+        return
+      }
+      if (!isMissingEdgeFunction(accessError)) {
+        setError('Document not found or access denied.')
+        setLoading(false)
+        return
+      }
 
       const { data: viewerPackage, error: packageError } = await supabase
         .rpc('get_viewer_package', { p_token: documentId })
@@ -177,8 +205,8 @@ export default function ViewDocumentPage() {
             {lang === 'bn' ? 'স্বাক্ষরকারী' : 'Signers'}
           </h3>
           <div className="space-y-2">
-            {signers.map((signer, idx) => (
-              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-[hsl(var(--muted))]/50">
+            {signers.map((signer) => (
+              <div key={signer.signer_email} className="flex items-center gap-2 p-2 rounded-lg bg-[hsl(var(--muted))]/50">
                 {signer.status === 'signed' ? (
                   <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
                 ) : (

@@ -196,15 +196,16 @@ export default function DocumentEditorPage() {
 
     const fieldEl = (e.target as HTMLElement).closest('[data-field-id]') as HTMLElement
     if (!fieldEl) return
+    const pageEl = fieldEl.closest('[data-page-number]')?.querySelector('.react-pdf__Page') as HTMLElement | null
+    if (!pageEl) {
+      isInteracting.current = false
+      return
+    }
 
-    const handlePointerMove = (ev: PointerEvent) => {
-      ev.preventDefault()
-      const pageEl = document.querySelector('.react-pdf__Page') as HTMLElement
-      if (!pageEl) return
+    const calculateSize = (clientX: number, clientY: number) => {
       const rect = pageEl.getBoundingClientRect()
-      const dxPct = ((ev.clientX - startX) / rect.width) * 100
-      const dyPct = ((ev.clientY - startY) / rect.height) * 100
-
+      const dxPct = ((clientX - startX) / rect.width) * 100
+      const dyPct = ((clientY - startY) / rect.height) * 100
       let newW = startW, newH = startH, newLeft = startLeft, newTop = startTop
 
       if (corner === 'se') {
@@ -225,6 +226,15 @@ export default function DocumentEditorPage() {
         newTop = startTop + (startH - newH)
       }
 
+      newLeft = Math.max(0, Math.min(100 - newW, newLeft))
+      newTop = Math.max(0, Math.min(100 - newH, newTop))
+      return { newW, newH, newLeft, newTop }
+    }
+
+    const handlePointerMove = (ev: PointerEvent) => {
+      ev.preventDefault()
+      const { newW, newH, newLeft, newTop } = calculateSize(ev.clientX, ev.clientY)
+
       fieldEl.style.width = `${newW}%`
       fieldEl.style.height = `${newH}%`
       fieldEl.style.left = `${newLeft}%`
@@ -235,34 +245,8 @@ export default function DocumentEditorPage() {
       document.removeEventListener('pointermove', handlePointerMove)
       document.removeEventListener('pointerup', handlePointerUp)
 
-      const pageEl = document.querySelector('.react-pdf__Page') as HTMLElement
-      if (pageEl) {
-        const rect = pageEl.getBoundingClientRect()
-        const dxPct = ((ev.clientX - startX) / rect.width) * 100
-        const dyPct = ((ev.clientY - startY) / rect.height) * 100
-
-        let newW = startW, newH = startH, newLeft = startLeft, newTop = startTop
-
-        if (corner === 'se') {
-          newW = Math.max(4, Math.min(50, startW + dxPct))
-          newH = Math.max(3, Math.min(30, startH + dyPct))
-        } else if (corner === 'sw') {
-          newW = Math.max(4, Math.min(50, startW - dxPct))
-          newH = Math.max(3, Math.min(30, startH + dyPct))
-          newLeft = startLeft + (startW - newW)
-        } else if (corner === 'ne') {
-          newW = Math.max(4, Math.min(50, startW + dxPct))
-          newH = Math.max(3, Math.min(30, startH - dyPct))
-          newTop = startTop + (startH - newH)
-        } else if (corner === 'nw') {
-          newW = Math.max(4, Math.min(50, startW - dxPct))
-          newH = Math.max(3, Math.min(30, startH - dyPct))
-          newLeft = startLeft + (startW - newW)
-          newTop = startTop + (startH - newH)
-        }
-
-        updateSignatureField(fieldId, { width: newW, height: newH, x: newLeft, y: newTop })
-      }
+      const { newW, newH, newLeft, newTop } = calculateSize(ev.clientX, ev.clientY)
+      updateSignatureField(fieldId, { width: newW, height: newH, x: newLeft, y: newTop })
 
       setTimeout(() => { isInteracting.current = false }, 100)
     }
@@ -517,11 +501,11 @@ export default function DocumentEditorPage() {
   }
 
   const handleFieldDragStop = (fieldId: string, _e: unknown, data: { x: number; y: number }) => {
-    const pageEl = document.querySelector('.react-pdf__Page') as HTMLElement
-    if (!pageEl) return
-    const rect = pageEl.getBoundingClientRect()
     const field = signatureFields.find((f) => f.id === fieldId)
     if (!field) return
+    const pageEl = document.querySelector(`[data-page-number="${field.page_number}"] .react-pdf__Page`) as HTMLElement | null
+    if (!pageEl) return
+    const rect = pageEl.getBoundingClientRect()
 
     const newX = field.x + (data.x / rect.width) * 100
     const newY = field.y + (data.y / rect.height) * 100
@@ -885,6 +869,8 @@ export default function DocumentEditorPage() {
                     </div>
                     {isSelected && (
                       <button
+                        type="button"
+                        aria-label={`Remove ${ftLabel} field for ${sName}`}
                         className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-md cursor-pointer z-40 hover:scale-110 transition-transform"
                         style={{ backgroundColor: color }}
                         onClick={(e) => {
@@ -925,7 +911,7 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-60 border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] overflow-y-auto flex flex-col">
+      <div className={`${selectedField ? 'flex' : 'hidden lg:flex'} absolute inset-y-0 right-0 z-40 w-72 border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl overflow-y-auto flex-col lg:static lg:z-auto lg:w-60 lg:shadow-none`}>
         {selectedField && (() => {
           const field = signatureFields.find((f) => f.id === selectedField)
           if (!field) return null
@@ -935,7 +921,7 @@ export default function DocumentEditorPage() {
           return (
             <>
               <div className="flex justify-end p-2">
-                <button onClick={() => setSelectedField(null)} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+                <button type="button" aria-label="Close field settings" onClick={() => setSelectedField(null)} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                   <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </div>

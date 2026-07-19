@@ -31,6 +31,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatDate } from '@/lib/utils'
 import type { Document } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
+import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -344,16 +345,17 @@ export default function DashboardPage() {
                               if (!currentDoc) return
 
                               try {
+                                const originalPdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
                                 // Fetch placements
                                 const { data: placementsArr, error: pErr } = await supabase
                                   .from('signature_placements')
                                   .select('*')
                                   .eq('document_id', doc.id)
 
-                                if (pErr) console.error('Error fetching placements:', pErr)
+                                if (pErr) throw pErr
 
                                 if (!placementsArr || placementsArr.length === 0) {
-                                  window.open(currentDoc.original_pdf_url, '_blank')
+                                  window.open(originalPdfUrl, '_blank', 'noopener,noreferrer')
                                   return
                                 }
 
@@ -364,10 +366,10 @@ export default function DashboardPage() {
                                   .select('*')
                                   .in('id', fieldIds)
 
-                                if (fErr) console.error('Error fetching fields:', fErr)
+                                if (fErr) throw fErr
 
                                 if (!fieldsArr || fieldsArr.length === 0) {
-                                  window.open(currentDoc.original_pdf_url, '_blank')
+                                  window.open(originalPdfUrl, '_blank', 'noopener,noreferrer')
                                   return
                                 }
 
@@ -389,15 +391,16 @@ export default function DashboardPage() {
 
                                 // Generate signed PDF
                                 const { generateSignedPdf } = await import('@/lib/signedPdf')
-                                const signedBlob = await generateSignedPdf(currentDoc.original_pdf_url, signedFields)
+                                const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
                                 const signedUrl = URL.createObjectURL(signedBlob)
 
                                 // Fetch audit trail for THIS document only
-                                const { data: auditData } = await supabase
+                                const { data: auditData, error: auditError } = await supabase
                                   .from('audit_trail')
                                   .select('*')
                                   .eq('document_id', doc.id)
                                   .order('created_at', { ascending: true })
+                                if (auditError) throw auditError
 
                                 // Client-side safety filter
                                 const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
@@ -417,8 +420,7 @@ export default function DashboardPage() {
                                 URL.revokeObjectURL(url)
                               } catch (error) {
                                 console.error('Error generating signed PDF:', error)
-                                showNotice('The completed PDF could not be generated. The original PDF is downloading instead.', 'error')
-                                window.open(currentDoc.original_pdf_url, '_blank')
+                                showNotice('The completed PDF could not be generated. Please try again.', 'error')
                               }
                             }}
                           >
@@ -617,7 +619,8 @@ export default function DashboardPage() {
         onClose={() => setDeleteConfirm(null)}
         onConfirm={async () => {
           if (deleteConfirm) {
-            await deleteDocument(deleteConfirm.docId)
+            const deleted = await deleteDocument(deleteConfirm.docId)
+            showNotice(deleted ? 'Document deleted.' : 'The document could not be deleted. Please try again.', deleted ? 'success' : 'error')
           }
         }}
         title={t('dashboard.deleteDocument')}

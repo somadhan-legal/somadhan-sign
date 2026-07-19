@@ -8,6 +8,17 @@ drop policy if exists "Anyone can add audit entries" on public.audit_trail;
 drop policy if exists "Anyone can upload signed PDFs" on storage.objects;
 drop policy if exists "Anyone can view documents" on storage.objects;
 
+update storage.buckets set public = false where id = 'documents';
+
+drop policy if exists "Authenticated users can upload" on storage.objects;
+create policy "Users can upload own documents"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'documents'
+    and auth.role() = 'authenticated'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 drop policy if exists "Users can view own uploads" on storage.objects;
 create policy "Users can view own uploads"
   on storage.objects for select
@@ -66,6 +77,17 @@ create unique index if not exists document_viewers_document_email_unique
   on public.document_viewers (document_id, lower(btrim(viewer_email)));
 create unique index if not exists document_viewers_token_unique
   on public.document_viewers (viewing_token);
+delete from public.signature_placements placement
+where placement.id in (
+  select duplicate.id
+  from (
+    select id, row_number() over (partition by field_id order by signed_at desc, id desc) as row_number
+    from public.signature_placements
+  ) duplicate
+  where duplicate.row_number > 1
+);
+create unique index if not exists signature_placements_field_unique
+  on public.signature_placements (field_id);
 
 alter table public.document_viewers enable row level security;
 
