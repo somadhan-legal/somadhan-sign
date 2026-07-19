@@ -16,7 +16,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import Button from '@/components/ui/Button'
+import { buttonStyles } from '@/components/ui/buttonStyles'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useThemeStore } from '@/stores/themeStore'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
@@ -57,19 +57,19 @@ export default function LandingPage() {
             <a href="#security" className="landing-nav-link">{t('landing.navSecurity')}</a>
           </nav>
 
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
               {lang === 'en' ? 'বাংলা' : 'EN'}
             </button>
             <button onClick={toggleTheme} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="landing-icon-button" title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <Link to="/login"><Button variant="ghost" size="sm">{t('landing.signIn')}</Button></Link>
-            <Link to="/login?mode=signup"><Button size="sm">{t('landing.getStartedFree')}</Button></Link>
+            <Link to="/login" className={buttonStyles({ variant: 'ghost', size: 'sm' })}>{t('landing.signIn')}</Link>
+            <Link to="/login?mode=signup" className={buttonStyles({ size: 'sm' })}>{t('landing.getStartedFree')}</Link>
           </div>
 
           <button
-            className="landing-icon-button sm:hidden"
+            className="landing-icon-button landing-mobile-menu-button"
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
@@ -79,7 +79,7 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-5 sm:hidden">
+          <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-5 lg:hidden">
             <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
               {[
                 ['#product', t('landing.navProduct')],
@@ -89,8 +89,8 @@ export default function LandingPage() {
                 <a key={href} href={href} onClick={() => setMenuOpen(false)} className="rounded-xl px-3 py-3 font-semibold hover:bg-[hsl(var(--muted))]">{label}</a>
               ))}
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Link to="/login"><Button variant="outline" className="w-full">{t('landing.signIn')}</Button></Link>
-                <Link to="/login?mode=signup"><Button className="w-full">{t('nav.getStarted')}</Button></Link>
+                <Link to="/login" className={buttonStyles({ variant: 'outline', className: 'w-full' })}>{t('landing.signIn')}</Link>
+                <Link to="/login?mode=signup" className={buttonStyles({ className: 'w-full' })}>{t('nav.getStarted')}</Link>
               </div>
               <div className="mt-3 flex gap-2">
                 <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
@@ -143,11 +143,9 @@ export default function LandingPage() {
                 transition={{ duration: 0.65, delay: 0.32 }}
                 className="mt-9 flex flex-col gap-3 sm:flex-row"
               >
-                <Link to="/login?mode=signup">
-                  <Button size="lg" className="group h-13 w-full px-7 text-base sm:w-auto">
-                    {t('landing.getStartedFree')}
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </Button>
+                <Link to="/login?mode=signup" className={buttonStyles({ size: 'lg', className: 'group h-13 w-full px-7 text-base sm:w-auto' })}>
+                  {t('landing.getStartedFree')}
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <a href="#product" className="inline-flex h-13 items-center justify-center rounded-lg border border-[hsl(var(--border))] px-7 text-base font-semibold transition-colors hover:bg-[hsl(var(--muted))]">
                   {t('landing.watchProduct')}

@@ -310,6 +310,10 @@ html { scroll-behavior: smooth; }
   .landing-container { width: min(100% - 3rem, 1240px); }
 }
 
+@media (min-width: 1024px) {
+  .landing-mobile-menu-button { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

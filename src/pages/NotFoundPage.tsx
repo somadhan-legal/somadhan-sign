@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FileQuestion, Home } from 'lucide-react'
-import Button from '@/components/ui/Button'
+import { buttonStyles } from '@/components/ui/buttonStyles'
 
 export default function NotFoundPage() {
   return (
@@ -14,11 +14,9 @@ export default function NotFoundPage() {
         <p className="mt-3 text-[hsl(var(--muted-foreground))]">
           The link may be incorrect or the page may have moved.
         </p>
-        <Link to="/" className="mt-7 inline-block">
-          <Button size="lg">
-            <Home className="mr-2 h-4 w-4" />
-            Return home
-          </Button>
+        <Link to="/" className={buttonStyles({ size: 'lg', className: 'mt-7' })}>
+          <Home className="mr-2 h-4 w-4" />
+          Return home
         </Link>
       </div>
     </main>

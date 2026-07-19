@@ -27,8 +27,7 @@ import Input from '@/components/ui/Input'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
-
-type FieldType = 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
+import { getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -51,32 +50,6 @@ const fieldTypeOptions: { type: FieldType; label: string }[] = [
   { type: 'checkbox', label: 'Checkbox' },
   { type: 'text', label: 'Text' },
 ]
-
-const FIELD_SIZE_PERCENTAGES: Record<FieldType, { width: number; height: number }> = {
-  signature: { width: 20, height: 6 },
-  initials: { width: 10, height: 5 },
-  date: { width: 14, height: 4 },
-  text: { width: 18, height: 4 },
-  checkbox: { width: 4, height: 4 },
-}
-
-const getFieldPlacement = (
-  type: FieldType,
-  pointerX: number,
-  pointerY: number,
-  pageWidth: number,
-  pageHeight: number
-) => {
-  const size = FIELD_SIZE_PERCENTAGES[type]
-  const pointerXPercent = (pointerX / pageWidth) * 100
-  const pointerYPercent = (pointerY / pageHeight) * 100
-  return {
-    x: Math.max(0, Math.min(100 - size.width, pointerXPercent - size.width / 2)),
-    y: Math.max(0, Math.min(100 - size.height, pointerYPercent - size.height / 2)),
-    width: size.width,
-    height: size.height,
-  }
-}
 
 function DraggableField({ children, onStop, bounds, style, className, fieldId }: {
   children: React.ReactNode

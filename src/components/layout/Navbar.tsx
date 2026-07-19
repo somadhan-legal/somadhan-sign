@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import Button from '@/components/ui/Button'
+import { buttonStyles } from '@/components/ui/buttonStyles'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 
@@ -44,11 +45,9 @@ export default function Navbar() {
 
             {user ? (
               <div className="flex items-center gap-3">
-                <Link to="/dashboard" className="hidden md:block">
-                  <Button variant="ghost" size="sm">
-                    <FileText className="w-4 h-4 mr-2" />
-                    {t('nav.documents')}
-                  </Button>
+                <Link to="/dashboard" className={buttonStyles({ variant: 'ghost', size: 'sm', className: 'hidden md:inline-flex' })}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  {t('nav.documents')}
                 </Link>
                 <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--muted))]">
                   <User className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
@@ -63,12 +62,8 @@ export default function Navbar() {
             ) : (
               !isLoginPage && (
                 <div className="flex items-center gap-2">
-                  <Link to="/login" className="hidden sm:block">
-                    <Button variant="ghost" size="sm">{t('nav.signIn')}</Button>
-                  </Link>
-                  <Link to="/login?mode=signup">
-                    <Button size="sm" className="w-full sm:w-auto px-6">{t('nav.getStarted')}</Button>
-                  </Link>
+                  <Link to="/login" className={buttonStyles({ variant: 'ghost', size: 'sm', className: 'hidden sm:inline-flex' })}>{t('nav.signIn')}</Link>
+                  <Link to="/login?mode=signup" className={buttonStyles({ size: 'sm', className: 'w-full px-6 sm:w-auto' })}>{t('nav.getStarted')}</Link>
                 </div>
               )
             )}
