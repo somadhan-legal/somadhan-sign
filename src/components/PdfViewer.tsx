@@ -117,6 +117,8 @@ export default function PdfViewer({
   const [totalPages, setTotalPages] = useState(0)
   const [internalScale, setInternalScale] = useState(1.0)
   const [availableWidth, setAvailableWidth] = useState(680)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [loadError, setLoadError] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
   const scale = externalScale ?? internalScale
@@ -134,6 +136,7 @@ export default function PdfViewer({
 
   const onDocumentLoadSuccess = useCallback(
     ({ numPages }: { numPages: number }) => {
+      setLoadError('')
       setTotalPages(numPages)
       onTotalPages?.(numPages)
     },
@@ -173,17 +176,25 @@ export default function PdfViewer({
 
       {/* PDF pages in a continuous scroll. */}
       <Document
+        key={`${fileUrl}-${reloadKey}`}
         file={fileUrl}
         onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={(err) => console.error('PdfViewer load error:', err)}
+        onLoadError={(err) => {
+          console.error('PdfViewer load error:', err)
+          setTotalPages(0)
+          setLoadError('The PDF could not be loaded. Check your connection and try again.')
+        }}
         loading={
           <div className="w-full min-w-[260px] max-w-[680px] h-[70vh] flex items-center justify-center">
             <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
           </div>
         }
         error={
-          <div className="w-full min-w-[260px] max-w-[680px] h-[50vh] px-6 text-center flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
-            <p>Failed to load PDF. Make sure you have a valid PDF URL.</p>
+          <div role="alert" className="w-full min-w-[260px] max-w-[680px] h-[50vh] px-6 text-center flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
+            <p>{loadError || 'The PDF could not be loaded.'}</p>
+            <Button className="mt-4" variant="outline" onClick={() => { setLoadError(''); setReloadKey((key) => key + 1) }}>
+              Try again
+            </Button>
           </div>
         }
       >

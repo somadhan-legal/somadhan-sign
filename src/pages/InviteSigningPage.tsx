@@ -598,7 +598,8 @@ export default function InviteSigningPage() {
   }
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
-    const pdfUrl = signerData!.documents.original_pdf_url
+    const refreshedSigner = token ? await fetchSignerByToken(token) : null
+    const pdfUrl = refreshedSigner?.documents.original_pdf_url || signerData!.documents.original_pdf_url
     const title = signerData!.documents.title
 
     // Step 1: Generate signed PDF with overlays
@@ -849,7 +850,14 @@ export default function InviteSigningPage() {
           <h3 className="font-medium text-sm mb-3">
             {t('signee.yourFields')} ({mySignedFields.length}/{myFields.length} {t('signee.signed')})
           </h3>
-          <div className="w-full h-2 bg-[hsl(var(--muted))] rounded-full mb-3">
+          <div
+            className="w-full h-2 bg-[hsl(var(--muted))] rounded-full mb-3"
+            role="progressbar"
+            aria-label="Signing progress"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(myFields.length, 1)}
+            aria-valuenow={mySignedFields.length}
+          >
             <div
               className="h-full bg-[hsl(var(--success))] rounded-full transition-all"
               style={{
@@ -920,6 +928,7 @@ export default function InviteSigningPage() {
                 <Button
                   variant="outline"
                   size="icon"
+                  aria-label="Previous unsigned field"
                   onClick={() => navigateToField(currentFieldIndex - 1)}
                   disabled={currentFieldIndex <= 0}
                   className="h-9 w-9"
@@ -932,6 +941,7 @@ export default function InviteSigningPage() {
                 <Button
                   variant="outline"
                   size="icon"
+                  aria-label="Next unsigned field"
                   onClick={() => navigateToField(currentFieldIndex + 1)}
                   disabled={currentFieldIndex >= allMyUnsigned.length - 1}
                   className="h-9 w-9"
@@ -962,6 +972,8 @@ export default function InviteSigningPage() {
           
           {/* Collapse button */}
           <button
+            type="button"
+            aria-label="Collapse signing panel"
             onClick={() => setLeftPanelCollapsed(true)}
             className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer mt-2"
             title="Collapse panel"
@@ -975,6 +987,8 @@ export default function InviteSigningPage() {
       {/* Expand button when collapsed */}
       {leftPanelCollapsed && (
         <button
+          type="button"
+          aria-label="Expand signing panel"
           onClick={() => setLeftPanelCollapsed(false)}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
           title="Expand panel"
@@ -987,10 +1001,10 @@ export default function InviteSigningPage() {
       <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center relative">
         {/* Language & Theme toggles - top right */}
         <div className="fixed top-3 right-4 z-40 flex items-center gap-1 bg-[hsl(var(--card))]/90 backdrop-blur rounded-lg border border-[hsl(var(--border))] px-1 py-0.5 shadow-sm">
-          <Button variant="ghost" size="icon" onClick={toggleLang} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
+          <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
             <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggle} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-11 w-11">
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-11 w-11">
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </div>

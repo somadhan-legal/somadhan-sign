@@ -76,6 +76,18 @@ serve(async (req) => {
     }
 
     const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, ccEmails, type, downloadUrl: requestedDownloadUrl, pdfBase64, viewLink, signeeEmails } = await req.json()
+    if (String(documentTitle || '').length > 200 || String(senderName || '').length > 200 || String(message || '').length > 5000) {
+      return new Response(JSON.stringify({ error: 'Email content is too long' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
+    if ((Array.isArray(to) && to.length > 100) || (Array.isArray(ccEmails) && ccEmails.length > 100) || (Array.isArray(signeeEmails) && signeeEmails.length > 100)) {
+      return new Response(JSON.stringify({ error: 'Too many email recipients' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      })
+    }
     const isCompletion = type === 'completion'
     const isCcNotification = type === 'cc-notification'
 
@@ -301,7 +313,6 @@ serve(async (req) => {
       </div>`
 
     // --- CC Notification email (view-only) ---
-    console.log('CC notification signeeEmails:', JSON.stringify(signeeEmails))
 
     let signeeListHtml = ''
     if (signeeEmails && Array.isArray(signeeEmails) && signeeEmails.length > 0) {
@@ -429,8 +440,6 @@ serve(async (req) => {
       ]
     }
 
-    console.log('Sending email to:', to, ccEmails ? `(CC: ${ccEmails.join(', ')})` : '')
-
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -441,8 +450,6 @@ serve(async (req) => {
     })
 
     const data = await res.json()
-    console.log('Resend API response:', JSON.stringify(data))
-
     if (!res.ok) {
       console.error('Resend API Error:', data)
       return new Response(
@@ -453,6 +460,8 @@ serve(async (req) => {
         },
       )
     }
+
+    console.log('Email accepted by provider:', data?.id || 'unknown')
 
     return new Response(
       JSON.stringify({ success: true }),

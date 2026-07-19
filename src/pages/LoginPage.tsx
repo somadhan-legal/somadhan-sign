@@ -7,6 +7,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
+import { getAuthErrorMessage } from '@/lib/authError'
 
 type AuthMode = 'login' | 'signup' | 'verify-otp' | 'forgot-password'
 
@@ -97,7 +98,7 @@ export default function LoginPage() {
           break
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(getAuthErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -110,7 +111,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Google sign-in could not be started.')
+      setError(getAuthErrorMessage(err, 'Google sign-in could not be started. Please try again.'))
       setSubmitting(false)
     }
   }
@@ -297,7 +298,7 @@ export default function LoginPage() {
                       setResendTimer(60)
                       setOtpAttempts([...recentAttempts, now])
                     } catch (err: unknown) {
-                      setError(err instanceof Error ? err.message : 'Failed to resend')
+                      setError(getAuthErrorMessage(err, 'The verification code could not be resent. Please try again.'))
                     } finally {
                       setSubmitting(false)
                     }
@@ -424,7 +425,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 )}
 

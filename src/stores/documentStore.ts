@@ -12,7 +12,11 @@ import type {
   SigningPackageResult,
 } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
-import { createOwnerDocumentUrl, getDocumentStoragePath } from '@/lib/documentStorage'
+import {
+  createOwnerDocumentUrl,
+  getDocumentStoragePath,
+  getLegacyPublicDocumentUrl,
+} from '@/lib/documentStorage'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -79,9 +83,22 @@ const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
 const isMissingEdgeFunction = (error: unknown) => {
-  const status = (error as { context?: { status?: number } } | null)?.context?.status
-  return status === 404 || (error instanceof Error && /not found/i.test(error.message))
+  const edgeError = error as { context?: { status?: number }; name?: string; message?: string } | null
+  return edgeError?.context?.status === 404
+    || edgeError?.name === 'FunctionsFetchError'
+    || /not found|failed to send a request/i.test(edgeError?.message || '')
 }
+
+const normalizeSigningPackageUrl = (signingPackage: SigningPackageResult): SigningPackageResult => ({
+  ...signingPackage,
+  signer: {
+    ...signingPackage.signer,
+    documents: {
+      ...signingPackage.signer.documents,
+      original_pdf_url: getLegacyPublicDocumentUrl(signingPackage.signer.documents.original_pdf_url),
+    },
+  },
+})
 
 const fetchSigningAccessPackage = async (token: string): Promise<SigningPackageResult | null | undefined> => {
   const { data, error } = await supabase.functions.invoke('get-document-access', {
@@ -179,7 +196,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       uploadedPath = fileName
       const { error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileName, file, { contentType: 'application/pdf', upsert: true })
+        .upload(fileName, file, { contentType: 'application/pdf', upsert: false })
       if (uploadError) throw uploadError
 
       const { data, error } = await supabase
@@ -503,10 +520,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const { data: signingPackage, error: packageError } = await supabase
         .rpc('get_signing_package', { p_token: signingToken })
       if (!packageError) {
+        const normalizedPackage = signingPackage ? normalizeSigningPackageUrl(signingPackage) : null
         set({
-          signatureFields: signingPackage?.fields || [],
-          placements: signingPackage?.placements || [],
-          auditTrail: signingPackage?.audit_trail || [],
+          signatureFields: normalizedPackage?.fields || [],
+          placements: normalizedPackage?.placements || [],
+          auditTrail: normalizedPackage?.audit_trail || [],
         })
         return
       }
@@ -573,12 +591,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .rpc('get_signing_package', { p_token: token })
     if (!packageError) {
       if (!signingPackage?.signer) return null
+      const normalizedPackage = normalizeSigningPackageUrl(signingPackage)
       set({
-        signatureFields: signingPackage.fields || [],
-        placements: signingPackage.placements || [],
-        auditTrail: signingPackage.audit_trail || [],
+        signatureFields: normalizedPackage.fields || [],
+        placements: normalizedPackage.placements || [],
+        auditTrail: normalizedPackage.audit_trail || [],
       })
-      return signingPackage.signer
+      return normalizedPackage.signer
     }
     if (!isMissingRpc(packageError)) {
       console.error('Error fetching signing package:', packageError)
@@ -597,7 +616,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       get().fetchPlacements(data.document_id),
       get().fetchAuditTrail(data.document_id),
     ])
-    return data
+    return {
+      ...data,
+      documents: {
+        ...data.documents,
+        original_pdf_url: getLegacyPublicDocumentUrl(data.documents.original_pdf_url),
+      },
+    }
   },
 
   updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getDocumentStoragePath } from './documentStorage'
+import { getDocumentStoragePath, getLegacyPublicDocumentUrl } from './documentStorage'
 
 describe('getDocumentStoragePath', () => {
   it('keeps a private storage path unchanged', () => {
@@ -22,5 +22,18 @@ describe('getDocumentStoragePath', () => {
     expect(getDocumentStoragePath('https://example.com/file.pdf')).toBeNull()
     expect(getDocumentStoragePath('')).toBeNull()
     expect(getDocumentStoragePath(null)).toBeNull()
+  })
+})
+
+describe('getLegacyPublicDocumentUrl', () => {
+  it('keeps an existing browser URL unchanged', () => {
+    const url = 'https://project.supabase.co/storage/v1/object/public/documents/file.pdf'
+    expect(getLegacyPublicDocumentUrl(url)).toBe(url)
+  })
+
+  it('turns a legacy storage path into a public URL during staged rollout', () => {
+    expect(getLegacyPublicDocumentUrl('user-id/file.pdf')).toContain(
+      '/storage/v1/object/public/documents/user-id/file.pdf',
+    )
   })
 })

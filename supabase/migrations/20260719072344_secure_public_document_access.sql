@@ -13,24 +13,35 @@ update storage.buckets set public = false where id = 'documents';
 drop policy if exists "Authenticated users can upload" on storage.objects;
 create policy "Users can upload own documents"
   on storage.objects for insert
+  to authenticated
   with check (
     bucket_id = 'documents'
-    and auth.role() = 'authenticated'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
 drop policy if exists "Users can view own uploads" on storage.objects;
 create policy "Users can view own uploads"
   on storage.objects for select
+  to authenticated
   using (
     bucket_id = 'documents'
-    and auth.role() = 'authenticated'
-    and (storage.foldername(name))[1] = auth.uid()::text
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists "Users can update own uploads" on storage.objects;
+drop policy if exists "Users can delete own uploads" on storage.objects;
+create policy "Users can delete own uploads"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'documents'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
 drop policy if exists "Owner can manage placements" on public.signature_placements;
 create policy "Owner can manage placements"
   on public.signature_placements for all
+  to authenticated
   using (
     exists (
       select 1 from public.documents d
@@ -48,6 +59,7 @@ drop policy if exists "Owner can manage audit trail" on public.audit_trail;
 drop policy if exists "Owner can view audit trail" on public.audit_trail;
 create policy "Owner can view audit trail"
   on public.audit_trail for select
+  to authenticated
   using (
     exists (
       select 1 from public.documents d
@@ -58,6 +70,7 @@ create policy "Owner can view audit trail"
 drop policy if exists "Owner can add audit entries" on public.audit_trail;
 create policy "Owner can add audit entries"
   on public.audit_trail for insert
+  to authenticated
   with check (
     exists (
       select 1 from public.documents d
@@ -90,10 +103,13 @@ create unique index if not exists signature_placements_field_unique
   on public.signature_placements (field_id);
 
 alter table public.document_viewers enable row level security;
+revoke all on table public.document_viewers from anon, authenticated;
+grant select, insert, update, delete on table public.document_viewers to authenticated;
 
 drop policy if exists "Owner can manage document viewers" on public.document_viewers;
 create policy "Owner can manage document viewers"
   on public.document_viewers for all
+  to authenticated
   using (
     exists (
       select 1 from public.documents d

@@ -30,17 +30,34 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   useEffect(() => {
     if (canvasRef.current && activeTab === 'draw') {
       const canvas = canvasRef.current
+      let previousCssWidth = Math.max(canvas.offsetWidth, 1)
+      let previousCssHeight = Math.max(canvas.offsetHeight, 1)
       const resizeCanvas = (preserveStrokes = true) => {
         const pad = padRef.current
         const strokes = preserveStrokes && pad ? pad.toData() : []
         const ratio = Math.max(window.devicePixelRatio || 1, 1)
-        const width = Math.max(Math.round(canvas.offsetWidth * ratio), 1)
-        const height = Math.max(Math.round(canvas.offsetHeight * ratio), 1)
+        const cssWidth = Math.max(canvas.offsetWidth, 1)
+        const cssHeight = Math.max(canvas.offsetHeight, 1)
+        const width = Math.max(Math.round(cssWidth * ratio), 1)
+        const height = Math.max(Math.round(cssHeight * ratio), 1)
         if (canvas.width === width && canvas.height === height) return
         canvas.width = width
         canvas.height = height
         canvas.getContext('2d')?.scale(ratio, ratio)
-        if (strokes.length > 0) pad?.fromData(strokes)
+        if (strokes.length > 0) {
+          const scaleX = cssWidth / previousCssWidth
+          const scaleY = cssHeight / previousCssHeight
+          pad?.fromData(strokes.map((stroke) => ({
+            ...stroke,
+            points: stroke.points.map((point) => ({
+              ...point,
+              x: point.x * scaleX,
+              y: point.y * scaleY,
+            })),
+          })))
+        }
+        previousCssWidth = cssWidth
+        previousCssHeight = cssHeight
       }
 
       resizeCanvas(false)

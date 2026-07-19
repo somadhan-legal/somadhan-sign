@@ -135,6 +135,7 @@ export default function DocumentEditorPage() {
   const [ccEmails, setCcEmails] = useState('')
   const [showSendConfirm, setShowSendConfirm] = useState(false)
   const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
+  const [sendFormError, setSendFormError] = useState('')
   const [countdown, setCountdown] = useState(5)
   const [placementPreview, setPlacementPreview] = useState<{
     pageNumber: number
@@ -462,13 +463,22 @@ export default function DocumentEditorPage() {
 
   const handleSendForSigning = async () => {
     if (!id || !user) return
+    const senderName = user.user_metadata?.full_name || user.email || 'A user'
+    const enteredCcEmails = ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
+    const invalidCcEmails = enteredCcEmails.filter((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    if (invalidCcEmails.length > 0) {
+      setSendFormError(`Check these CC addresses: ${invalidCcEmails.join(', ')}`)
+      return
+    }
+
+    setSendFormError('')
     setShowSendConfirm(false)
     setSaving(true)
-    
-    const senderName = user.user_metadata?.full_name || user.email || 'A user'
+
     const signerEmailSet = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
+    if (user.email) signerEmailSet.add(user.email.trim().toLowerCase())
     const ccEmailsList = Array.from(new Set(
-      ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
+      enteredCcEmails
     )).filter((email) => !signerEmailSet.has(email))
     
     try {
@@ -572,7 +582,7 @@ export default function DocumentEditorPage() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.signers')}</h3>
             {!isLocked && (
-              <button onClick={openAddSignerModal} className="p-1 hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+              <button type="button" onClick={openAddSignerModal} aria-label="Add signer" className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                 <UserPlus className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
               </button>
             )}
@@ -589,6 +599,8 @@ export default function DocumentEditorPage() {
             <>
               {signers.length > 3 && (
                 <button
+                  type="button"
+                  aria-label="Scroll signer list up"
                   onClick={() => signerListRef.current?.scrollBy({ top: -60, behavior: 'smooth' })}
                   className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
@@ -636,18 +648,22 @@ export default function DocumentEditorPage() {
                     {!isLocked && (
                       <div className="shrink-0 flex items-center gap-0.5 opacity-100 transition-opacity relative lg:opacity-0 lg:group-hover:opacity-100">
                         <button
+                          type="button"
+                          aria-label={`Edit ${signer.signer_name || signer.signer_email}`}
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
-                          className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
+                          className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
                           title="Edit Signer"
                         >
                           <PenTool className="w-3 h-3" />
                         </button>
                         <button
+                          type="button"
+                          aria-label={`Remove ${signer.signer_name || signer.signer_email}`}
                           onClick={(e) => {
                             e.stopPropagation()
                             setDeleteSignerId(signer.id)
                           }}
-                          className="p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
+                          className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
                           title="Remove Signer"
                         >
                           <X className="w-3 h-3" />
@@ -682,6 +698,8 @@ export default function DocumentEditorPage() {
               </div>
               {signers.length > 3 && (
                 <button
+                  type="button"
+                  aria-label="Scroll signer list down"
                   onClick={() => signerListRef.current?.scrollBy({ top: 60, behavior: 'smooth' })}
                   className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
@@ -750,6 +768,8 @@ export default function DocumentEditorPage() {
             </>
           )}
           <button
+            type="button"
+            aria-label="Collapse field panel"
             onClick={() => setLeftPanelCollapsed(true)}
             className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer"
             title="Collapse panel"
@@ -763,6 +783,8 @@ export default function DocumentEditorPage() {
       {/* Expand button when left panel is collapsed */}
       {leftPanelCollapsed && (
         <button
+          type="button"
+          aria-label="Expand field panel"
           onClick={() => setLeftPanelCollapsed(false)}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
           title="Expand panel"
@@ -1111,8 +1133,10 @@ export default function DocumentEditorPage() {
                 label={t('editor.ccEmail')}
                 placeholder="e.g., manager@company.com, legal@company.com"
                 value={ccEmails}
-                onChange={(e) => setCcEmails(e.target.value)}
+                onChange={(e) => { setCcEmails(e.target.value); setSendFormError('') }}
+                maxLength={1000}
               />
+              {sendFormError && <p role="alert" className="text-sm font-medium text-[hsl(var(--destructive))]">{sendFormError}</p>}
               <div>
                 <label className="block text-sm font-medium mb-1">{t('editor.messageForSignees')}</label>
                 <textarea
@@ -1120,6 +1144,7 @@ export default function DocumentEditorPage() {
                   value={sendMessage}
                   onChange={(e) => setSendMessage(e.target.value)}
                   placeholder="Message for signees (optional)"
+                  maxLength={2000}
                 />
               </div>
               <div className="flex gap-3">

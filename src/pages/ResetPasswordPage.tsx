@@ -8,6 +8,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import { getAuthErrorMessage } from '@/lib/authError'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -51,7 +52,7 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t('reset.passwordTooShort'))
       return
     }
@@ -66,7 +67,7 @@ export default function ResetPasswordPage() {
       await updatePassword(password)
       setSuccess(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('reset.failedToUpdate'))
+      setError(getAuthErrorMessage(err, t('reset.failedToUpdate')))
     } finally {
       setSubmitting(false)
     }
@@ -98,7 +99,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] p-4">
       <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-md w-full shadow-xl">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <a href="https://sign.somadhan.com" target="_blank" rel="noopener noreferrer">
+          <a href="/" aria-label="Somadhan Sign home">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
         </div>
@@ -140,7 +141,7 @@ export default function ResetPasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
             />
             <button
               type="button"
@@ -161,7 +162,7 @@ export default function ResetPasswordPage() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={8}
           />
 
           <Button type="submit" className="w-full h-11" disabled={submitting}>

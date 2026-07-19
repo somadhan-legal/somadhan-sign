@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -53,11 +53,20 @@ export default function DashboardPage() {
   const itemsPerPage = 5
   const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
   const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
+  const noticeTimerRef = useRef<number | null>(null)
 
   const showNotice = (message: string, kind: 'success' | 'error' | 'info' = 'info') => {
     setNotice({ message, kind })
-    window.setTimeout(() => setNotice(null), 4500)
+    if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNotice(null)
+      noticeTimerRef.current = null
+    }, 4500)
   }
+
+  useEffect(() => () => {
+    if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
+  }, [])
 
   // Reset upload form state
   const resetUploadForm = () => {
@@ -90,6 +99,12 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!file || !user) return
 
+    const normalizedTitle = title.trim()
+    if (!normalizedTitle) {
+      setUploadError('Enter a document title.')
+      return
+    }
+
     const validationError = await validatePdfFile(file)
     if (validationError) {
       setUploadError(validationError)
@@ -99,7 +114,7 @@ export default function DashboardPage() {
     setUploadError('')
     setUploading(true)
     const doc = await createDocument(
-      { title, original_pdf_url: '', created_by: user.id },
+      { title: normalizedTitle, original_pdf_url: '', created_by: user.id },
       file
     )
     setUploading(false)
@@ -123,6 +138,11 @@ export default function DashboardPage() {
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedDocs = filteredDocs.slice(startIndex, endIndex)
+
+  useEffect(() => setCurrentPage(1), [searchQuery, filterStatus])
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, Math.max(totalPages, 1)))
+  }, [totalPages])
 
   const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
     draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },

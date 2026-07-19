@@ -16,6 +16,11 @@ export function getDocumentStoragePath(reference: string | null | undefined): st
   }
 }
 
+export function getLegacyPublicDocumentUrl(reference: string): string {
+  if (reference.includes('://')) return reference
+  return supabase.storage.from(DOCUMENT_BUCKET).getPublicUrl(reference).data.publicUrl
+}
+
 export async function createOwnerDocumentUrl(reference: string): Promise<string> {
   const path = getDocumentStoragePath(reference)
   if (!path) throw new Error('The stored document reference is invalid.')

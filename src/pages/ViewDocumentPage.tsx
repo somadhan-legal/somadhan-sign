@@ -10,6 +10,7 @@ import { Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } fr
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
+import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
 
 interface DocumentData {
   id: string
@@ -28,8 +29,10 @@ const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
 const isMissingEdgeFunction = (error: unknown) => {
-  const status = (error as { context?: { status?: number } } | null)?.context?.status
-  return status === 404 || (error instanceof Error && /not found/i.test(error.message))
+  const edgeError = error as { context?: { status?: number }; name?: string; message?: string } | null
+  return edgeError?.context?.status === 404
+    || edgeError?.name === 'FunctionsFetchError'
+    || /not found|failed to send a request/i.test(edgeError?.message || '')
 }
 
 export default function ViewDocumentPage() {
@@ -80,7 +83,10 @@ export default function ViewDocumentPage() {
           setLoading(false)
           return
         }
-        setDocument(viewerPackage.document)
+        setDocument({
+          ...viewerPackage.document,
+          original_pdf_url: getLegacyPublicDocumentUrl(viewerPackage.document.original_pdf_url),
+        })
         setSigners(viewerPackage.signers || [])
         setLoading(false)
         return
@@ -106,7 +112,7 @@ export default function ViewDocumentPage() {
       setDocument({
         id: docData.id,
         title: docData.title,
-        original_pdf_url: docData.original_pdf_url,
+        original_pdf_url: getLegacyPublicDocumentUrl(docData.original_pdf_url),
         status: docData.status,
       })
 
@@ -188,7 +194,14 @@ export default function ViewDocumentPage() {
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-3">
             {lang === 'bn' ? 'স্বাক্ষর অগ্রগতি' : 'Signing Progress'}
           </h3>
-          <div className="w-full bg-[hsl(var(--muted))] rounded-full h-2 mb-3">
+          <div
+            className="w-full bg-[hsl(var(--muted))] rounded-full h-2 mb-3"
+            role="progressbar"
+            aria-label="Document signing progress"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(totalSigners, 1)}
+            aria-valuenow={signedCount}
+          >
             <div
               className="bg-[hsl(var(--primary))] h-2 rounded-full transition-all"
               style={{ width: `${totalSigners > 0 ? (signedCount / totalSigners) * 100 : 0}%` }}

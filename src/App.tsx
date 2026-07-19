@@ -1,5 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
@@ -49,17 +50,18 @@ export default function App() {
   }, [initialize])
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <Routes>
         {/* Public signing route. No account authentication is required. */}
         <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />
         {/* Public view-only route for CC recipients. No account authentication is required. */}
         <Route path="/view/:documentId" element={<Suspense fallback={<PageLoader />}><ViewDocumentPage /></Suspense>} />
         <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
+        <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
         <Route path="/" element={<HomeRedirect />} />
 
         <Route element={<Layout />}>
-          <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
           <Route
             path="/dashboard"
             element={
@@ -86,7 +88,8 @@ export default function App() {
           />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </MotionConfig>
   )
 }

@@ -197,7 +197,7 @@ const translations: Record<string, Record<Language, string>> = {
   },
   'reset.goToLogin': { en: 'Go to Login', bn: 'লগইন পেজে যান' },
   'reset.backToLogin': { en: 'Back to Login', bn: 'লগইনে ফিরে যান' },
-  'reset.passwordTooShort': { en: 'Password must be at least 6 characters.', bn: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।' },
+  'reset.passwordTooShort': { en: 'Password must be at least 8 characters.', bn: 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।' },
   'reset.passwordsDoNotMatch': { en: 'Passwords do not match.', bn: 'পাসওয়ার্ড মিলছে না।' },
   'reset.linkExpired': {
     en: 'This password reset link has expired or is invalid. Please request a new one.',
