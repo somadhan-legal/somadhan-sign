@@ -27,6 +27,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate } from '@/lib/utils'
+import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 
@@ -261,7 +262,6 @@ export default function InviteSigningPage() {
     }
     setSignatureData(data)
     await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
-    await fetchPlacements(documentId, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -288,7 +288,6 @@ export default function InviteSigningPage() {
     }
     setInitialsData(data)
     await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
-    await fetchPlacements(documentId, token)
     setSubmitting(false)
     await checkCompletion()
   }
@@ -324,18 +323,7 @@ export default function InviteSigningPage() {
     setTappedFieldId(null)
     setSubmitting(false)
 
-    // Re-fetch placements to find accurate next unsigned
-    await fetchPlacements(documentId, token)
-    const latestPlacements = useDocumentStore.getState().placements
-    const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
-    const remainingUnsigned = myFields.filter((f) => !latestSignedIds.has(f.id) && f.field_type === 'signature')
-    if (remainingUnsigned.length > 0) {
-      const nextField = remainingUnsigned[0]
-      const nextIdx = allMyUnsigned.findIndex((f) => f.id === nextField.id)
-      if (nextIdx >= 0) navigateToField(nextIdx)
-    }
-
-    await checkCompletion()
+    await checkCompletion(fieldId)
   }
 
   const handleDateField = async (fieldId: string, dateValue: string) => {
@@ -359,7 +347,7 @@ export default function InviteSigningPage() {
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
     setSubmitting(false)
-    await checkCompletion()
+    await checkCompletion(fieldId)
   }
 
   const handleCheckboxField = async (fieldId: string) => {
@@ -382,7 +370,7 @@ export default function InviteSigningPage() {
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
     setSubmitting(false)
-    await checkCompletion()
+    await checkCompletion(fieldId)
   }
 
   const handleTextFieldSubmit = async (fieldId: string) => {
@@ -407,16 +395,23 @@ export default function InviteSigningPage() {
     await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
     setTextInputValue('')
     setSubmitting(false)
-    await checkCompletion()
+    await checkCompletion(fieldId)
   }
 
-  const checkCompletion = async () => {
+  const checkCompletion = async (completedFieldId?: string) => {
     if (!documentId || !signerData) return
     // Re-fetch placements to get accurate count
     await fetchPlacements(documentId, token)
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
+    const nextField = getNextUnsignedField(myFields, latestSignedIds, completedFieldId)
+    if (nextField) {
+      setCurrentFieldIndex(remaining.findIndex((field) => field.id === nextField.id))
+      scrollToField(nextField)
+      return
+    }
+
     if (remaining.length === 0) {
       const statusUpdated = await updateSignerStatus(signerData.id, 'signed', token)
       if (!statusUpdated) {
@@ -1240,6 +1235,7 @@ export default function InviteSigningPage() {
                           aria-label="Field text"
                           value={textInputValue}
                           onChange={(e) => setTextInputValue(e.target.value)}
+                          maxLength={1000}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
                           placeholder="Type here..."
@@ -1342,7 +1338,7 @@ export default function InviteSigningPage() {
         <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
           <span>{actionError}</span>
           {allMyUnsigned.length === 0 && (
-            <button type="button" onClick={checkCompletion} className="shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
+            <button type="button" onClick={() => checkCompletion()} className="shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
               Try again
             </button>
           )}
