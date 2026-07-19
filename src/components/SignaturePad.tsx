@@ -5,7 +5,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useThemeStore } from '@/stores/themeStore'
-import { validateSignatureImage } from '@/lib/fileValidation'
+import { normalizeSignatureImage, validateSignatureImage } from '@/lib/fileValidation'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
@@ -20,10 +20,12 @@ type TabType = 'draw' | 'type' | 'upload'
 export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel, saveLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
+  const uploadRequestRef = useRef(0)
   const [activeTab, setActiveTab] = useState<TabType>('draw')
   const [typedName, setTypedName] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
+  const [processingUpload, setProcessingUpload] = useState(false)
   const { t } = useLanguageStore()
   const { isDark } = useThemeStore()
 
@@ -140,21 +142,32 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     onSave(dataUrl, type)
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const requestId = ++uploadRequestRef.current
     const file = e.target.files?.[0]
     if (!file) return
     const validationError = validateSignatureImage(file)
     if (validationError) {
       setUploadedImage(null)
       setUploadError(validationError)
+      setProcessingUpload(false)
       e.target.value = ''
       return
     }
     setUploadError('')
-    const reader = new FileReader()
-    reader.onload = () => setUploadedImage(reader.result as string)
-    reader.onerror = () => setUploadError('The signature image could not be read.')
-    reader.readAsDataURL(file)
+    setUploadedImage(null)
+    setProcessingUpload(true)
+    try {
+      const normalizedImage = await normalizeSignatureImage(file)
+      if (requestId === uploadRequestRef.current) setUploadedImage(normalizedImage)
+    } catch {
+      if (requestId === uploadRequestRef.current) {
+        setUploadedImage(null)
+        setUploadError('The signature image could not be prepared. Try a smaller image.')
+      }
+    } finally {
+      if (requestId === uploadRequestRef.current) setProcessingUpload(false)
+    }
   }
 
   const handleApplyToAll = () => {
@@ -266,11 +279,11 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="flex-1" onClick={handleSave}>
+        <Button variant="outline" className="flex-1" onClick={handleSave} disabled={processingUpload}>
           {saveLabel || t('signee.saveSignature') || 'Save'}
         </Button>
         {showApplyAll && onApplyToAll && (
-          <Button className="flex-1" onClick={handleApplyToAll}>
+          <Button className="flex-1" onClick={handleApplyToAll} disabled={processingUpload}>
             {applyAllLabel || t('signee.applyToAll')}
           </Button>
         )}
