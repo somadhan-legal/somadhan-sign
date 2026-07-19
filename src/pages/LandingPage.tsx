@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -34,7 +34,29 @@ export default function LandingPage() {
   const { t, lang, toggle: toggleLang } = useLanguageStore()
   const { isDark, toggle: toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const logo = isDark ? SomadhanLogoDark : SomadhanLogoLight
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const desktopQuery = window.matchMedia('(min-width: 1024px)')
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setMenuOpen(false)
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus())
+    }
+    const handleDesktopChange = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuOpen(false)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    desktopQuery.addEventListener('change', handleDesktopChange)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      desktopQuery.removeEventListener('change', handleDesktopChange)
+    }
+  }, [menuOpen])
 
   const features = [
     { icon: MousePointer2, title: t('landing.feat.fields'), copy: t('landing.feat.fieldsDesc'), tone: 'coral' },
@@ -69,10 +91,12 @@ export default function LandingPage() {
           </div>
 
           <button
+            ref={menuButtonRef}
             className="landing-icon-button landing-mobile-menu-button"
             onClick={() => setMenuOpen((open) => !open)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
+            aria-controls="landing-mobile-navigation"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -80,7 +104,7 @@ export default function LandingPage() {
 
         {menuOpen && (
           <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-5 lg:hidden">
-            <nav className="flex flex-col gap-1" aria-label="Mobile navigation">
+            <nav id="landing-mobile-navigation" className="flex flex-col gap-1" aria-label="Mobile navigation">
               {[
                 ['#product', t('landing.navProduct')],
                 ['#capabilities', t('landing.navCapabilities')],
