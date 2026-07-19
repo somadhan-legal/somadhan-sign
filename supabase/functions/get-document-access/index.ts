@@ -62,6 +62,14 @@ Deno.serve(async (req) => {
       if (!path) return jsonResponse({ error: 'The document file reference is invalid' }, 500)
       const { data: signedUrl, error: signedUrlError } = await serviceClient.storage.from('documents').createSignedUrl(path, 60 * 60)
       if (signedUrlError || !signedUrl?.signedUrl) throw signedUrlError || new Error('Could not create document URL')
+      let finalPdfUrl: string | null = null
+      if (document.status === 'completed' && document.final_pdf_url) {
+        const finalPath = storagePath(document.final_pdf_url)
+        if (!finalPath) return jsonResponse({ error: 'The final document file reference is invalid' }, 500)
+        const { data: finalSignedUrl, error: finalSignedUrlError } = await serviceClient.storage.from('documents').createSignedUrl(finalPath, 60 * 60)
+        if (finalSignedUrlError || !finalSignedUrl?.signedUrl) throw finalSignedUrlError || new Error('Could not create final document URL')
+        finalPdfUrl = finalSignedUrl.signedUrl
+      }
 
       const normalizedEmail = signer.signer_email.toLowerCase()
       return jsonResponse({
@@ -71,8 +79,9 @@ Deno.serve(async (req) => {
             documents: {
               title: document.title,
               original_pdf_url: signedUrl.signedUrl,
+              final_pdf_url: finalPdfUrl,
               status: document.status,
-              final_pdf_available: Boolean(document.final_pdf_url),
+              final_pdf_available: Boolean(finalPdfUrl),
             },
           },
           fields: (fields || []).map((field) => ({
@@ -98,7 +107,7 @@ Deno.serve(async (req) => {
     if (!viewer) return jsonResponse({ error: 'Document not found or access denied' }, 404)
 
     const [{ data: document, error: documentError }, { data: signers, error: signersError }] = await Promise.all([
-      serviceClient.from('documents').select('id, title, original_pdf_url, status').eq('id', viewer.document_id).maybeSingle(),
+      serviceClient.from('documents').select('id, title, original_pdf_url, final_pdf_url, status').eq('id', viewer.document_id).maybeSingle(),
       serviceClient.from('document_signers').select('signer_email, signer_name, status').eq('document_id', viewer.document_id).order('created_at'),
     ])
     if (documentError || signersError) throw documentError || signersError
@@ -108,10 +117,18 @@ Deno.serve(async (req) => {
     if (!path) return jsonResponse({ error: 'The document file reference is invalid' }, 500)
     const { data: signedUrl, error: signedUrlError } = await serviceClient.storage.from('documents').createSignedUrl(path, 60 * 60)
     if (signedUrlError || !signedUrl?.signedUrl) throw signedUrlError || new Error('Could not create document URL')
+    let finalPdfUrl: string | null = null
+    if (document.status === 'completed' && document.final_pdf_url) {
+      const finalPath = storagePath(document.final_pdf_url)
+      if (!finalPath) return jsonResponse({ error: 'The final document file reference is invalid' }, 500)
+      const { data: finalSignedUrl, error: finalSignedUrlError } = await serviceClient.storage.from('documents').createSignedUrl(finalPath, 60 * 60)
+      if (finalSignedUrlError || !finalSignedUrl?.signedUrl) throw finalSignedUrlError || new Error('Could not create final document URL')
+      finalPdfUrl = finalSignedUrl.signedUrl
+    }
 
     return jsonResponse({
       viewerPackage: {
-        document: { ...document, original_pdf_url: signedUrl.signedUrl },
+        document: { ...document, original_pdf_url: signedUrl.signedUrl, final_pdf_url: finalPdfUrl },
         signers: signers || [],
       },
     })

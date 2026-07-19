@@ -28,6 +28,7 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
+import { downloadBlob, safePdfFilename } from '@/lib/download'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 
@@ -164,6 +165,10 @@ export default function InviteSigningPage() {
       addAuditEntry(signerData.document_id, 'Document Viewed', signerData.signer_email, signerData.signer_name, undefined, token)
     }
   }, [signerData, addAuditEntry, token])
+
+  useEffect(() => () => {
+    if (auditPdfUrl) URL.revokeObjectURL(auditPdfUrl)
+  }, [auditPdfUrl])
 
   const userEmail = signerData?.signer_email || ''
   const userName = signerData?.signer_name || null
@@ -485,6 +490,8 @@ export default function InviteSigningPage() {
         // Generate signed PDF + audit trail combined (non-blocking for email)
         if (signerData.documents.original_pdf_url && completionData?.fields && completionData?.placements) {
           try {
+            const refreshedAccess = token ? await fetchSignerByToken(token) : null
+            const completionPdfUrl = refreshedAccess?.documents.original_pdf_url || signerData.documents.original_pdf_url
             const signedFields: SignedField[] = completionData.placements.map((p) => {
               const field = completionData.fields?.find((candidate) => candidate.id === p.field_id)
               return {
@@ -499,7 +506,7 @@ export default function InviteSigningPage() {
             })
             
             const { generateSignedPdf } = await import('@/lib/signedPdf')
-            const signedBlob = await generateSignedPdf(signerData.documents.original_pdf_url, signedFields)
+            const signedBlob = await generateSignedPdf(completionPdfUrl, signedFields)
             
             let finalBlob = signedBlob
             if (completionData.audit_trail && completionData.audit_trail.length > 0) {
@@ -651,6 +658,11 @@ export default function InviteSigningPage() {
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
     const refreshedSigner = token ? await fetchSignerByToken(token) : null
+    if (refreshedSigner?.documents.final_pdf_url) {
+      const response = await fetch(refreshedSigner.documents.final_pdf_url)
+      if (!response.ok) throw new Error('The final PDF could not be downloaded.')
+      return response.blob()
+    }
     const pdfUrl = refreshedSigner?.documents.original_pdf_url || signerData!.documents.original_pdf_url
     const title = signerData!.documents.title
 
@@ -668,12 +680,11 @@ export default function InviteSigningPage() {
 
     // Step 3: Append audit trail pages to the signed PDF
     const { generateAuditPdf } = await import('@/lib/auditPdf')
-    const finalBlob = await generateAuditPdf(basePdfUrl, filteredAudit, title)
-
-    // Cleanup temp blob URL
-    if (basePdfUrl !== pdfUrl) URL.revokeObjectURL(basePdfUrl)
-
-    return finalBlob
+    try {
+      return await generateAuditPdf(basePdfUrl, filteredAudit, title)
+    } finally {
+      if (basePdfUrl !== pdfUrl) URL.revokeObjectURL(basePdfUrl)
+    }
   }
 
   const handleViewDocument = async () => {
@@ -698,14 +709,7 @@ export default function InviteSigningPage() {
     setPdfError('')
     try {
       const blob = await buildSignedAuditPdf()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${signerData.documents.title} - Signed.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      downloadBlob(blob, safePdfFilename(signerData.documents.title, ' - Signed'))
     } catch (err) {
       console.error('Error generating signed PDF:', err)
       setPdfError('The signed PDF could not be generated. Please try again.')
@@ -742,7 +746,7 @@ export default function InviteSigningPage() {
               <Download className="w-4 h-4 mr-1" />
               {t('signee.downloadPdf')}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+            <Button variant="outline" size="sm" onClick={() => { setShowPreview(false); setAuditPdfUrl(null) }}>
               {t('signee.close')}
             </Button>
           </div>

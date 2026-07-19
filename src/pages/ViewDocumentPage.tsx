@@ -16,6 +16,7 @@ interface DocumentData {
   id: string
   title: string
   original_pdf_url: string
+  final_pdf_url?: string | null
   status: string
 }
 
@@ -271,7 +272,7 @@ export default function ViewDocumentPage() {
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </div>
-        <PdfViewer fileUrl={document.original_pdf_url} />
+        <PdfViewer fileUrl={document.final_pdf_url || document.original_pdf_url} />
       </div>
     </div>
   )

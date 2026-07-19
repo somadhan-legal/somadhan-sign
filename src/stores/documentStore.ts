@@ -97,6 +97,9 @@ const normalizeSigningPackageUrl = (signingPackage: SigningPackageResult): Signi
     documents: {
       ...signingPackage.signer.documents,
       original_pdf_url: getLegacyPublicDocumentUrl(signingPackage.signer.documents.original_pdf_url),
+      final_pdf_url: signingPackage.signer.documents.final_pdf_url
+        ? getLegacyPublicDocumentUrl(signingPackage.signer.documents.final_pdf_url)
+        : null,
     },
   },
 })

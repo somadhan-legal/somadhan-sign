@@ -9,6 +9,7 @@ export interface SignerByTokenResult {
   documents: {
     title: string
     original_pdf_url: string
+    final_pdf_url?: string | null
     status: string
     final_pdf_available?: boolean
   }
@@ -45,6 +46,7 @@ export interface ViewerDocumentResult {
   id: string
   title: string
   original_pdf_url: string
+  final_pdf_url?: string | null
   status: string
 }
 
