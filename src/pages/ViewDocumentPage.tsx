@@ -11,6 +11,7 @@ import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
 import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
+import { isMissingEdgeFunction } from '@/lib/edgeFunctionError'
 
 interface DocumentData {
   id: string
@@ -28,13 +29,6 @@ interface SignerInfo {
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
-
-const isMissingEdgeFunction = (error: unknown) => {
-  const edgeError = error as { context?: { status?: number }; name?: string; message?: string } | null
-  return edgeError?.context?.status === 404
-    || edgeError?.name === 'FunctionsFetchError'
-    || /not found|failed to send a request/i.test(edgeError?.message || '')
-}
 
 export default function ViewDocumentPage() {
   const { documentId } = useParams<{ documentId: string }>()

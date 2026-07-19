@@ -17,6 +17,7 @@ import {
   getDocumentStoragePath,
   getLegacyPublicDocumentUrl,
 } from '@/lib/documentStorage'
+import { isMissingEdgeFunction } from '@/lib/edgeFunctionError'
 
 interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -82,13 +83,6 @@ let activeAuditFetch = 0
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
-
-const isMissingEdgeFunction = (error: unknown) => {
-  const edgeError = error as { context?: { status?: number }; name?: string; message?: string } | null
-  return edgeError?.context?.status === 404
-    || edgeError?.name === 'FunctionsFetchError'
-    || /not found|failed to send a request/i.test(edgeError?.message || '')
-}
 
 const normalizeSigningPackageUrl = (signingPackage: SigningPackageResult): SigningPackageResult => ({
   ...signingPackage,
