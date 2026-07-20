@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import NotFoundPage from '@/pages/NotFoundPage'
+import { useLanguageStore } from '@/stores/languageStore'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -16,9 +17,11 @@ const ViewDocumentPage = lazy(() => import('@/pages/ViewDocumentPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
 function PageLoader() {
+  const { t } = useLanguageStore()
   return (
-    <div className="min-h-dvh flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-dvh flex items-center justify-center" role="status" aria-live="polite">
+      <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+      <span className="sr-only">{t('common.loadingPage')}</span>
     </div>
   )
 }
@@ -28,11 +31,7 @@ function HomeRedirect() {
   
   // Show loading while checking auth state
   if (!initialized || loading) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <PageLoader />
   }
   
   // Redirect to dashboard if user is authenticated

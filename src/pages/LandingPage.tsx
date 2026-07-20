@@ -67,6 +67,12 @@ export default function LandingPage() {
 
   return (
     <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
+      <a
+        href="#main-content"
+        className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
+      >
+        {t('common.skipToContent')}
+      </a>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[hsl(var(--border))] bg-[hsl(var(--background)/0.94)] backdrop-blur-xl">
         <div className="landing-container flex h-20 items-center justify-between">
           <a href="#top" aria-label="Somadhan Sign home" className="shrink-0">
@@ -127,7 +133,7 @@ export default function LandingPage() {
         )}
       </header>
 
-      <main>
+      <main id="main-content" tabIndex={-1} className="outline-none">
         <section id="top" className="relative flex min-h-[min(900px,100svh)] items-center pt-24">
           <div className="landing-rule-grid absolute inset-0 opacity-60" aria-hidden="true" />
           <div className="landing-container relative grid items-center gap-14 py-20 lg:grid-cols-[0.92fr_1.08fr] lg:py-24">

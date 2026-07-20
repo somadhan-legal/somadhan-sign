@@ -19,6 +19,8 @@ const translations: Record<string, Record<Language, string>> = {
   'common.dialog': { en: 'Dialog', bn: 'ডায়ালগ' },
   'common.closeConfirmation': { en: 'Close confirmation', bn: 'নিশ্চিতকরণ বন্ধ করুন' },
   'common.confirmation': { en: 'Confirmation', bn: 'নিশ্চিতকরণ' },
+  'common.skipToContent': { en: 'Skip to main content', bn: 'মূল কনটেন্টে যান' },
+  'common.loadingPage': { en: 'Loading page...', bn: 'পৃষ্ঠা লোড হচ্ছে...' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
   'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
 
