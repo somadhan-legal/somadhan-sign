@@ -611,7 +611,7 @@ export default function InviteSigningPage() {
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" aria-hidden="true" />
           <p className="text-[hsl(var(--muted-foreground))]">{t('signee.loadingDoc')}</p>
         </div>
       </div>

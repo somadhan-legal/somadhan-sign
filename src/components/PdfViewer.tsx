@@ -188,8 +188,9 @@ export default function PdfViewer({
           setLoadError(t('viewer.pdfLoadFailed'))
         }}
         loading={
-          <div className="w-full min-w-[260px] max-w-[680px] h-[70vh] flex items-center justify-center">
-            <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+          <div className="w-full min-w-[260px] max-w-[680px] h-[70vh] flex items-center justify-center" role="status" aria-live="polite">
+            <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+            <span className="sr-only">{t('viewer.loadingPdf')}</span>
           </div>
         }
         error={

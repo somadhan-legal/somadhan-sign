@@ -97,7 +97,7 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
 
         {loading ? (
           <div className="flex items-center justify-center py-12" role="status">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent" aria-hidden="true" />
             <span className="sr-only">{t('audit.loading')}</span>
           </div>
         ) : auditTrail.length === 0 ? (

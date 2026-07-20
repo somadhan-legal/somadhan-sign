@@ -523,8 +523,9 @@ export default function DocumentEditorPage() {
 
   if (loading && !currentDocument) {
     return (
-      <div className="min-h-dvh flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-dvh flex items-center justify-center" role="status" aria-live="polite">
+        <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+        <span className="sr-only">{t('common.loadingDocument')}</span>
       </div>
     )
   }
@@ -1153,11 +1154,11 @@ export default function DocumentEditorPage() {
 
       {/* Loading Overlay - While Sending */}
       {sending && !sentToast && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="status" aria-live="polite">
           <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center mb-4">
-                <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+                <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
               </div>
               <h3 className="text-xl font-bold mb-2">{t('editor.sendingDocument')}</h3>
               <p className="text-[hsl(var(--muted-foreground))]">

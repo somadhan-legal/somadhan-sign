@@ -276,8 +276,9 @@ export default function DashboardPage() {
 
       {/* Document List */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
+          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+          <span className="sr-only">{t('dashboard.loadingDocuments')}</span>
         </div>
       ) : filteredDocs.length === 0 ? (
         <div className="text-center py-20">
@@ -689,7 +690,7 @@ export default function DashboardPage() {
             </Button>
             <Button type="submit" className="flex-1" disabled={uploading || !file}>
               {uploading ? (
-                <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span className="sr-only">{t('dashboard.uploading')}</span></>
+                <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" /><span className="sr-only">{t('dashboard.uploading')}</span></>
               ) : (
                 t('dashboard.uploadAndContinue')
               )}

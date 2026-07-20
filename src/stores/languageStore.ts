@@ -21,6 +21,7 @@ const translations: Record<string, Record<Language, string>> = {
   'common.confirmation': { en: 'Confirmation', bn: 'নিশ্চিতকরণ' },
   'common.skipToContent': { en: 'Skip to main content', bn: 'মূল কনটেন্টে যান' },
   'common.loadingPage': { en: 'Loading page...', bn: 'পৃষ্ঠা লোড হচ্ছে...' },
+  'common.loadingDocument': { en: 'Loading document...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
   'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
 
@@ -295,6 +296,7 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.deleteConfirmMessage': { en: 'Delete', bn: 'মুছুন' },
   'dashboard.cannotUndo': { en: 'This cannot be undone.', bn: 'এটি পূর্বাবস্থায় ফেরানো যাবে না।' },
   'dashboard.enterTitle': { en: 'Enter a document title.', bn: 'ডকুমেন্টের শিরোনাম লিখুন।' },
+  'dashboard.loadingDocuments': { en: 'Loading documents...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
   'dashboard.uploadFailed': { en: 'The document could not be uploaded. Check your connection and try again.', bn: 'ডকুমেন্ট আপলোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
   'dashboard.loadingSigners': { en: 'Loading signers...', bn: 'স্বাক্ষরকারীদের লোড করা হচ্ছে...' },
   'dashboard.signersLoadFailed': { en: 'Signer details could not be loaded.', bn: 'স্বাক্ষরকারীর বিস্তারিত লোড করা যায়নি।' },
@@ -570,6 +572,7 @@ const translations: Record<string, Record<Language, string>> = {
   'viewer.zoomOut': { en: 'Zoom out', bn: 'ছোট করুন' },
   'viewer.zoomIn': { en: 'Zoom in', bn: 'বড় করুন' },
   'viewer.pdfLoadFailed': { en: 'The PDF could not be loaded. Check your connection and try again.', bn: 'PDF লোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
+  'viewer.loadingPdf': { en: 'Loading PDF...', bn: 'PDF লোড হচ্ছে...' },
   'viewer.tryAgain': { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
   'viewer.pdfPage': { en: 'PDF page', bn: 'PDF পৃষ্ঠা' },
   'viewer.placeCenterHint': { en: 'Press Enter to place the selected field in the center.', bn: 'নির্বাচিত ক্ষেত্রটি মাঝখানে রাখতে Enter চাপুন।' },
