@@ -581,6 +581,18 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.signingProgress': { en: 'Signing progress', bn: 'স্বাক্ষরের অগ্রগতি' },
   'signee.signingDate': { en: 'Signing date', bn: 'স্বাক্ষরের তারিখ' },
   'signee.fieldText': { en: 'Field text', bn: 'ক্ষেত্রের লেখা' },
+  'signee.signedValue': { en: 'Signed field value', bn: 'স্বাক্ষরিত ক্ষেত্রের মান' },
+  'signee.signaturePreview': { en: 'Signature preview', bn: 'স্বাক্ষরের প্রিভিউ' },
+  'signee.applyToThis': { en: 'Apply to this', bn: 'এখানে প্রয়োগ করুন' },
+  'signee.applyToEveryField': { en: 'Apply to all', bn: 'সব ক্ষেত্রে প্রয়োগ করুন' },
+  'signee.activateField': { en: 'Activate to complete this field.', bn: 'এই ক্ষেত্রটি পূরণ করতে সক্রিয় করুন।' },
+  'signee.tapToAddDate': { en: 'Tap to add date', bn: 'তারিখ যোগ করতে ট্যাপ করুন' },
+  'signee.tapToEnterText': { en: 'Tap to enter text', bn: 'লেখা যোগ করতে ট্যাপ করুন' },
+  'signee.tapToSign': { en: 'Tap to sign', bn: 'স্বাক্ষর করতে ট্যাপ করুন' },
+  'signee.tapAnyField': { en: 'Tap any field on the PDF to fill it', bn: 'পূরণ করতে PDF-এ যেকোনো ক্ষেত্রে ট্যাপ করুন' },
+  'signee.allYourFieldsSigned': { en: 'All your fields are signed!', bn: 'আপনার সব ক্ষেত্র স্বাক্ষরিত হয়েছে!' },
+  'signee.saveInitials': { en: 'Save Initials', bn: 'ইনিশিয়াল সংরক্ষণ করুন' },
+  'signee.applyToAllCount': { en: 'Apply to All ({count})', bn: 'সব ক্ষেত্রে প্রয়োগ করুন ({count})' },
 
   // ─── Shared document viewer ───
   'viewer.page': { en: 'page', bn: 'পৃষ্ঠা' },

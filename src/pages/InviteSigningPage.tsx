@@ -1059,7 +1059,7 @@ export default function InviteSigningPage() {
                 </Button>
               </div>
               <p className="text-xs text-center text-[hsl(var(--muted-foreground))]">
-                {lang === 'bn' ? 'পূরণ করতে PDF-এ যেকোনো ক্ষেত্রে ট্যাপ করুন' : 'Tap any field on the PDF to fill it'}
+                {t('signee.tapAnyField')}
               </p>
             </div>
           )}
@@ -1074,7 +1074,7 @@ export default function InviteSigningPage() {
                 <CheckCircle2 className="w-10 h-10 mx-auto text-[hsl(var(--success))] mb-2" />
               )}
               <p className="text-sm font-medium text-[hsl(var(--success))]">
-                {lang === 'bn' ? 'আপনার সব ক্ষেত্র স্বাক্ষরিত হয়েছে!' : 'All your fields are signed!'}
+                {t('signee.allYourFieldsSigned')}
               </p>
             </div>
           )}
@@ -1175,7 +1175,7 @@ export default function InviteSigningPage() {
                     {/* Signed states use raw content without borders. */}
                     {isSigned && placement && (isSignatureType || placement.signature_id.startsWith('data:image')) ? (
                       <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                        <img src={placement.signature_id} alt="Signed" className="max-w-full max-h-full object-contain" />
+                        <img src={placement.signature_id} alt={t('signee.signedValue')} className="max-w-full max-h-full object-contain" />
                       </div>
                     ) : isSigned && placement && (isDate || placement.signature_id.startsWith('date:')) ? (
                       <div className="w-full h-full flex items-end">
@@ -1195,7 +1195,7 @@ export default function InviteSigningPage() {
                       <div className="relative w-full h-full">
                         {/* Field highlight with signature preview */}
                         <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
-                          <img src={sigData} alt="Preview" className="max-w-full max-h-full object-contain opacity-40" />
+                          <img src={sigData} alt={t('signee.signaturePreview')} className="max-w-full max-h-full object-contain opacity-40" />
                         </div>
                         {/* Popover buttons below the field */}
                         <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 flex gap-1 whitespace-nowrap" style={{ zIndex: 100 }}>
@@ -1204,7 +1204,7 @@ export default function InviteSigningPage() {
                             disabled={submitting}
                             className="px-3 py-1.5 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--card))] text-[10px] rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer shadow-lg"
                           >
-                            {submitting ? '...' : 'Apply to this'}
+                            {submitting ? '...' : t('signee.applyToThis')}
                           </button>
                           {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) && (
                             <button
@@ -1216,7 +1216,7 @@ export default function InviteSigningPage() {
                               disabled={submitting}
                               className="px-3 py-1.5 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
                             >
-                              {submitting ? '...' : 'Apply to All'}
+                              {submitting ? '...' : t('signee.applyToEveryField')}
                             </button>
                           )}
                         </div>
@@ -1282,20 +1282,20 @@ export default function InviteSigningPage() {
                         }}
                         role={isMine && !isSigned ? 'button' : undefined}
                         tabIndex={isMine && !isSigned ? 0 : undefined}
-                        aria-label={isMine && !isSigned ? `${field.field_type} field. Activate to complete.` : undefined}
+                        aria-label={isMine && !isSigned ? `${t(`editor.${field.field_type}`)}. ${t('signee.activateField')}` : undefined}
                       >
                         {isMine ? (
                           isCheckbox ? (
                             <div className="w-3.5 h-3.5 border border-gray-500 rounded-sm" />
                           ) : isDate ? (
-                            <span className="text-[10px] text-black">{isCurrentNav ? 'Tap to add date' : 'Date'}</span>
+                            <span className="text-[10px] text-black">{isCurrentNav ? t('signee.tapToAddDate') : t('editor.date')}</span>
                           ) : isText ? (
-                            <span className="text-[10px] text-black">{isCurrentNav ? 'Tap to enter text' : 'Text'}</span>
+                            <span className="text-[10px] text-black">{isCurrentNav ? t('signee.tapToEnterText') : t('editor.text')}</span>
                           ) : (
                             <>
                               <span className="text-black">{fieldTypeIcons[field.field_type]}</span>
                               <span className="text-[10px] ml-1 text-black">
-                                {isCurrentNav ? 'Tap to sign' : isInitials ? 'Initials' : 'Your signature'}
+                                {isCurrentNav ? t('signee.tapToSign') : isInitials ? t('editor.initials') : t('signee.yourSignature')}
                               </span>
                             </>
                           )
@@ -1319,10 +1319,10 @@ export default function InviteSigningPage() {
       <Modal isOpen={showSignatureModal} onClose={() => setShowSignatureModal(false)} title={t('signee.createYourSignature')} size="md">
         <SignaturePad
           onSave={handleSaveSignature}
-          saveLabel="Save Signature"
+          saveLabel={t('signee.saveSignature')}
           showApplyAll={myUnsignedSignatureFields.length > 0}
           onApplyToAll={handleAutoFillSignatures}
-          applyAllLabel={`Apply to All (${myUnsignedSignatureFields.length})`}
+          applyAllLabel={t('signee.applyToAllCount').replace('{count}', String(myUnsignedSignatureFields.length))}
         />
       </Modal>
 
@@ -1333,10 +1333,10 @@ export default function InviteSigningPage() {
         </p>
         <SignaturePad
           onSave={handleSaveInitials}
-          saveLabel="Save Initials"
+          saveLabel={t('signee.saveInitials')}
           showApplyAll={myUnsignedInitialsFields.length > 0}
           onApplyToAll={(data) => { setInitialsData(data); setShowInitialsModal(false); handleAutoFillInitials(data) }}
-          applyAllLabel={`Apply to All (${myUnsignedInitialsFields.length})`}
+          applyAllLabel={t('signee.applyToAllCount').replace('{count}', String(myUnsignedInitialsFields.length))}
         />
       </Modal>
 
@@ -1350,7 +1350,7 @@ export default function InviteSigningPage() {
           <span>{actionError}</span>
           {allMyUnsigned.length === 0 && (
             <button type="button" onClick={() => checkCompletion()} className="shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
-              Try again
+              {t('viewer.tryAgain')}
             </button>
           )}
         </div>
