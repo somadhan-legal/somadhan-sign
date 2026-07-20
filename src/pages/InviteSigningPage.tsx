@@ -48,6 +48,8 @@ const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
+const CONSENT_VERSION = 'somadhan-esign-consent-v1'
+
 const fieldTypeIcons: Record<string, React.ReactNode> = {
   signature: <PenTool className="w-3 h-3" />,
   initials: <Type className="w-3 h-3" />,
@@ -189,7 +191,12 @@ export default function InviteSigningPage() {
       'Electronic Signature Consent Given',
       userEmail,
       userName,
-      'Consent captured in the signing interface',
+      JSON.stringify({
+        version: CONSENT_VERSION,
+        statement: t('signee.consentDescription'),
+        language: lang,
+        source: 'signing-interface',
+      }),
       token,
     )
     if (recorded) setHasConsented(true)
@@ -891,7 +898,7 @@ export default function InviteSigningPage() {
           {signatureData ? (
             <div className="space-y-2">
               <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-white">
-                <img src={signatureData} alt="Your signature" className="max-h-16 mx-auto" />
+                <img src={signatureData} alt={t('signee.yourSignature')} className="max-h-16 mx-auto" />
               </div>
               {myUnsignedSignatureFields.length === 0 ? (
                 <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allSignaturesFilled') || 'All signatures filled'}</p>
