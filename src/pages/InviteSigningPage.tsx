@@ -488,6 +488,7 @@ export default function InviteSigningPage() {
           completionData = data
         } catch (rpcErr) {
           console.error('[completion] RPC get_document_for_completion failed:', rpcErr)
+          setCompletionDeliveryFailed(true)
         }
         
         const downloadUrl = ''
@@ -578,6 +579,8 @@ export default function InviteSigningPage() {
             } else {
               setCompletionDeliveryFailed(false)
             }
+          } else {
+            setCompletionDeliveryFailed(true)
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)
