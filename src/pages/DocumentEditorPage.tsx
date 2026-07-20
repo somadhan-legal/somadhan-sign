@@ -558,7 +558,7 @@ export default function DocumentEditorPage() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.signers')}</h3>
             {!isLocked && (
-              <button type="button" onClick={openAddSignerModal} aria-label="Add signer" className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+              <button type="button" onClick={openAddSignerModal} aria-label={t('editor.addSigner')} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                 <UserPlus className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
               </button>
             )}
@@ -576,7 +576,7 @@ export default function DocumentEditorPage() {
               {signers.length > 3 && (
                 <button
                   type="button"
-                  aria-label="Scroll signer list up"
+                  aria-label={t('editor.scrollSignersUp')}
                   onClick={() => signerListRef.current?.scrollBy({ top: -60, behavior: 'smooth' })}
                   className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
@@ -625,22 +625,22 @@ export default function DocumentEditorPage() {
                       <div className="shrink-0 flex items-center gap-0.5 opacity-100 transition-opacity relative lg:opacity-0 lg:group-hover:opacity-100">
                         <button
                           type="button"
-                          aria-label={`Edit ${signer.signer_name || signer.signer_email}`}
+                          aria-label={t('editor.editNamedSigner').replace('{name}', signer.signer_name || signer.signer_email)}
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
                           className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
-                          title="Edit Signer"
+                          title={t('editor.editSigner')}
                         >
                           <PenTool className="w-3 h-3" />
                         </button>
                         <button
                           type="button"
-                          aria-label={`Remove ${signer.signer_name || signer.signer_email}`}
+                          aria-label={t('editor.removeNamedSigner').replace('{name}', signer.signer_name || signer.signer_email)}
                           onClick={(e) => {
                             e.stopPropagation()
                             setDeleteSignerId(signer.id)
                           }}
                           className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
-                          title="Remove Signer"
+                          title={t('editor.removeSigner')}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -663,8 +663,8 @@ export default function DocumentEditorPage() {
                             }
                           }}
                           message={t('editor.removeSignerConfirm')}
-                          confirmText="OK"
-                          cancelText="Cancel"
+                          confirmText={t('editor.confirm')}
+                          cancelText={t('editor.cancel')}
                         />
                       </div>
                     )}
@@ -675,7 +675,7 @@ export default function DocumentEditorPage() {
               {signers.length > 3 && (
                 <button
                   type="button"
-                  aria-label="Scroll signer list down"
+                  aria-label={t('editor.scrollSignersDown')}
                   onClick={() => signerListRef.current?.scrollBy({ top: 60, behavior: 'smooth' })}
                   className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
@@ -890,7 +890,7 @@ export default function DocumentEditorPage() {
                       }}
                       role="button"
                       tabIndex={0}
-                      aria-label={`${ftLabel} field assigned to ${sName}`}
+                      aria-label={t('editor.fieldAssignedTo').replace('{field}', ftLabel).replace('{name}', sName)}
                     >
                       <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
                       <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
@@ -900,7 +900,7 @@ export default function DocumentEditorPage() {
                     {isSelected && (
                       <button
                         type="button"
-                        aria-label={`Remove ${ftLabel} field for ${sName}`}
+                        aria-label={t('editor.removeFieldFor').replace('{field}', ftLabel).replace('{name}', sName)}
                         className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-md cursor-pointer z-40 hover:scale-110 transition-transform"
                         style={{ backgroundColor: color }}
                         onClick={(e) => {
@@ -951,7 +951,7 @@ export default function DocumentEditorPage() {
           return (
             <>
               <div className="flex justify-end p-2">
-                <button type="button" aria-label="Close field settings" onClick={() => setSelectedField(null)} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+                <button type="button" aria-label={t('editor.closeFieldSettings')} onClick={() => setSelectedField(null)} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                   <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </div>
@@ -972,7 +972,7 @@ export default function DocumentEditorPage() {
                     return (
                       <button
                         key={signer.id}
-                        aria-label={`Assign field to ${signer.signer_name || signer.signer_email}`}
+                        aria-label={t('editor.assignFieldTo').replace('{name}', signer.signer_name || signer.signer_email)}
                         onClick={() => { updateSignatureField(field.id, { assigned_to_email: signer.signer_email }); setSelectedSignerIdx(idx) }}
                         className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-left transition-all cursor-pointer ${
                           isAssigned ? 'shadow-sm' : 'hover:bg-[hsl(var(--muted))]/50'
@@ -1050,14 +1050,14 @@ export default function DocumentEditorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label={t('editor.firstName')}
-                  placeholder="John"
+                  placeholder={t('editor.firstNamePlaceholder')}
                   value={signerFirstName}
                   onChange={(e) => setSignerFirstName(e.target.value)}
                   required
                 />
                 <Input
                   label={t('editor.lastName')}
-                  placeholder="Doe"
+                  placeholder={t('editor.lastNamePlaceholder')}
                   value={signerLastName}
                   onChange={(e) => setSignerLastName(e.target.value)}
                 />
@@ -1065,7 +1065,7 @@ export default function DocumentEditorPage() {
               <Input
                 label={t('editor.email')}
                 type="email"
-                placeholder="signer@example.com"
+                placeholder={t('editor.signerEmailPlaceholder')}
                 value={signerEmail}
                 onChange={(e) => { setSignerEmail(e.target.value); setSignerFormError('') }}
                 required
@@ -1115,7 +1115,7 @@ export default function DocumentEditorPage() {
               </div>
               <Input
                 label={t('editor.ccEmail')}
-                placeholder="e.g., manager@company.com, legal@company.com"
+                placeholder={t('editor.ccPlaceholder')}
                 value={ccEmails}
                 onChange={(e) => { setCcEmails(e.target.value); setSendFormError('') }}
                 maxLength={1000}
@@ -1127,7 +1127,7 @@ export default function DocumentEditorPage() {
                   className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/30 focus:border-[hsl(var(--primary))]"
                   value={sendMessage}
                   onChange={(e) => setSendMessage(e.target.value)}
-                  placeholder="Message for signees (optional)"
+                  placeholder={t('editor.messagePlaceholder')}
                   maxLength={2000}
                 />
               </div>
