@@ -61,6 +61,18 @@ export default function DashboardPage() {
   const signerRequestRef = useRef(0)
   const uploadValidationRequestRef = useRef(0)
 
+  const localizePdfValidationError = (message: string) => {
+    const keys: Record<string, string> = {
+      'The selected PDF is empty.': 'dashboard.pdfEmpty',
+      'The PDF must be 5 MB or smaller.': 'dashboard.pdfTooLarge',
+      'Please select a PDF file.': 'dashboard.pdfRequired',
+      'This file does not contain a valid PDF header.': 'dashboard.pdfInvalidHeader',
+      'The PDF is damaged, encrypted, or unsupported.': 'dashboard.pdfUnsupported',
+      'The PDF does not contain any pages.': 'dashboard.pdfNoPages',
+    }
+    return keys[message] ? t(keys[message]) : message
+  }
+
   const showNotice = (message: string, kind: 'success' | 'error' | 'info' = 'info') => {
     setNotice({ message, kind })
     if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current)
@@ -134,13 +146,13 @@ export default function DashboardPage() {
 
     const normalizedTitle = title.trim()
     if (!normalizedTitle) {
-      setUploadError('Enter a document title.')
+      setUploadError(t('dashboard.enterTitle'))
       return
     }
 
     const validationError = await validatePdfFile(file)
     if (validationError) {
-      setUploadError(validationError)
+      setUploadError(localizePdfValidationError(validationError))
       return
     }
 
@@ -157,7 +169,7 @@ export default function DashboardPage() {
       resetUploadForm()
       navigate(`/document/${doc.id}/edit`)
     } else {
-      setUploadError('The document could not be uploaded. Check your connection and try again.')
+      setUploadError(t('dashboard.uploadFailed'))
     }
   }
 
@@ -181,7 +193,7 @@ export default function DashboardPage() {
     draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },
     pending: { icon: <Clock className="w-3 h-3" />, variant: 'warning', label: t('dashboard.pending') },
     completed: { icon: <CheckCircle2 className="w-3 h-3" />, variant: 'success', label: t('dashboard.completed') },
-    cancelled: { icon: <XCircle className="w-3 h-3" />, variant: 'destructive', label: 'Cancelled' },
+    cancelled: { icon: <XCircle className="w-3 h-3" />, variant: 'destructive', label: t('dashboard.cancelled') },
   }
 
   const stats = {
@@ -379,9 +391,11 @@ export default function DashboardPage() {
                                   await addAuditEntry(doc.id, 'Reminder Sent', user.email, user.user_metadata?.full_name, JSON.stringify({ sent: result.sent, failed: result.failed }))
                                 }
                                 if (result.sent > 0) {
-                                  showNotice(`Reminder sent to ${result.sent} pending signer(s).${result.failed > 0 ? ` ${result.failed} failed.` : ''}`, result.failed > 0 ? 'info' : 'success')
+                                  const signerLabel = t(result.sent === 1 ? 'dashboard.pendingSigner' : 'dashboard.pendingSigners')
+                                  const failureLabel = result.failed > 0 ? ` ${result.failed} ${t('dashboard.failedCount')}.` : ''
+                                  showNotice(`${t('dashboard.reminderSentTo')} ${result.sent} ${signerLabel}.${failureLabel}`, result.failed > 0 ? 'info' : 'success')
                                 } else {
-                                  showNotice(result.failed > 0 ? 'The reminder could not be sent. Please try again.' : 'No pending signers to remind.', result.failed > 0 ? 'error' : 'info')
+                                  showNotice(result.failed > 0 ? t('dashboard.reminderFailed') : t('dashboard.noPendingSigners'), result.failed > 0 ? 'error' : 'info')
                                 }
                               }}
                             >
@@ -488,7 +502,7 @@ export default function DashboardPage() {
                                 }
                               } catch (error) {
                                 console.error('Error generating signed PDF:', error)
-                                showNotice('The completed PDF could not be generated. Please try again.', 'error')
+                                showNotice(t('dashboard.completedPdfFailed'), 'error')
                               }
                             }}
                           >
@@ -524,11 +538,11 @@ export default function DashboardPage() {
                 {expandedDoc === doc.id && (
                   <div id={`signers-${doc.id}`} className="mt-3 pt-3 border-t border-[hsl(var(--border))]">
                     {expandedSignersLoading ? (
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Loading signers...</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('dashboard.loadingSigners')}</p>
                     ) : expandedSignersError ? (
-                      <p role="alert" className="text-xs text-[hsl(var(--destructive))]">Signer details could not be loaded.</p>
+                      <p role="alert" className="text-xs text-[hsl(var(--destructive))]">{t('dashboard.signersLoadFailed')}</p>
                     ) : expandedSigners.length === 0 ? (
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">No signers</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('dashboard.noSigners')}</p>
                     ) : (
                       <div className="space-y-2">
                         {expandedSigners.map((signer) => (
@@ -560,7 +574,10 @@ export default function DashboardPage() {
         {totalPages > 1 && (
           <div className="mt-6 flex flex-col items-center gap-3 px-1 sm:flex-row sm:justify-between sm:px-4">
             <p className="text-sm text-[hsl(var(--muted-foreground))]">
-              Showing {startIndex + 1}-{Math.min(endIndex, filteredDocs.length)} of {filteredDocs.length} documents
+              {t('dashboard.showingDocuments')
+                .replace('{start}', String(startIndex + 1))
+                .replace('{end}', String(Math.min(endIndex, filteredDocs.length)))
+                .replace('{total}', String(filteredDocs.length))}
             </p>
             <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
               <Button
@@ -569,16 +586,18 @@ export default function DashboardPage() {
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                Previous
+                {t('dashboard.previous')}
               </Button>
-              <span aria-live="polite" className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
+              <span aria-live="polite" className="text-sm font-medium">
+                {t('dashboard.pageOf').replace('{page}', String(currentPage)).replace('{total}', String(totalPages))}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                Next
+                {t('dashboard.next')}
               </Button>
             </div>
           </div>
@@ -603,21 +622,21 @@ export default function DashboardPage() {
           setShowUploadModal(false)
           resetUploadForm()
         }}
-        title="Upload Document"
+        title={t('dashboard.uploadDocument')}
         size="md"
         closeDisabled={uploading}
       >
         <form onSubmit={handleUpload} className="space-y-4">
           <Input
-            label="Document Title"
-            placeholder="e.g. Contract Agreement"
+            label={t('dashboard.documentTitle')}
+            placeholder={t('dashboard.documentTitlePlaceholder')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
             maxLength={160}
           />
           <div>
-            <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">PDF File</label>
+            <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">{t('dashboard.pdfFile')}</label>
             <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-lg p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
               <input
                 type="file"
@@ -631,7 +650,7 @@ export default function DashboardPage() {
                   }
                   const validationError = selectedFile ? await validatePdfFile(selectedFile) : ''
                   if (requestId === uploadValidationRequestRef.current) {
-                    setUploadError(validationError || '')
+                    setUploadError(validationError ? localizePdfValidationError(validationError) : '')
                   }
                 }}
                 className="hidden"
@@ -644,9 +663,9 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium">{file.name}</p>
                 ) : (
                   <>
-                    <p className="text-sm font-medium">Click to upload PDF</p>
+                    <p className="text-sm font-medium">{t('dashboard.clickUploadPdf')}</p>
                     <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                      PDF files up to 5MB
+                      {t('dashboard.pdfLimit')}
                     </p>
                   </>
                 )}
@@ -666,13 +685,13 @@ export default function DashboardPage() {
               }}
               disabled={uploading}
             >
-              Cancel
+              {t('editor.cancel')}
             </Button>
             <Button type="submit" className="flex-1" disabled={uploading || !file}>
               {uploading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /><span className="sr-only">{t('dashboard.uploading')}</span></>
               ) : (
-                'Upload & Continue'
+                t('dashboard.uploadAndContinue')
               )}
             </Button>
           </div>
@@ -686,14 +705,14 @@ export default function DashboardPage() {
         onConfirm={async () => {
           if (deleteConfirm) {
             const deleted = await deleteDocument(deleteConfirm.docId)
-            showNotice(deleted ? 'Document deleted.' : 'The document could not be deleted. Please try again.', deleted ? 'success' : 'error')
+            showNotice(deleted ? t('dashboard.documentDeleted') : t('dashboard.deleteFailed'), deleted ? 'success' : 'error')
           }
         }}
         title={t('dashboard.deleteDocument')}
         message={`${t('dashboard.deleteConfirmMessage')} "${deleteConfirm?.title}"? ${t('dashboard.cannotUndo')}`}
         variant="danger"
-        confirmText="OK"
-        cancelText="Cancel"
+        confirmText={t('dashboard.confirm')}
+        cancelText={t('editor.cancel')}
       />
 
       {notice && (
