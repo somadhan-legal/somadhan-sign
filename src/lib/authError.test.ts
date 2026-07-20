@@ -14,4 +14,9 @@ describe('getAuthErrorMessage', () => {
   it('handles rate-limit status codes', () => {
     expect(getAuthErrorMessage({ status: 429 })).toContain('Too many attempts')
   })
+
+  it('returns localized guidance without exposing provider details', () => {
+    expect(getAuthErrorMessage({ code: 'invalid_credentials' }, 'আবার চেষ্টা করুন।', 'bn')).toBe('ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।')
+    expect(getAuthErrorMessage({ message: 'internal database detail' }, 'আবার চেষ্টা করুন।', 'bn')).toBe('আবার চেষ্টা করুন।')
+  })
 })

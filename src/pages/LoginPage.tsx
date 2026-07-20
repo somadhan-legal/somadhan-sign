@@ -70,10 +70,11 @@ export default function LoginPage() {
         case 'signup':
           if (blockedUntil && Date.now() < blockedUntil) {
             const remainingMin = Math.ceil((blockedUntil - Date.now()) / 60000)
-            throw new Error(`Too many OTP attempts. Please try again in ${remainingMin} minutes.`)
+            setError(t('login.tooManyAttempts').replace('{minutes}', String(remainingMin)))
+            return
           }
           await signUpWithEmail(email, password, name)
-          setMessage('If this email can be registered, a 6-digit verification code is on its way.')
+          setMessage(t('login.verificationSent'))
           setMode('verify-otp')
           setResendTimer(60)
           setOtpAttempts([Date.now()])
@@ -84,11 +85,11 @@ export default function LoginPage() {
           break
         case 'forgot-password':
           await resetPassword(email)
-          setMessage('Password reset link has been sent to your email. Please check your inbox.')
+          setMessage(t('login.resetLinkSent'))
           break
       }
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err))
+      setError(getAuthErrorMessage(err, t('login.genericError'), lang))
     } finally {
       setSubmitting(false)
     }
@@ -101,7 +102,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle()
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err, 'Google sign-in could not be started. Please try again.'))
+      setError(getAuthErrorMessage(err, t('login.googleStartFailed'), lang))
       setSubmitting(false)
     }
   }
@@ -191,7 +192,7 @@ export default function LoginPage() {
 
                 <Button type="submit" className="w-full h-11" disabled={submitting}>
                   {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" /><span className="sr-only">{t('login.sendingResetLink')}</span></>
                   ) : (
                     t('login.sendResetLink')
                   )}
@@ -230,7 +231,7 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
-                  label="6-digit OTP"
+                  label={t('login.otpLabel')}
                   name="one-time-code"
                   autoComplete="one-time-code"
                   inputMode="numeric"
@@ -245,7 +246,7 @@ export default function LoginPage() {
 
                 <Button type="submit" className="w-full h-11" disabled={submitting || otpCode.length < 6}>
                   {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" /><span className="sr-only">{t('login.verifyingCode')}</span></>
                   ) : (
                     t('login.verifyCode')
                   )}
@@ -253,7 +254,7 @@ export default function LoginPage() {
               </form>
 
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-4 text-center">
-                Didn&apos;t receive the code?{' '}
+                {t('login.didNotReceiveCode')}{' '}
                 <button
                   type="button"
                   disabled={submitting || resendTimer > 0}
@@ -263,7 +264,7 @@ export default function LoginPage() {
                     // Check if blocked
                     if (blockedUntil && Date.now() < blockedUntil) {
                       const remainingMin = Math.ceil((blockedUntil - Date.now()) / 60000)
-                      setError(`Too many attempts. Please try again in ${remainingMin} minutes.`)
+                      setError(t('login.tooManyAttempts').replace('{minutes}', String(remainingMin)))
                       return
                     }
                     
@@ -275,7 +276,7 @@ export default function LoginPage() {
                     if (recentAttempts.length >= 3) {
                       const blockUntil = now + 60 * 60 * 1000 // 1 hour
                       setBlockedUntil(blockUntil)
-                      setError('Too many OTP attempts. You are blocked for 1 hour.')
+                      setError(t('login.otpBlocked'))
                       return
                     }
                     
@@ -284,18 +285,20 @@ export default function LoginPage() {
                     setSubmitting(true)
                     try {
                       await resendSignupOtp(email)
-                      setMessage('New OTP sent! Check your email.')
+                      setMessage(t('login.newOtpSent'))
                       setResendTimer(60)
                       setOtpAttempts([...recentAttempts, now])
                     } catch (err: unknown) {
-                      setError(getAuthErrorMessage(err, 'The verification code could not be resent. Please try again.'))
+                      setError(getAuthErrorMessage(err, t('login.resendFailed'), lang))
                     } finally {
                       setSubmitting(false)
                     }
                   }}
                   className="text-[hsl(var(--primary))] hover:underline cursor-pointer font-medium disabled:opacity-50"
                 >
-                  {resendTimer > 0 ? `Resend OTP (${resendTimer}s)` : 'Resend OTP'}
+                  {resendTimer > 0
+                    ? t('login.resendOtpCountdown').replace('{seconds}', String(resendTimer))
+                    : t('login.resendOtp')}
                 </button>
               </p>
 
@@ -304,7 +307,7 @@ export default function LoginPage() {
                   onClick={() => { setMode('signup'); setError(''); setMessage(''); setOtpCode('') }}
                   className="text-xs text-[hsl(var(--muted-foreground))] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <ArrowLeft className="w-3 h-3" /> Back to sign up
+                  <ArrowLeft className="w-3 h-3" /> {t('login.backToSignup')}
                 </button>
               </div>
             </div>
@@ -364,7 +367,7 @@ export default function LoginPage() {
                     label={t('login.fullName')}
                     name="name"
                     autoComplete="name"
-                    placeholder="John Doe"
+                    placeholder={t('login.namePlaceholder')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -399,7 +402,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                       className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -423,13 +426,13 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                         className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">Use at least 8 characters.</p>
+                    <p className="mt-1.5 text-xs text-[hsl(var(--muted-foreground))]">{t('login.passwordHint')}</p>
                   </div>
                 )}
 
@@ -447,7 +450,7 @@ export default function LoginPage() {
 
                 <Button type="submit" className="w-full h-11" disabled={submitting}>
                   {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" /><span className="sr-only">{mode === 'login' ? t('login.signingIn') : t('login.creatingAccount')}</span></>
                   ) : mode === 'login' ? (
                     t('login.signIn')
                   ) : (

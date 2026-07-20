@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
   const { updatePassword, isRecovery, user } = useAuthStore()
   const navigate = useNavigate()
   const { isDark } = useThemeStore()
-  const { t } = useLanguageStore()
+  const { t, lang } = useLanguageStore()
 
   useEffect(() => {
     // Check URL for error parameters
@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
       await updatePassword(password)
       setSuccess(true)
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err, t('reset.failedToUpdate')))
+      setError(getAuthErrorMessage(err, t('reset.failedToUpdate'), lang))
     } finally {
       setSubmitting(false)
     }
@@ -146,7 +146,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
               className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
 
           <Button type="submit" className="w-full h-11" disabled={submitting}>
             {submitting ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" /><span className="sr-only">{t('reset.updatingPassword')}</span></>
             ) : (
               t('reset.updatePassword')
             )}
