@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import '@fontsource/noto-sans-bengali/bengali-400.css'
 import somadhanLogo from '@/assets/somadhan.png'
+import { formatAuditMetadata } from '@/lib/auditMetadata'
 
 export interface AuditEntry {
   action: string
@@ -272,8 +273,10 @@ export async function generateAuditPdf(
 
   // Audit entries
   for (const entry of auditEntries) {
+    const metadata = formatAuditMetadata(entry.metadata)
+    const rowHeight = (metadata || entry.ip_address) ? smallLine * 3 + 12 : smallLine * 2 + 12
     // Check if we need a new page
-    if (yPos < margin + 40) {
+    if (yPos < margin + rowHeight) {
       page = pdfDoc.addPage([pageWidth, pageHeight])
       yPos = pageHeight - margin
       
@@ -391,27 +394,25 @@ export async function generateAuditPdf(
     }
 
     // Metadata
-    if (entry.metadata) {
-      if (entry.metadata.trim()) {
-        await drawUserText(pdfDoc, page, entry.metadata, {
+    if (metadata) {
+        await drawUserText(pdfDoc, page, metadata, {
           x: margin + 10,
-          y: yPos - smallLine,
+          y: yPos - smallLine * 2,
           size: 8,
           latinFont: font,
           color: rgb(0.5, 0.5, 0.5),
-          maxWidth: 150,
+          maxWidth: 330,
         })
-      }
     }
 
     // Separator line
     page.drawLine({
-      start: { x: margin, y: yPos - smallLine * 2 - 6 },
-      end: { x: pageWidth - margin, y: yPos - smallLine * 2 - 6 },
+      start: { x: margin, y: yPos - rowHeight + 6 },
+      end: { x: pageWidth - margin, y: yPos - rowHeight + 6 },
       thickness: 0.3,
       color: rgb(0.9, 0.9, 0.9),
     })
-    yPos -= smallLine * 2 + 12
+    yPos -= rowHeight
   }
 
   // Footer on last page

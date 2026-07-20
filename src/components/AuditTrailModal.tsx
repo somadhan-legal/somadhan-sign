@@ -12,6 +12,7 @@ import {
 import { useDocumentStore } from '@/stores/documentStore'
 import Modal from '@/components/ui/Modal'
 import { useLanguageStore } from '@/stores/languageStore'
+import { formatAuditMetadata } from '@/lib/auditMetadata'
 
 interface AuditTrailModalProps {
   isOpen: boolean
@@ -111,14 +112,22 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
               const config = actionConfig[entry.action] || { icon: <Clock className="w-4 h-4" />, color: 'text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]' }
               const { date, time } = formatDateTime(entry.created_at, lang === 'bn' ? 'bn-BD' : 'en-US')
               const actionKey = actionTranslationKeys[entry.action]
+              const metadata = formatAuditMetadata(entry.metadata, lang)
 
               return (
                 <div key={entry.id} className="grid grid-cols-1 gap-3 px-4 py-4 hover:bg-[hsl(var(--muted))]/50 transition-colors sm:grid-cols-[1fr_1fr_1fr] sm:gap-4 sm:py-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${config.color}`}>
                       {config.icon}
                     </div>
-                    <span className="text-sm font-medium">{actionKey ? t(actionKey) : entry.action}</span>
+                    <div className="min-w-0">
+                      <span className="block text-sm font-medium">{actionKey ? t(actionKey) : entry.action}</span>
+                      {metadata && (
+                        <span className="mt-1 block text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                          {metadata}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col justify-center min-w-0">
                     <span className="text-sm font-medium truncate">
