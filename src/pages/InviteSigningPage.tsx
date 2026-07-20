@@ -605,7 +605,7 @@ export default function InviteSigningPage() {
 
   if (pageLoading) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]" role="status" aria-live="polite">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
@@ -1249,7 +1249,7 @@ export default function InviteSigningPage() {
                           maxLength={1000}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
-                          placeholder="Type here..."
+                          placeholder={t('signee.typeHere')}
                           className="w-full h-full text-[11px] font-medium text-black bg-white border-b border-[hsl(var(--primary))] outline-none px-1"
                         />
                       </div>

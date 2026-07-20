@@ -22,6 +22,12 @@ const translations: Record<string, Record<Language, string>> = {
   'common.skipToContent': { en: 'Skip to main content', bn: 'মূল কনটেন্টে যান' },
   'common.loadingPage': { en: 'Loading page...', bn: 'পৃষ্ঠা লোড হচ্ছে...' },
   'common.loadingDocument': { en: 'Loading document...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
+  'errorBoundary.title': { en: 'Something went wrong', bn: 'কিছু সমস্যা হয়েছে' },
+  'errorBoundary.description': { en: 'Your work may still be saved. Reload the page to reconnect and continue.', bn: 'আপনার কাজ সংরক্ষিত থাকতে পারে। আবার সংযোগ করে চালিয়ে যেতে পৃষ্ঠাটি রিলোড করুন।' },
+  'errorBoundary.reload': { en: 'Reload page', bn: 'পৃষ্ঠা রিলোড করুন' },
+  'notFound.title': { en: 'This page could not be found', bn: 'এই পৃষ্ঠাটি পাওয়া যায়নি' },
+  'notFound.description': { en: 'The link may be incorrect or the page may have moved.', bn: 'লিঙ্কটি ভুল হতে পারে অথবা পৃষ্ঠাটি সরানো হয়েছে।' },
+  'notFound.returnHome': { en: 'Return home', bn: 'হোমে ফিরুন' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
   'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
 
@@ -546,6 +552,7 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.signatureImageEmpty': { en: 'The selected image is empty.', bn: 'নির্বাচিত ছবিটি খালি।' },
   'signee.signatureImageTooLarge': { en: 'The signature image must be 2 MB or smaller.', bn: 'স্বাক্ষরের ছবি ২ MB বা তার কম হতে হবে।' },
   'signee.signatureImageTypeInvalid': { en: 'Use a PNG, JPG, or WebP image.', bn: 'PNG, JPG অথবা WebP ছবি ব্যবহার করুন।' },
+  'signee.typeHere': { en: 'Type here...', bn: 'এখানে লিখুন...' },
   'signee.fieldSaveFailed': {
     en: 'This field could not be saved. Your document was refreshed, so you can try again.',
     bn: 'এই ক্ষেত্রটি সংরক্ষণ করা যায়নি। ডকুমেন্টটি রিফ্রেশ করা হয়েছে, এখন আবার চেষ্টা করুন।',

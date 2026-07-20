@@ -125,7 +125,7 @@ export default function ViewDocumentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]" role="status" aria-live="polite">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
