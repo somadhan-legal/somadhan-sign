@@ -521,6 +521,8 @@ declare
   field_row public.signature_fields;
   placement_row public.signature_placements;
   document_status text;
+  signature_bytes bytea;
+  parsed_date date;
 begin
   select * into signer_row from public.document_signers where signing_token = p_token for update;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
@@ -547,8 +549,25 @@ begin
     p_signature_id !~ '^data:image/png;base64,[A-Za-z0-9+/=]+$'
     or length(p_signature_id) > 3000000
   ) then raise exception 'Invalid signature image'; end if;
-  if field_row.field_type = 'date' and p_signature_id !~ '^\d{4}-\d{2}-\d{2}$' then
-    raise exception 'Invalid date value';
+  if field_row.field_type in ('signature', 'initials') then
+    begin
+      signature_bytes := decode(split_part(p_signature_id, ',', 2), 'base64');
+    exception when others then
+      raise exception 'Invalid signature image';
+    end;
+    if octet_length(signature_bytes) < 8
+      or substring(signature_bytes from 1 for 8) <> decode('89504E470D0A1A0A', 'hex') then
+      raise exception 'Invalid signature image';
+    end if;
+  end if;
+  if field_row.field_type = 'date' then
+    if p_signature_id !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Invalid date value'; end if;
+    begin
+      parsed_date := p_signature_id::date;
+    exception when others then
+      raise exception 'Invalid date value';
+    end;
+    if parsed_date::text <> p_signature_id then raise exception 'Invalid date value'; end if;
   end if;
   if field_row.field_type = 'checkbox' and p_signature_id <> 'checkbox:checked' then
     raise exception 'Invalid checkbox value';
@@ -664,16 +683,21 @@ begin
     'Checkbox Checked', 'Text Entered', 'All Fields Signed',
     'Electronic Signature Consent Given'
   ) then raise exception 'Invalid audit action'; end if;
-  if p_action = 'Electronic Signature Consent Given' then
+  if p_action in ('Document Viewed', 'Electronic Signature Consent Given') then
     select * into audit_row
     from public.audit_trail existing
     where existing.document_id = signer_row.document_id
-      and existing.action = 'Electronic Signature Consent Given'
+      and existing.action = p_action
       and lower(existing.user_email) = lower(signer_row.signer_email)
     order by existing.created_at
     limit 1;
     if audit_row.id is not null then return audit_row; end if;
   end if;
+  if p_action not in ('Document Viewed', 'All Fields Signed')
+    and not exists (
+      select 1 from public.documents document
+      where document.id = signer_row.document_id and document.status = 'pending'
+    ) then raise exception 'This signing request is no longer active'; end if;
   if p_action = 'All Fields Signed' then
     if signer_row.status <> 'signed' then raise exception 'Signer has not completed all fields'; end if;
     select * into audit_row
@@ -685,6 +709,11 @@ begin
     limit 1;
     if audit_row.id is not null then return audit_row; end if;
   end if;
+  if (
+    select count(*) from public.audit_trail existing
+    where existing.document_id = signer_row.document_id
+      and lower(existing.user_email) = lower(signer_row.signer_email)
+  ) >= 500 then raise exception 'Audit entry limit reached'; end if;
 
   begin
     request_headers := current_setting('request.headers', true)::json;
