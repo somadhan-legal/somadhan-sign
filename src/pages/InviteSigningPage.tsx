@@ -121,7 +121,7 @@ export default function InviteSigningPage() {
       setPageLoading(true)
       const data = await fetchSignerByToken(token)
       if (!data) {
-        setError('The document you\'re looking for was not found. It may have been deleted or the link is invalid.')
+        setError(t('signee.docNotFoundDesc'))
         setPageLoading(false)
         return
       }
@@ -157,7 +157,7 @@ export default function InviteSigningPage() {
       setPageLoading(false)
     }
     load()
-  }, [token, fetchSignerByToken, updateSignerStatus])
+  }, [token, fetchSignerByToken, updateSignerStatus, t])
 
   useEffect(() => {
     if (signerData && !hasLoggedView.current) {
@@ -259,7 +259,7 @@ export default function InviteSigningPage() {
         signature_id: data,
       }, token)
       if (!saved) {
-        setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+        setActionError(t('signee.fieldSaveFailed'))
         await fetchPlacements(documentId, token)
         setSubmitting(false)
         return
@@ -285,7 +285,7 @@ export default function InviteSigningPage() {
         signature_id: data,
       }, token)
       if (!saved) {
-        setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+        setActionError(t('signee.fieldSaveFailed'))
         await fetchPlacements(documentId, token)
         setSubmitting(false)
         return
@@ -317,7 +317,7 @@ export default function InviteSigningPage() {
       signature_id: dataToUse,
     }, token)
     if (!saved) {
-      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      setActionError(t('signee.fieldSaveFailed'))
       await fetchPlacements(documentId, token)
       setSubmitting(false)
       return
@@ -344,7 +344,7 @@ export default function InviteSigningPage() {
       signature_id: dateValue,
     }, token)
     if (!saved) {
-      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      setActionError(t('signee.fieldSaveFailed'))
       await fetchPlacements(documentId, token)
       setSubmitting(false)
       return
@@ -367,7 +367,7 @@ export default function InviteSigningPage() {
       signature_id: 'checkbox:checked',
     }, token)
     if (!saved) {
-      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      setActionError(t('signee.fieldSaveFailed'))
       await fetchPlacements(documentId, token)
       setSubmitting(false)
       return
@@ -391,7 +391,7 @@ export default function InviteSigningPage() {
       signature_id: textInputValue.trim(),
     }, token)
     if (!saved) {
-      setActionError('This field could not be saved. Your document was refreshed, so you can try again.')
+      setActionError(t('signee.fieldSaveFailed'))
       await fetchPlacements(documentId, token)
       setSubmitting(false)
       return
@@ -420,7 +420,7 @@ export default function InviteSigningPage() {
     if (remaining.length === 0) {
       const statusUpdated = await updateSignerStatus(signerData.id, 'signed', token)
       if (!statusUpdated) {
-        setActionError('Your fields were saved, but completion could not be confirmed. Please check your connection and try again.')
+        setActionError(t('signee.completionConfirmFailed'))
         return
       }
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName, undefined, token)
@@ -463,7 +463,7 @@ export default function InviteSigningPage() {
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
-          setActionError('Everyone has signed, but the document could not be finalized. Please try again.')
+          setActionError(t('signee.finalizeFailed'))
           return
         }
         setDocumentCompleted(true)
@@ -698,7 +698,7 @@ export default function InviteSigningPage() {
       setShowPreview(true)
     } catch (err) {
       console.error('Error generating PDF:', err)
-      setPdfError('The signed document could not be generated. Please try again.')
+      setPdfError(t('signee.signedDocumentGenerateFailed'))
     } finally {
       setGeneratingPdf(false)
     }
@@ -712,7 +712,7 @@ export default function InviteSigningPage() {
       downloadBlob(blob, safePdfFilename(signerData.documents.title, ' - Signed'))
     } catch (err) {
       console.error('Error generating signed PDF:', err)
-      setPdfError('The signed PDF could not be generated. Please try again.')
+      setPdfError(t('signee.signedPdfGenerateFailed'))
     }
   }
 
@@ -846,9 +846,9 @@ export default function InviteSigningPage() {
             <button
               type="button"
               onClick={() => setShowAuditTrail(true)}
-              aria-label="Open audit trail"
+              aria-label={t('signee.openAuditTrail')}
               className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
-              title="Audit Trail"
+              title={t('audit.title')}
             >
               <History className="w-4 h-4" />
             </button>
@@ -951,7 +951,7 @@ export default function InviteSigningPage() {
           <div
             className="w-full h-2 bg-[hsl(var(--muted))] rounded-full mb-3"
             role="progressbar"
-            aria-label="Signing progress"
+                  aria-label={t('signee.signingProgress')}
             aria-valuemin={0}
             aria-valuemax={Math.max(myFields.length, 1)}
             aria-valuenow={mySignedFields.length}
@@ -1030,7 +1030,7 @@ export default function InviteSigningPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Previous unsigned field"
+                  aria-label={t('signee.previousUnsignedField')}
                   onClick={() => navigateToField(currentFieldIndex - 1)}
                   disabled={currentFieldIndex <= 0}
                   className="h-9 w-9"
@@ -1043,7 +1043,7 @@ export default function InviteSigningPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Next unsigned field"
+                  aria-label={t('signee.nextUnsignedField')}
                   onClick={() => navigateToField(currentFieldIndex + 1)}
                   disabled={currentFieldIndex >= allMyUnsigned.length - 1}
                   className="h-9 w-9"
@@ -1075,10 +1075,10 @@ export default function InviteSigningPage() {
           {/* Collapse button */}
           <button
             type="button"
-            aria-label="Collapse signing panel"
+            aria-label={t('signee.collapsePanel')}
             onClick={() => setLeftPanelCollapsed(true)}
             className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer mt-2"
-            title="Collapse panel"
+            title={t('signee.collapsePanel')}
           >
             <PanelLeftClose className="w-5 h-5" />
           </button>
@@ -1090,10 +1090,10 @@ export default function InviteSigningPage() {
       {leftPanelCollapsed && (
         <button
           type="button"
-          aria-label="Expand signing panel"
+          aria-label={t('signee.expandPanel')}
           onClick={() => setLeftPanelCollapsed(false)}
           className="w-11 shrink-0 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted))] transition-colors flex items-center justify-center cursor-pointer"
-          title="Expand panel"
+          title={t('signee.expandPanel')}
         >
           <PanelLeftOpen className="w-5 h-5 text-[hsl(var(--muted-foreground))]" />
         </button>
@@ -1220,7 +1220,7 @@ export default function InviteSigningPage() {
                       <div className="w-full h-full flex items-center justify-center">
                         <input
                           type="date"
-                          aria-label="Signing date"
+                          aria-label={t('signee.signingDate')}
                           className="text-[11px] border border-[hsl(var(--primary))] rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
                           onChange={(e) => {
                             if (e.target.value) {
@@ -1236,7 +1236,7 @@ export default function InviteSigningPage() {
                       <div className="w-full h-full flex items-center">
                         <input
                           type="text"
-                          aria-label="Field text"
+                          aria-label={t('signee.fieldText')}
                           value={textInputValue}
                           onChange={(e) => setTextInputValue(e.target.value)}
                           maxLength={1000}

@@ -417,6 +417,7 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.signed': { en: 'signed', bn: 'স্বাক্ষরিত' },
   'signee.places': { en: 'places', bn: 'জায়গা' },
   'signee.allInitialsFilled': { en: 'All initials fields filled', bn: 'সকল ইনিশিয়াল ক্ষেত্র পূরণ হয়েছে' },
+  'signee.allSignaturesFilled': { en: 'All signature fields filled', bn: 'সকল স্বাক্ষর ক্ষেত্র পূরণ হয়েছে' },
   'signee.applyToAll': { en: 'Apply to All Initials', bn: 'সকল ইনিশিয়াল প্রয়োগ করুন' },
   'signee.prev': { en: 'Prev', bn: 'আগের' },
   'signee.next': { en: 'Next', bn: 'পরের' },
@@ -460,6 +461,34 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.uploadSignatureImage': { en: 'Click to upload a signature image', bn: 'স্বাক্ষরের ছবি আপলোড করতে ক্লিক করুন' },
   'signee.signatureImageFormats': { en: 'PNG, JPG, or WebP up to 2 MB', bn: 'PNG, JPG বা WebP, সর্বোচ্চ ২ MB' },
   'signee.transparentImageHint': { en: 'A transparent background gives the cleanest result.', bn: 'স্বচ্ছ ব্যাকগ্রাউন্ডে ফলাফল সবচেয়ে পরিষ্কার হবে।' },
+  'signee.fieldSaveFailed': {
+    en: 'This field could not be saved. Your document was refreshed, so you can try again.',
+    bn: 'এই ক্ষেত্রটি সংরক্ষণ করা যায়নি। ডকুমেন্টটি রিফ্রেশ করা হয়েছে, এখন আবার চেষ্টা করুন।',
+  },
+  'signee.completionConfirmFailed': {
+    en: 'Your fields were saved, but completion could not be confirmed. Check your connection and try again.',
+    bn: 'আপনার ক্ষেত্রগুলো সংরক্ষিত হয়েছে, কিন্তু সম্পন্ন হওয়া নিশ্চিত করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+  'signee.finalizeFailed': {
+    en: 'Everyone has signed, but the document could not be finalized. Please try again.',
+    bn: 'সকলেই স্বাক্ষর করেছেন, কিন্তু ডকুমেন্টটি চূড়ান্ত করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  'signee.signedDocumentGenerateFailed': {
+    en: 'The signed document could not be generated. Please try again.',
+    bn: 'স্বাক্ষরিত ডকুমেন্ট তৈরি করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  'signee.signedPdfGenerateFailed': {
+    en: 'The signed PDF could not be generated. Please try again.',
+    bn: 'স্বাক্ষরিত PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।',
+  },
+  'signee.openAuditTrail': { en: 'Open audit trail', bn: 'অডিট ইতিহাস খুলুন' },
+  'signee.previousUnsignedField': { en: 'Previous unsigned field', bn: 'আগের অসম্পূর্ণ ক্ষেত্র' },
+  'signee.nextUnsignedField': { en: 'Next unsigned field', bn: 'পরের অসম্পূর্ণ ক্ষেত্র' },
+  'signee.collapsePanel': { en: 'Collapse signing panel', bn: 'স্বাক্ষর প্যানেল বন্ধ করুন' },
+  'signee.expandPanel': { en: 'Expand signing panel', bn: 'স্বাক্ষর প্যানেল খুলুন' },
+  'signee.signingProgress': { en: 'Signing progress', bn: 'স্বাক্ষরের অগ্রগতি' },
+  'signee.signingDate': { en: 'Signing date', bn: 'স্বাক্ষরের তারিখ' },
+  'signee.fieldText': { en: 'Field text', bn: 'ক্ষেত্রের লেখা' },
 
   // ─── Shared document viewer ───
   'viewer.page': { en: 'page', bn: 'পৃষ্ঠা' },
