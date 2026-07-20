@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface ModalProps {
   isOpen: boolean
@@ -13,19 +14,28 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, className, size = 'md', closeDisabled = false }: ModalProps) {
+  const { t } = useLanguageStore()
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  const closeDisabledRef = useRef(closeDisabled)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+    closeDisabledRef.current = closeDisabled
+  }, [onClose, closeDisabled])
 
   useEffect(() => {
     if (isOpen) {
       const previouslyFocused = document.activeElement as HTMLElement | null
+      const previousOverflow = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       requestAnimationFrame(() => dialogRef.current?.focus())
 
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
           event.preventDefault()
-          if (!closeDisabled) onClose()
+          if (!closeDisabledRef.current) onCloseRef.current()
           return
         }
         if (event.key !== 'Tab' || !dialogRef.current) return
@@ -50,24 +60,23 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
       document.addEventListener('keydown', handleKeyDown)
       return () => {
         document.removeEventListener('keydown', handleKeyDown)
-        document.body.style.overflow = ''
+        document.body.style.overflow = previousOverflow
         previouslyFocused?.focus()
       }
     }
-    document.body.style.overflow = ''
-  }, [isOpen, onClose, closeDisabled])
+  }, [isOpen])
 
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <button type="button" tabIndex={-1} aria-label="Close dialog" className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} disabled={closeDisabled} />
+      <button type="button" tabIndex={-1} aria-label={t('common.closeDialog')} className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} disabled={closeDisabled} />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        aria-label={title ? undefined : 'Dialog'}
+        aria-label={title ? undefined : t('common.dialog')}
         tabIndex={-1}
         className={cn(
           'relative z-10 max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl bg-[hsl(var(--card))] p-6 shadow-2xl',
@@ -87,7 +96,7 @@ export default function Modal({ isOpen, onClose, title, children, className, siz
               type="button"
               onClick={onClose}
               disabled={closeDisabled}
-              aria-label="Close dialog"
+              aria-label={t('common.closeDialog')}
               className="h-11 w-11 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
             >
               <X className="w-5 h-5" />

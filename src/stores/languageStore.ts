@@ -15,6 +15,10 @@ const translations: Record<string, Record<Language, string>> = {
   'nav.getStarted': { en: 'Get Started', bn: 'শুরু করুন' },
   'nav.documents': { en: 'Documents', bn: 'ডকুমেন্টস' },
   'nav.lightMode': { en: 'Light mode', bn: 'লাইট মোড' },
+  'common.closeDialog': { en: 'Close dialog', bn: 'ডায়ালগ বন্ধ করুন' },
+  'common.dialog': { en: 'Dialog', bn: 'ডায়ালগ' },
+  'common.closeConfirmation': { en: 'Close confirmation', bn: 'নিশ্চিতকরণ বন্ধ করুন' },
+  'common.confirmation': { en: 'Confirmation', bn: 'নিশ্চিতকরণ' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
   'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
 

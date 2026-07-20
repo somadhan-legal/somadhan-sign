@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import Button from './Button'
+import { useLanguageStore } from '@/stores/languageStore'
 
 interface ConfirmDialogProps {
   isOpen: boolean
@@ -23,19 +24,26 @@ export default function ConfirmDialog({
   cancelText = 'Cancel',
   variant = 'warning'
 }: ConfirmDialogProps) {
+  const { t } = useLanguageStore()
   const titleId = useId()
   const messageId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!isOpen) return
     const previouslyFocused = document.activeElement as HTMLElement | null
+    const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     requestAnimationFrame(() => dialogRef.current?.focus())
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab' || !dialogRef.current) return
@@ -60,10 +68,10 @@ export default function ConfirmDialog({
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
+      document.body.style.overflow = previousOverflow
       previouslyFocused?.focus()
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -74,7 +82,7 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" tabIndex={-1} aria-label="Close confirmation" className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-label={t('common.closeConfirmation')} className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} />
       <div
         ref={dialogRef}
         role="alertdialog"
