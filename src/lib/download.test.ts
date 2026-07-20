@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { safePdfFilename } from './download'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { downloadPdfUrl, safePdfFilename } from './download'
+
+afterEach(() => vi.unstubAllGlobals())
 
 describe('safePdfFilename', () => {
   it('removes unsafe filename characters', () => {
@@ -12,5 +14,15 @@ describe('safePdfFilename', () => {
 
   it('uses a safe fallback for an empty title', () => {
     expect(safePdfFilename('   ')).toBe('Document.pdf')
+  })
+
+  it('rejects a successful response that is not actually a PDF', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('not a pdf', { status: 200 })))
+    await expect(downloadPdfUrl('https://example.com/file', 'file.pdf')).rejects.toThrow('not a valid PDF')
+  })
+
+  it('rejects an unsuccessful PDF response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('missing', { status: 404 })))
+    await expect(downloadPdfUrl('https://example.com/file', 'file.pdf')).rejects.toThrow('could not be downloaded')
   })
 })
