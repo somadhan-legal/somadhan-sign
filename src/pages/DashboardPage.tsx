@@ -110,8 +110,21 @@ export default function DashboardPage() {
         setMenuOpen(null)
       }
     }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      const openDocumentId = menuOpen
+      setMenuOpen(null)
+      requestAnimationFrame(() => document.getElementById(`document-actions-${openDocumentId}`)?.focus())
+    }
     document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    requestAnimationFrame(() => {
+      document.getElementById(`document-menu-${menuOpen}`)?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    })
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
   }, [menuOpen])
 
   const toggleSignerDetails = async (documentId: string) => {
@@ -325,7 +338,7 @@ export default function DashboardPage() {
                         {doc.title}
                       </Link>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                        Created {formatDate(doc.created_at)}
+                        {t('dashboard.createdOn').replace('{date}', formatDate(doc.created_at))}
                       </p>
                     </div>
                   </div>
@@ -333,7 +346,7 @@ export default function DashboardPage() {
                     {doc.status !== 'draft' && (
                       <button
                         type="button"
-                        aria-label={expandedDoc === doc.id ? `Hide signers for ${doc.title}` : `Show signers for ${doc.title}`}
+                        aria-label={t(expandedDoc === doc.id ? 'dashboard.hideSignersFor' : 'dashboard.showSignersFor').replace('{title}', doc.title)}
                         aria-expanded={expandedDoc === doc.id}
                         aria-controls={`signers-${doc.id}`}
                         onClick={() => void toggleSignerDetails(doc.id)}
@@ -351,17 +364,22 @@ export default function DashboardPage() {
                     <div className="relative" data-menu-container>
                       <button
                         type="button"
-                        aria-label={`Open actions for ${doc.title}`}
+                        id={`document-actions-${doc.id}`}
+                        aria-label={t('dashboard.openActionsFor').replace('{title}', doc.title)}
+                        aria-expanded={menuOpen === doc.id}
+                        aria-controls={`document-menu-${doc.id}`}
+                        aria-haspopup="menu"
                         onClick={() => setMenuOpen(menuOpen === doc.id ? null : doc.id)}
                         className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
                       {menuOpen === doc.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
+                        <div id={`document-menu-${doc.id}`} role="menu" className="absolute right-0 top-full mt-1 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
                           {doc.status === 'draft' && (
                             <Link
                               to={`/document/${doc.id}/edit`}
+                              role="menuitem"
                               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
                               onClick={() => setMenuOpen(null)}
                             >
@@ -371,6 +389,7 @@ export default function DashboardPage() {
                           )}
                           {doc.status === 'draft' && (
                             <button
+                              role="menuitem"
                               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                               onClick={() => {
                                 navigate(`/document/${doc.id}/edit`)
@@ -383,6 +402,7 @@ export default function DashboardPage() {
                           )}
                           {doc.status === 'pending' && (
                             <button
+                              role="menuitem"
                               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                               onClick={async () => {
                                 setMenuOpen(null)
@@ -406,6 +426,7 @@ export default function DashboardPage() {
                           )}
                           <Link
                             to={`/document/${doc.id}`}
+                            role="menuitem"
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
                             onClick={() => setMenuOpen(null)}
                           >
@@ -413,6 +434,7 @@ export default function DashboardPage() {
                             {t('dashboard.view')}
                           </Link>
                           <button
+                            role="menuitem"
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                             onClick={async () => {
                               setMenuOpen(null)
@@ -511,6 +533,7 @@ export default function DashboardPage() {
                             {t('dashboard.download')}
                           </button>
                           <button
+                            role="menuitem"
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                             onClick={() => {
                               setAuditDocId(doc.id)
@@ -521,6 +544,7 @@ export default function DashboardPage() {
                             {t('dashboard.auditTrail')}
                           </button>
                           <button
+                            role="menuitem"
                             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
                             onClick={() => {
                               setMenuOpen(null)
@@ -558,7 +582,7 @@ export default function DashboardPage() {
                               </div>
                             </div>
                             <Badge variant={signer.status === 'signed' ? 'success' : signer.status === 'viewed' ? 'warning' : 'outline'}>
-                              {signer.status.charAt(0).toUpperCase() + signer.status.slice(1)}
+                              {t(`dashboard.${signer.status}`)}
                             </Badge>
                           </div>
                         ))}
