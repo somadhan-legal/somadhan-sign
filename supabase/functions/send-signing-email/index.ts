@@ -51,6 +51,15 @@ const storagePath = (reference: string | null): string | null => {
   }
 }
 
+const bytesToBase64 = (bytes: Uint8Array) => {
+  const chunkSize = 0x8000
+  let binary = ''
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize))
+  }
+  return btoa(binary)
+}
+
 // Text branding keeps email rendering independent from private document storage.
 const headerLogo = (afterLogo: string) => `
   <div style="background-color: #075056; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
@@ -130,6 +139,7 @@ serve(async (req) => {
     let resolvedSigningLink = signingLink
     let resolvedViewLink = viewLink
     let verifiedRecipient: string | null = null
+    let verifiedPdfBase64 = ''
 
     if (isCompletion) {
       if (typeof signingToken !== 'string' || signingToken.length < 32) {
@@ -251,14 +261,18 @@ serve(async (req) => {
       }
 
       const finalPath = storagePath(finalPdfReference)
-      if (finalPath) {
-        const { data: signedDownload, error: signedDownloadError } = await completionServiceClient.storage
-          .from('documents')
-          .createSignedUrl(finalPath, 60 * 60 * 24 * 7)
-        if (signedDownloadError) throw signedDownloadError
-        resolvedDownloadUrl = signedDownload?.signedUrl || ''
-      } else {
-        resolvedDownloadUrl = ''
+      if (!finalPath) throw new Error('The final document file reference is invalid')
+      const [{ data: signedDownload, error: signedDownloadError }, { data: finalPdf, error: finalPdfError }] = await Promise.all([
+        completionServiceClient.storage.from('documents').createSignedUrl(finalPath, 60 * 60 * 24 * 7),
+        completionServiceClient.storage.from('documents').download(finalPath),
+      ])
+      if (signedDownloadError || !signedDownload?.signedUrl) throw signedDownloadError || new Error('The final document link could not be created')
+      if (finalPdfError || !finalPdf) throw finalPdfError || new Error('The final document attachment could not be loaded')
+      resolvedDownloadUrl = signedDownload.signedUrl
+      if (finalPdf.size <= 21_000_000) {
+        const finalBytes = new Uint8Array(await finalPdf.arrayBuffer())
+        if (new TextDecoder().decode(finalBytes.slice(0, 5)) !== '%PDF-') throw new Error('The stored final document is invalid')
+        verifiedPdfBase64 = bytesToBase64(finalBytes)
       }
     } else {
       const { data: authData, error: authError } = await authClient.auth.getUser()
@@ -365,7 +379,7 @@ serve(async (req) => {
             All parties have signed this document. The document is now complete.
           </p>
           ${downloadButton}
-          ${pdfBase64 ? '<p style="color: #6b7280; font-size: 13px; line-height: 1.6;">The signed document is also attached to this email.</p>' : ''}
+          ${verifiedPdfBase64 ? '<p style="color: #6b7280; font-size: 13px; line-height: 1.6;">The signed document is also attached to this email.</p>' : ''}
           <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
@@ -488,12 +502,12 @@ serve(async (req) => {
     }
 
     // Add PDF attachment for completion emails
-    if (isCompletion && pdfBase64) {
+    if (isCompletion && verifiedPdfBase64) {
       const safeTitle = subjectTitle.replace(/[^a-zA-Z0-9_\- ]/g, '_') || 'document'
       emailPayload.attachments = [
         {
           filename: `${safeTitle}_signed.pdf`,
-          content: pdfBase64,
+          content: verifiedPdfBase64,
         },
       ]
     }
