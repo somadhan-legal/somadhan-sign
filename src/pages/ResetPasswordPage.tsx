@@ -99,7 +99,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-dvh flex items-center justify-center bg-[hsl(var(--background))] p-4">
       <div className="bg-[hsl(var(--card))] rounded-2xl p-8 max-w-md w-full shadow-xl">
         <div className="flex items-center gap-2 mb-8 justify-center">
-          <a href="/" aria-label="Somadhan Sign home">
+          <a href="/" aria-label={t('common.homeLabel')}>
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
         </div>

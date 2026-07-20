@@ -778,7 +778,7 @@ export default function InviteSigningPage() {
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
           </a>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'}>
+            <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} title={lang === 'en' ? 'বাংলা' : 'English'}>
               <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
             </Button>
             <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
@@ -1120,7 +1120,7 @@ export default function InviteSigningPage() {
       <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center relative">
         {/* Language & Theme toggles - top right */}
         <div className="fixed top-3 right-4 z-40 flex items-center gap-1 bg-[hsl(var(--card))]/90 backdrop-blur rounded-lg border border-[hsl(var(--border))] px-1 py-0.5 shadow-sm">
-          <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
+          <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} title={lang === 'en' ? 'বাংলা' : 'English'} className="h-11 w-11">
             <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
           </Button>
           <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="h-11 w-11">

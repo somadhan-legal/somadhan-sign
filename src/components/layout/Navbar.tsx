@@ -48,7 +48,7 @@ export default function Navbar() {
           )}
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} title={lang === 'en' ? 'বাংলা' : 'English'}>
+            <Button variant="ghost" size="icon" onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} title={lang === 'en' ? 'বাংলা' : 'English'}>
               <span className="text-xs font-bold">{lang === 'en' ? 'বাং' : 'EN'}</span>
             </Button>
             <Button variant="ghost" size="icon" onClick={toggle} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>

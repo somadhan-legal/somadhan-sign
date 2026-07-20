@@ -75,18 +75,18 @@ export default function LandingPage() {
       </a>
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[hsl(var(--border))] bg-[hsl(var(--background)/0.94)] backdrop-blur-xl">
         <div className="landing-container flex h-20 items-center justify-between">
-          <a href="#top" aria-label="Somadhan Sign home" className="shrink-0">
+          <a href="#top" aria-label={t('common.homeLabel')} className="shrink-0">
             <img src={logo} alt="Somadhan Sign" className="h-10 w-auto sm:h-11" />
           </a>
 
-          <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label="Primary navigation">
+          <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex" aria-label={t('common.primaryNavigation')}>
             <a href="#product" className="landing-nav-link">{t('landing.navProduct')}</a>
             <a href="#capabilities" className="landing-nav-link">{t('landing.navCapabilities')}</a>
             <a href="#security" className="landing-nav-link">{t('landing.navSecurity')}</a>
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
+            <button onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} className="landing-icon-button px-3 text-xs font-extrabold" title={lang === 'en' ? 'বাংলা' : 'English'}>
               {lang === 'en' ? 'বাংলা' : 'EN'}
             </button>
             <button onClick={toggleTheme} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="landing-icon-button" title={isDark ? t('nav.lightMode') : t('nav.darkMode')}>
@@ -100,7 +100,7 @@ export default function LandingPage() {
             ref={menuButtonRef}
             className="landing-icon-button landing-mobile-menu-button"
             onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={t(menuOpen ? 'common.closeMenu' : 'common.openMenu')}
             aria-expanded={menuOpen}
             aria-controls="landing-mobile-navigation"
           >
@@ -110,7 +110,7 @@ export default function LandingPage() {
 
         {menuOpen && (
           <div className="border-t border-[hsl(var(--border))] bg-[hsl(var(--background))] px-5 py-5 lg:hidden">
-            <nav id="landing-mobile-navigation" className="flex flex-col gap-1" aria-label="Mobile navigation">
+            <nav id="landing-mobile-navigation" className="flex flex-col gap-1" aria-label={t('common.mobileNavigation')}>
               {[
                 ['#product', t('landing.navProduct')],
                 ['#capabilities', t('landing.navCapabilities')],
@@ -123,7 +123,7 @@ export default function LandingPage() {
                 <Link to="/login?mode=signup" className={buttonStyles({ className: 'w-full' })}>{t('nav.getStarted')}</Link>
               </div>
               <div className="mt-3 flex gap-2">
-                <button onClick={toggleLang} aria-label={lang === 'en' ? 'Switch to Bangla' : 'Switch to English'} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
+                <button onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
                 <button onClick={toggleTheme} aria-label={isDark ? t('nav.lightMode') : t('nav.darkMode')} className="landing-icon-button flex-1">
                   {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </button>
@@ -199,7 +199,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
               className="relative mx-auto w-full max-w-[680px]"
-              aria-label="Somadhan Sign document workspace preview"
+              aria-label={t('landing.workspacePreview')}
             >
               <div className="landing-product-frame">
                 <div className="flex items-center justify-between border-b border-[hsl(var(--border))] px-4 py-3 sm:px-5">
