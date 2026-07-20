@@ -449,6 +449,10 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.removeNamedSigner': { en: 'Remove {name}', bn: '{name} মুছুন' },
   'editor.fieldAssignedTo': { en: '{field} field assigned to {name}', bn: '{name}-কে নির্ধারিত {field} ক্ষেত্র' },
   'editor.removeFieldFor': { en: 'Remove {field} field for {name}', bn: '{name}-এর {field} ক্ষেত্র মুছুন' },
+  'editor.fieldKeyboardHint': {
+    en: 'Use arrow keys to move. Hold Shift and use arrow keys to resize. Hold Alt for smaller adjustments.',
+    bn: 'সরাতে অ্যারো কী ব্যবহার করুন। আকার বদলাতে Shift চেপে অ্যারো কী ব্যবহার করুন। আরও ছোট পরিবর্তনের জন্য Alt চেপে রাখুন।',
+  },
   'editor.closeFieldSettings': { en: 'Close field settings', bn: 'ক্ষেত্রের সেটিংস বন্ধ করুন' },
   'editor.assignFieldTo': { en: 'Assign field to {name}', bn: '{name}-কে ক্ষেত্রটি নির্ধারণ করুন' },
   'editor.firstNamePlaceholder': { en: 'John', bn: 'রহিম' },

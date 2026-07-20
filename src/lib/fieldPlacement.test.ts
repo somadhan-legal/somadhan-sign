@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getFieldPlacement } from './fieldPlacement'
+import { adjustFieldWithKeyboard, getFieldPlacement } from './fieldPlacement'
 
 describe('getFieldPlacement', () => {
   it('centers a signature field on the pointer', () => {
@@ -27,5 +27,27 @@ describe('getFieldPlacement', () => {
       width: 4,
       height: 4,
     })
+  })
+})
+
+describe('adjustFieldWithKeyboard', () => {
+  const field = { x: 40, y: 47, width: 20, height: 6 }
+
+  it('moves fields and supports fine adjustments', () => {
+    expect(adjustFieldWithKeyboard(field, 'ArrowRight', false, false).x).toBe(41)
+    expect(adjustFieldWithKeyboard(field, 'ArrowUp', false, true).y).toBe(46.75)
+  })
+
+  it('resizes fields without moving their top-left corner', () => {
+    expect(adjustFieldWithKeyboard(field, 'ArrowRight', true, false)).toEqual({
+      ...field,
+      width: 21,
+    })
+    expect(adjustFieldWithKeyboard(field, 'ArrowUp', true, true).height).toBe(5.75)
+  })
+
+  it('keeps movement and size inside page bounds', () => {
+    expect(adjustFieldWithKeyboard({ x: 96, y: 97, width: 4, height: 3 }, 'ArrowRight', false, false).x).toBe(96)
+    expect(adjustFieldWithKeyboard({ x: 96, y: 97, width: 4, height: 3 }, 'ArrowDown', true, false).height).toBe(3)
   })
 })

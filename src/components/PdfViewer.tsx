@@ -84,7 +84,7 @@ function PageWithOverlay({
       onKeyDown={handleKeyDown}
       onPointerMove={handlePointerMove}
       onPointerLeave={onPageMouseLeave}
-      role={onPageClick ? 'button' : undefined}
+      role={onPageClick ? 'region' : undefined}
       tabIndex={onPageClick ? 0 : undefined}
       aria-label={onPageClick ? `${t('viewer.pdfPage')} ${pageNumber}. ${t('viewer.placeCenterHint')}` : undefined}
       style={{ userSelect: 'none', touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom' }}

@@ -27,7 +27,7 @@ import Input from '@/components/ui/Input'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
-import { getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
+import { adjustFieldWithKeyboard, getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 
@@ -982,12 +982,30 @@ export default function DocumentEditorPage() {
                           event.preventDefault()
                           event.stopPropagation()
                           if (!isLocked) setSelectedField(field.id)
+                          return
                         }
+                        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        if (isLocked) return
+
+                        updateSignatureField(
+                          field.id,
+                          adjustFieldWithKeyboard(
+                            field,
+                            event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
+                            event.shiftKey,
+                            event.altKey,
+                          ),
+                        )
+                        setSelectedField(field.id)
                       }}
                       role="button"
                       tabIndex={0}
                       aria-label={t('editor.fieldAssignedTo').replace('{field}', ftLabel).replace('{name}', sName)}
+                      aria-describedby={`field-keyboard-hint-${field.id}`}
                     >
+                      <span id={`field-keyboard-hint-${field.id}`} className="sr-only">{t('editor.fieldKeyboardHint')}</span>
                       <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
                       <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
                         {sName}

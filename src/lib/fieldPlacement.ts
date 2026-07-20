@@ -26,3 +26,34 @@ export function getFieldPlacement(
     height: size.height,
   }
 }
+
+type ArrowKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'
+type FieldBounds = { x: number; y: number; width: number; height: number }
+
+export function adjustFieldWithKeyboard(
+  field: FieldBounds,
+  key: ArrowKey,
+  resize: boolean,
+  fineAdjustment: boolean,
+): FieldBounds {
+  const step = fineAdjustment ? 0.25 : 1
+  if (resize) {
+    const widthDelta = key === 'ArrowRight' ? step : key === 'ArrowLeft' ? -step : 0
+    const heightDelta = key === 'ArrowDown' ? step : key === 'ArrowUp' ? -step : 0
+    return {
+      x: field.x,
+      y: field.y,
+      width: Math.max(4, Math.min(50, 100 - field.x, field.width + widthDelta)),
+      height: Math.max(3, Math.min(30, 100 - field.y, field.height + heightDelta)),
+    }
+  }
+
+  const xDelta = key === 'ArrowRight' ? step : key === 'ArrowLeft' ? -step : 0
+  const yDelta = key === 'ArrowDown' ? step : key === 'ArrowUp' ? -step : 0
+  return {
+    x: Math.max(0, Math.min(100 - field.width, field.x + xDelta)),
+    y: Math.max(0, Math.min(100 - field.height, field.y + yDelta)),
+    width: field.width,
+    height: field.height,
+  }
+}
