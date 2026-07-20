@@ -28,6 +28,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
 import { getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
+import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -82,7 +83,6 @@ export default function DocumentEditorPage() {
     updateSignatureField,
     removeSignatureField,
     saveSignatureFields,
-    fetchSignatureFields,
     addSigner,
     updateSigner,
     removeSigner,
@@ -100,6 +100,7 @@ export default function DocumentEditorPage() {
   const [signerFormError, setSignerFormError] = useState('')
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
+  const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saved' | 'error'>('idle')
   const [savingSigner, setSavingSigner] = useState(false)
   const [sending, setSending] = useState(false)
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
@@ -121,6 +122,11 @@ export default function DocumentEditorPage() {
   } | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const signerListRef = useRef<HTMLDivElement>(null)
+  const initializedDocumentRef = useRef<string | null>(null)
+  const lastSavedFingerprintRef = useRef('')
+  const latestFingerprintRef = useRef('')
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const pendingSaveCountRef = useRef(0)
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -154,6 +160,77 @@ export default function DocumentEditorPage() {
   }
 
   const docFields = signatureFields.filter((f) => f.document_id === id)
+
+  const persistCurrentFields = useCallback(async (showConfirmation = false) => {
+    if (!id || currentDocument?.status !== 'draft') return
+    const snapshot = useDocumentStore.getState().signatureFields
+      .filter((field) => field.document_id === id)
+      .map((field) => ({ ...field }))
+    const fingerprint = getFieldDraftFingerprint(snapshot, id)
+    if (fingerprint === lastSavedFingerprintRef.current) {
+      if (showConfirmation) {
+        setSavedToast(true)
+        setTimeout(() => setSavedToast(false), 2500)
+      }
+      return
+    }
+
+    pendingSaveCountRef.current += 1
+    setSavingDraft(true)
+    setDraftSaveState('idle')
+    const operation = saveQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await saveSignatureFields(id, snapshot)
+        lastSavedFingerprintRef.current = fingerprint
+        if (latestFingerprintRef.current === fingerprint) setDraftSaveState('saved')
+        if (showConfirmation) {
+          setSelectedField(null)
+          setSavedToast(true)
+          setTimeout(() => setSavedToast(false), 2500)
+        }
+      })
+      .catch((error) => {
+        setDraftSaveState('error')
+        throw error
+      })
+      .finally(() => {
+        pendingSaveCountRef.current -= 1
+        if (pendingSaveCountRef.current === 0) setSavingDraft(false)
+      })
+    saveQueueRef.current = operation
+    return operation
+  }, [currentDocument?.status, id, saveSignatureFields])
+
+  useEffect(() => {
+    if (!id || loading || currentDocument?.id !== id) return
+    const fingerprint = getFieldDraftFingerprint(signatureFields, id)
+    latestFingerprintRef.current = fingerprint
+
+    if (initializedDocumentRef.current !== id) {
+      initializedDocumentRef.current = id
+      lastSavedFingerprintRef.current = fingerprint
+      setDraftSaveState('saved')
+      return
+    }
+    if (currentDocument.status !== 'draft' || fingerprint === lastSavedFingerprintRef.current) return
+
+    setDraftSaveState('idle')
+    const timer = window.setTimeout(() => {
+      void persistCurrentFields().catch(() => undefined)
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [currentDocument?.id, currentDocument?.status, id, loading, persistCurrentFields, signatureFields])
+
+  useEffect(() => {
+    const warnAboutUnsavedChanges = (event: BeforeUnloadEvent) => {
+      if (latestFingerprintRef.current === lastSavedFingerprintRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnAboutUnsavedChanges)
+    return () => window.removeEventListener('beforeunload', warnAboutUnsavedChanges)
+  }, [])
 
   const isInteracting = useRef(false)
   const getFieldTypeLabel = (fieldType: FieldType) => t(`editor.${fieldType}`)
@@ -296,9 +373,8 @@ export default function DocumentEditorPage() {
         await addSigner(id, normalizedEmail, fullName || undefined)
       }
 
-      // Refetch signers and fields to ensure UI is in sync
+      // Refetch the signer list without replacing unsaved field placement work.
       await fetchSigners(id)
-      await fetchSignatureFields(id)
       
       // Auto-scroll to newly added signer
       if (!editingSignerId) {
@@ -354,12 +430,8 @@ export default function DocumentEditorPage() {
 
   const handleSave = async () => {
     if (!id || savingDraft || sending) return
-    setSavingDraft(true)
     try {
-      await saveSignatureFields(id)
-      setSelectedField(null)
-      setSavedToast(true)
-      setTimeout(() => setSavedToast(false), 2500)
+      await persistCurrentFields(true)
     } catch (err: unknown) {
       setConfirmDialog({
         isOpen: true,
@@ -368,12 +440,10 @@ export default function DocumentEditorPage() {
         onConfirm: () => {},
         variant: 'warning',
       })
-    } finally {
-      setSavingDraft(false)
     }
   }
 
-  const handlePreSend = () => {
+  const handlePreSend = async () => {
     if (!id || !user || savingDraft || sending) return
     const signerEmails = new Set(signers.map((signer) => signer.signer_email.trim().toLowerCase()))
     const orphaned = docFields.filter((field) =>
@@ -438,7 +508,18 @@ export default function DocumentEditorPage() {
       }
     }
 
-    setShowSendConfirm(true)
+    try {
+      await persistCurrentFields()
+      setShowSendConfirm(true)
+    } catch (err: unknown) {
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.couldNotSaveFields'),
+        message: err instanceof Error ? err.message : t('editor.changesSaveFailed'),
+        onConfirm: () => {},
+        variant: 'warning',
+      })
+    }
   }
 
   const handleSendForSigning = async () => {
@@ -742,6 +823,13 @@ export default function DocumentEditorPage() {
                 <Save className="w-3.5 h-3.5 mr-1.5" />
                 {savingDraft ? t('editor.saving') : t('editor.saveDraft')}
               </Button>
+              <p
+                className={`px-1 text-center text-[10px] ${draftSaveState === 'error' ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--muted-foreground))]'}`}
+                role={draftSaveState === 'error' ? 'alert' : 'status'}
+                aria-live="polite"
+              >
+                {savingDraft ? t('editor.saving') : draftSaveState === 'error' ? t('editor.autosaveFailed') : t('editor.saved')}
+              </p>
               <Button size="sm" className="w-full text-xs" onClick={handlePreSend} disabled={savingDraft || sending}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />
                 {t('editor.sendForSigning')}

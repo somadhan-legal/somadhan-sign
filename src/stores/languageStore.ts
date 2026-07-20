@@ -341,6 +341,8 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.text': { en: 'Text', bn: 'টেক্সট' },
   'editor.saveDraft': { en: 'Save Draft', bn: 'খসড়া সংরক্ষণ' },
   'editor.saving': { en: 'Saving...', bn: 'সংরক্ষণ হচ্ছে...' },
+  'editor.saved': { en: 'All changes saved', bn: 'সব পরিবর্তন সংরক্ষিত' },
+  'editor.autosaveFailed': { en: 'Changes are not saved. Check your connection and try again.', bn: 'পরিবর্তন সংরক্ষিত হয়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
   'editor.sendForSigning': { en: 'Send for Signing', bn: 'স্বাক্ষরের জন্য পাঠান' },
   'editor.locked': { en: 'Document sent - editing locked', bn: 'ডকুমেন্ট পাঠানো হয়েছে - সম্পাদনা লক' },
   'editor.helpTitle': { en: 'Quick Guide', bn: 'দ্রুত নির্দেশিকা' },
@@ -361,8 +363,8 @@ const translations: Record<string, Record<Language, string>> = {
     bn: '৪. একটি রাখা ক্ষেত্রে ক্লিক করে স্বাক্ষরকারী নির্ধারণ করুন',
   },
   'editor.help5': {
-    en: '5. Save draft, then Send for Signing when ready',
-    bn: '৫. খসড়া সংরক্ষণ করুন, তারপর প্রস্তুত হলে স্বাক্ষরের জন্য পাঠান',
+    en: '5. Changes save automatically. Send when ready',
+    bn: '৫. পরিবর্তন স্বয়ংক্রিয়ভাবে সংরক্ষিত হবে। প্রস্তুত হলে পাঠান',
   },
   'editor.clickFieldHint': {
     en: 'Click a field on the PDF to see its details and change the assigned signer.',

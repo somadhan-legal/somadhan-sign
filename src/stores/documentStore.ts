@@ -18,8 +18,9 @@ import {
   getLegacyPublicDocumentUrl,
 } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
+import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 
-interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
+export interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
   created_at?: string
   isNew?: boolean
@@ -56,7 +57,7 @@ interface DocumentState {
   addSignatureField: (field: SignatureFieldLocal) => void
   updateSignatureField: (id: string, updates: Partial<SignatureFieldLocal>) => void
   removeSignatureField: (id: string) => void
-  saveSignatureFields: (documentId: string) => Promise<void>
+  saveSignatureFields: (documentId: string, fieldsSnapshot?: SignatureFieldLocal[]) => Promise<void>
   fetchSignatureFields: (documentId: string) => Promise<void>
 
   addSigner: (documentId: string, email: string, name?: string) => Promise<void>
@@ -302,10 +303,25 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }))
   },
 
-  saveSignatureFields: async (documentId: string) => {
-    const fields = get().signatureFields.filter(
+  saveSignatureFields: async (documentId: string, fieldsSnapshot) => {
+    const fields = (fieldsSnapshot || get().signatureFields).filter(
       (f) => f.document_id === documentId
     )
+    const submittedFingerprint = getFieldDraftFingerprint(fields, documentId)
+
+    const applySavedFields = (savedFields: SignatureFieldLocal[]) => {
+      set((state) => {
+        if (getFieldDraftFingerprint(state.signatureFields, documentId) !== submittedFingerprint) {
+          return state
+        }
+        return {
+          signatureFields: [
+            ...state.signatureFields.filter((field) => field.document_id !== documentId),
+            ...savedFields,
+          ],
+        }
+      })
+    }
 
     const inserts: SignatureFieldInsert[] = fields.map((f, index) => ({
       document_id: f.document_id,
@@ -325,7 +341,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       p_fields: inserts,
     })
     if (!replaceError) {
-      set({ signatureFields: (replacedFields as SignatureFieldLocal[]) || [] })
+      applySavedFields((replacedFields as SignatureFieldLocal[]) || [])
       return
     }
     if (!isMissingRpc(replaceError)) throw replaceError
@@ -343,7 +359,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (deleteError) throw deleteError
 
     if (fields.length === 0) {
-      set({ signatureFields: [] })
+      applySavedFields([])
       return
     }
 
@@ -355,7 +371,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
       throw error
     }
-    set({ signatureFields: (insertedFields as SignatureFieldLocal[]) || [] })
+    applySavedFields((insertedFields as SignatureFieldLocal[]) || [])
   },
 
   fetchSignatureFields: async (documentId: string) => {
@@ -465,6 +481,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     
     set((state) => ({
       signers: state.signers.map(s => s.id === signerId ? (data as DocumentSigner) : s),
+      signatureFields: newEmail && newEmail !== oldEmail
+        ? state.signatureFields.map((field) =>
+            field.document_id === currentSigner.document_id && field.assigned_to_email === oldEmail
+              ? { ...field, assigned_to_email: newEmail }
+              : field
+          )
+        : state.signatureFields,
     }))
   },
 
