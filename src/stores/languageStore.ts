@@ -539,6 +539,13 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.uploadSignatureImage': { en: 'Click to upload a signature image', bn: 'স্বাক্ষরের ছবি আপলোড করতে ক্লিক করুন' },
   'signee.signatureImageFormats': { en: 'PNG, JPG, or WebP up to 2 MB', bn: 'PNG, JPG বা WebP, সর্বোচ্চ ২ MB' },
   'signee.transparentImageHint': { en: 'A transparent background gives the cleanest result.', bn: 'স্বচ্ছ ব্যাকগ্রাউন্ডে ফলাফল সবচেয়ে পরিষ্কার হবে।' },
+  'signee.signatureMethod': { en: 'Signature method', bn: 'স্বাক্ষরের পদ্ধতি' },
+  'signee.uploadedSignature': { en: 'Uploaded signature preview', bn: 'আপলোড করা স্বাক্ষরের প্রিভিউ' },
+  'signee.preparingSignatureImage': { en: 'Preparing signature image...', bn: 'স্বাক্ষরের ছবি প্রস্তুত হচ্ছে...' },
+  'signee.signatureImagePrepareFailed': { en: 'The signature image could not be prepared. Try a smaller image.', bn: 'স্বাক্ষরের ছবি প্রস্তুত করা যায়নি। ছোট ছবি দিয়ে আবার চেষ্টা করুন।' },
+  'signee.signatureImageEmpty': { en: 'The selected image is empty.', bn: 'নির্বাচিত ছবিটি খালি।' },
+  'signee.signatureImageTooLarge': { en: 'The signature image must be 2 MB or smaller.', bn: 'স্বাক্ষরের ছবি ২ MB বা তার কম হতে হবে।' },
+  'signee.signatureImageTypeInvalid': { en: 'Use a PNG, JPG, or WebP image.', bn: 'PNG, JPG অথবা WebP ছবি ব্যবহার করুন।' },
   'signee.fieldSaveFailed': {
     en: 'This field could not be saved. Your document was refreshed, so you can try again.',
     bn: 'এই ক্ষেত্রটি সংরক্ষণ করা যায়নি। ডকুমেন্টটি রিফ্রেশ করা হয়েছে, এখন আবার চেষ্টা করুন।',

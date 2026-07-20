@@ -26,6 +26,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState('')
   const [processingUpload, setProcessingUpload] = useState(false)
+  const [hasDrawing, setHasDrawing] = useState(false)
   const { t } = useLanguageStore()
   const { isDark } = useThemeStore()
 
@@ -70,6 +71,8 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
         maxWidth: 3,
       })
       padRef.current = pad
+      const handleStrokeEnd = () => setHasDrawing(!pad.isEmpty())
+      pad.addEventListener('endStroke', handleStrokeEnd)
       const resizeObserver = new ResizeObserver(() => resizeCanvas())
       resizeObserver.observe(canvas)
 
@@ -87,6 +90,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
 
   const handleClear = () => {
     padRef.current?.clear()
+    setHasDrawing(false)
   }
 
   // Convert the drawn signature to black ink because PDF paper is always white.
@@ -148,8 +152,13 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     if (!file) return
     const validationError = validateSignatureImage(file)
     if (validationError) {
+      const validationKeys: Record<string, string> = {
+        'The selected image is empty.': 'signee.signatureImageEmpty',
+        'The signature image must be 2 MB or smaller.': 'signee.signatureImageTooLarge',
+        'Use a PNG, JPG, or WebP image.': 'signee.signatureImageTypeInvalid',
+      }
       setUploadedImage(null)
-      setUploadError(validationError)
+      setUploadError(validationKeys[validationError] ? t(validationKeys[validationError]) : validationError)
       setProcessingUpload(false)
       e.target.value = ''
       return
@@ -163,7 +172,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     } catch {
       if (requestId === uploadRequestRef.current) {
         setUploadedImage(null)
-        setUploadError('The signature image could not be prepared. Try a smaller image.')
+        setUploadError(t('signee.signatureImagePrepareFailed'))
       }
     } finally {
       if (requestId === uploadRequestRef.current) setProcessingUpload(false)
@@ -182,15 +191,25 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     { id: 'draw', label: t('signee.tabDraw') || 'Draw', icon: <Pen className="w-4 h-4" /> },
     { id: 'type', label: t('signee.tabType') || 'Type', icon: <Type className="w-4 h-4" /> },
   ]
+  const hasValue = activeTab === 'draw'
+    ? hasDrawing
+    : activeTab === 'type'
+      ? Boolean(typedName.trim())
+      : Boolean(uploadedImage) && !processingUpload
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 bg-[hsl(var(--muted))] rounded-lg p-1">
+      <div className="flex gap-1 bg-[hsl(var(--muted))] rounded-lg p-1" role="tablist" aria-label={t('signee.signatureMethod')}>
         {tabs.map((tab) => (
           <button
             type="button"
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => {
+              setActiveTab(tab.id)
+              if (tab.id === 'draw') setHasDrawing(false)
+            }}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-[hsl(var(--card))] shadow-sm text-[hsl(var(--foreground))]'
@@ -252,12 +271,13 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
               onChange={handleFileUpload}
               className="hidden"
               id="sig-upload"
+              disabled={processingUpload}
             />
             <label htmlFor="sig-upload" className="cursor-pointer">
               {uploadedImage ? (
                 <img
                   src={uploadedImage}
-                  alt="Uploaded signature"
+                  alt={t('signee.uploadedSignature')}
                   className="max-h-32 mx-auto"
                 />
               ) : (
@@ -275,15 +295,16 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
             </label>
           </div>
           {uploadError && <p role="alert" className="mt-2 text-sm text-[hsl(var(--destructive))]">{uploadError}</p>}
+          {processingUpload && <p role="status" className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{t('signee.preparingSignatureImage')}</p>}
         </div>
       )}
 
       <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="flex-1" onClick={handleSave} disabled={processingUpload}>
+        <Button variant="outline" className="flex-1" onClick={handleSave} disabled={!hasValue || processingUpload}>
           {saveLabel || t('signee.saveSignature') || 'Save'}
         </Button>
         {showApplyAll && onApplyToAll && (
-          <Button className="flex-1" onClick={handleApplyToAll} disabled={processingUpload}>
+          <Button className="flex-1" onClick={handleApplyToAll} disabled={!hasValue || processingUpload}>
             {applyAllLabel || t('signee.applyToAll')}
           </Button>
         )}
