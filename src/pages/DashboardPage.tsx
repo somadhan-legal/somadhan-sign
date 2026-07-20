@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [remindingDocumentId, setRemindingDocumentId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [expandedSigners, setExpandedSigners] = useState<DocumentSigner[]>([])
@@ -60,6 +61,7 @@ export default function DashboardPage() {
   const noticeTimerRef = useRef<number | null>(null)
   const signerRequestRef = useRef(0)
   const uploadValidationRequestRef = useRef(0)
+  const reminderRequestRef = useRef(false)
 
   const localizePdfValidationError = (message: string) => {
     const keys: Record<string, string> = {
@@ -183,6 +185,30 @@ export default function DashboardPage() {
       navigate(`/document/${doc.id}/edit`)
     } else {
       setUploadError(t('dashboard.uploadFailed'))
+    }
+  }
+
+  const handleReminder = async (documentId: string) => {
+    if (reminderRequestRef.current) return
+    reminderRequestRef.current = true
+    setMenuOpen(null)
+    setRemindingDocumentId(documentId)
+    try {
+      const senderName = user?.user_metadata?.full_name || user?.email || 'A user'
+      const result = await sendReminder(documentId, senderName)
+      if (user?.email && result.sent > 0) {
+        await addAuditEntry(documentId, 'Reminder Sent', user.email, user.user_metadata?.full_name, JSON.stringify({ sent: result.sent, failed: result.failed }))
+      }
+      if (result.sent > 0) {
+        const signerLabel = t(result.sent === 1 ? 'dashboard.pendingSigner' : 'dashboard.pendingSigners')
+        const failureLabel = result.failed > 0 ? ` ${result.failed} ${t('dashboard.failedCount')}.` : ''
+        showNotice(`${t('dashboard.reminderSentTo')} ${result.sent} ${signerLabel}.${failureLabel}`, result.failed > 0 ? 'info' : 'success')
+      } else {
+        showNotice(result.failed > 0 ? t('dashboard.reminderFailed') : t('dashboard.noPendingSigners'), result.failed > 0 ? 'error' : 'info')
+      }
+    } finally {
+      reminderRequestRef.current = false
+      setRemindingDocumentId(null)
     }
   }
 
@@ -403,22 +429,9 @@ export default function DashboardPage() {
                           {doc.status === 'pending' && (
                             <button
                               role="menuitem"
-                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
-                              onClick={async () => {
-                                setMenuOpen(null)
-                                const senderName = user?.user_metadata?.full_name || user?.email || 'A user'
-                                const result = await sendReminder(doc.id, senderName)
-                                if (user?.email && result.sent > 0) {
-                                  await addAuditEntry(doc.id, 'Reminder Sent', user.email, user.user_metadata?.full_name, JSON.stringify({ sent: result.sent, failed: result.failed }))
-                                }
-                                if (result.sent > 0) {
-                                  const signerLabel = t(result.sent === 1 ? 'dashboard.pendingSigner' : 'dashboard.pendingSigners')
-                                  const failureLabel = result.failed > 0 ? ` ${result.failed} ${t('dashboard.failedCount')}.` : ''
-                                  showNotice(`${t('dashboard.reminderSentTo')} ${result.sent} ${signerLabel}.${failureLabel}`, result.failed > 0 ? 'info' : 'success')
-                                } else {
-                                  showNotice(result.failed > 0 ? t('dashboard.reminderFailed') : t('dashboard.noPendingSigners'), result.failed > 0 ? 'error' : 'info')
-                                }
-                              }}
+                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed w-full text-left cursor-pointer"
+                              onClick={() => void handleReminder(doc.id)}
+                              disabled={remindingDocumentId !== null}
                             >
                               <Bell className="w-4 h-4" />
                               {t('dashboard.sendReminder')}
@@ -657,6 +670,7 @@ export default function DashboardPage() {
             placeholder={t('dashboard.documentTitlePlaceholder')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={uploading}
             required
             maxLength={160}
           />
@@ -681,8 +695,9 @@ export default function DashboardPage() {
                 className="hidden"
                 id="pdf-upload"
                 required
+                disabled={uploading}
               />
-              <label htmlFor="pdf-upload" className="cursor-pointer">
+              <label htmlFor="pdf-upload" className={uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}>
                 <FileText className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))]/50 mb-2" />
                 {file ? (
                   <p className="text-sm font-medium">{file.name}</p>

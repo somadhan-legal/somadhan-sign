@@ -4,6 +4,9 @@ import { createClient } from "supabase"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
 }
 
 const escapeHtml = (value: unknown) => String(value ?? '')
@@ -557,9 +560,15 @@ serve(async (req) => {
       }
       if (isCompletion && completionRecipient && verifiedDocumentId) {
         headers['Idempotency-Key'] = await emailIdempotencyKey('completion', verifiedDocumentId, completionRecipient)
-      } else if (!isReminder && verifiedRecipient && verifiedDocumentId) {
+      } else if (verifiedRecipient && verifiedDocumentId) {
+        // Resend retains idempotency keys for 24 hours. Invitations retain their
+        // existing document-level key, while reminders use a 15-minute window so
+        // an intentional later reminder remains possible.
+        const scope = isReminder
+          ? `reminder-${Math.floor(Date.now() / (15 * 60 * 1000))}`
+          : isCcNotification ? 'viewer' : 'invitation'
         headers['Idempotency-Key'] = await emailIdempotencyKey(
-          isCcNotification ? 'viewer' : 'invitation',
+          scope,
           verifiedDocumentId,
           verifiedRecipient,
         )
