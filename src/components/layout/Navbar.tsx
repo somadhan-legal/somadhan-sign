@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
+import { useState } from 'react'
 
 export default function Navbar() {
   const { user, signOut } = useAuthStore()
@@ -15,10 +16,21 @@ export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
   const isLoginPage = location.pathname === '/login'
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState('')
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
+    if (signingOut) return
+    setSigningOut(true)
+    setSignOutError('')
+    try {
+      await signOut()
+      navigate('/login')
+    } catch {
+      setSignOutError(t('nav.signOutFailed'))
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -55,7 +67,7 @@ export default function Navbar() {
                     {user.user_metadata?.full_name || user.email}
                   </span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label={t('nav.signOut')} title={t('nav.signOut')}>
+                <Button variant="ghost" size="icon" onClick={handleSignOut} disabled={signingOut} aria-label={signingOut ? t('nav.signingOut') : t('nav.signOut')} title={t('nav.signOut')}>
                   <LogOut className="w-4 h-4" />
                 </Button>
               </div>
@@ -69,6 +81,7 @@ export default function Navbar() {
             )}
           </div>
         </div>
+        {signOutError && <p role="alert" className="pb-2 text-right text-xs font-medium text-[hsl(var(--destructive))]">{signOutError}</p>}
       </div>
     </nav>
   )

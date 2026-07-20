@@ -30,6 +30,8 @@ const translations: Record<string, Record<Language, string>> = {
   'notFound.returnHome': { en: 'Return home', bn: 'হোমে ফিরুন' },
   'nav.darkMode': { en: 'Dark mode', bn: 'ডার্ক মোড' },
   'nav.signOut': { en: 'Sign out', bn: 'সাইন আউট' },
+  'nav.signingOut': { en: 'Signing out...', bn: 'সাইন আউট হচ্ছে...' },
+  'nav.signOutFailed': { en: 'Could not sign out. Check your connection and try again.', bn: 'সাইন আউট করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
 
   // ─── Landing Page ───
   'landing.heroTitle1': { en: 'Sign documents with', bn: 'ডকুমেন্ট  সাইন  করুন' },
