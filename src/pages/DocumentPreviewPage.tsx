@@ -25,6 +25,7 @@ import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 import { formatSigningDate } from '@/lib/utils'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
+import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -56,9 +57,7 @@ export default function DocumentPreviewPage() {
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadError, setDownloadError] = useState('')
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 1024
-  )
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
 
   useEffect(() => {
     if (id) {
@@ -202,6 +201,14 @@ export default function DocumentPreviewPage() {
 
   return (
     <div className="relative flex h-full min-w-0">
+      {!leftPanelCollapsed && (
+        <button
+          type="button"
+          aria-label={t('viewer.hideDetails')}
+          onClick={() => setLeftPanelCollapsed(true)}
+          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
+        />
+      )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">

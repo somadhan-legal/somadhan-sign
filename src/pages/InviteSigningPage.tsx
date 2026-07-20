@@ -31,6 +31,7 @@ import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, safePdfFilename } from '@/lib/download'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
+import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -110,9 +111,7 @@ export default function InviteSigningPage() {
   const [pdfError, setPdfError] = useState('')
   const hasLoggedView = useRef(false)
   const { isDark, toggle } = useThemeStore()
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 1024
-  )
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
   const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => {
@@ -832,6 +831,14 @@ export default function InviteSigningPage() {
 
   return (
     <div className="relative flex h-dvh min-w-0">
+      {!leftPanelCollapsed && (
+        <button
+          type="button"
+          aria-label={t('signee.collapsePanel')}
+          onClick={() => setLeftPanelCollapsed(true)}
+          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
+        />
+      )}
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">

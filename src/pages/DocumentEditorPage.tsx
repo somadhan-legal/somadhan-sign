@@ -29,6 +29,7 @@ import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
 import { getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
+import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -141,9 +142,7 @@ export default function DocumentEditorPage() {
   const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
   
   // Panel collapse state
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 1024
-  )
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -623,6 +622,14 @@ export default function DocumentEditorPage() {
 
   return (
     <div className="relative flex h-full min-w-0">
+      {!leftPanelCollapsed && (
+        <button
+          type="button"
+          aria-label={t('editor.collapsePanel')}
+          onClick={() => setLeftPanelCollapsed(true)}
+          className="fixed inset-0 z-30 bg-black/35 lg:hidden"
+        />
+      )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden lg:static lg:z-auto lg:w-56 lg:shadow-none">

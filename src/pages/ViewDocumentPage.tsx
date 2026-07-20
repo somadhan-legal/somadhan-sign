@@ -12,6 +12,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
 import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
+import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 
 interface DocumentData {
   id: string
@@ -38,9 +39,7 @@ export default function ViewDocumentPage() {
   const [error, setError] = useState<string | null>(null)
   const [document, setDocument] = useState<DocumentData | null>(null)
   const [signers, setSigners] = useState<SignerInfo[]>([])
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 1024
-  )
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
 
   useEffect(() => {
     if (!documentId) return
@@ -160,6 +159,14 @@ export default function ViewDocumentPage() {
 
   return (
     <div className="relative flex h-dvh min-w-0">
+      {!leftPanelCollapsed && (
+        <button
+          type="button"
+          aria-label={t('viewer.hideDetails')}
+          onClick={() => setLeftPanelCollapsed(true)}
+          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
+        />
+      )}
       {/* Sidebar */}
       {!leftPanelCollapsed && (
       <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
