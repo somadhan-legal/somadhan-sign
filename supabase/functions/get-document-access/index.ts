@@ -88,11 +88,13 @@ Deno.serve(async (req) => {
             ...field,
             assigned_to_email: field.assigned_to_email.toLowerCase() === normalizedEmail ? signer.signer_email : '',
           })),
-          placements: (placements || []).map((placement) => ({
-            ...placement,
-            signer_id: null,
-            signer_email: placement.signer_email.toLowerCase() === normalizedEmail ? signer.signer_email : '',
-          })),
+          placements: (placements || [])
+            .filter((placement) => document.status === 'completed' || placement.signer_email.toLowerCase() === normalizedEmail)
+            .map((placement) => ({
+              ...placement,
+              signer_id: null,
+              signer_email: placement.signer_email.toLowerCase() === normalizedEmail ? signer.signer_email : '',
+            })),
           audit_trail: auditTrail || [],
         },
       })

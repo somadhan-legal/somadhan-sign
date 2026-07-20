@@ -354,6 +354,7 @@ begin
       ))
       from public.signature_placements p
       where p.document_id = ds.document_id
+        and (d.status = 'completed' or lower(p.signer_email) = lower(ds.signer_email))
     ), '[]'::json),
     'audit_trail', coalesce((
       select json_agg(json_build_object(
