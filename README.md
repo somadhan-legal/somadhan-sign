@@ -192,7 +192,7 @@ The application uses **Zustand** for global state management with the following 
    ```env
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key-here
-   # Set to true only after get-document-access and the secure access migration are deployed.
+   # Set to true in the same coordinated rollout that makes document storage private.
    VITE_SECURE_DOCUMENT_ACCESS_ENABLED=false
    ```
 
@@ -215,10 +215,10 @@ The application uses **Zustand** for global state management with the following 
    supabase db push
    ```
    
-   c. Set up Storage bucket:
-   - Go to **Storage** in Supabase dashboard
-   - Create a bucket named `documents`
-   - Set it to **Public** or configure RLS policies
+   c. Set up Storage:
+   - The migrations create and configure the `documents` bucket.
+   - The current security migration makes this bucket private. Do not change it back to public.
+   - On an existing live deployment, deploy `get-document-access` first, then apply the secure migration and release the frontend with `VITE_SECURE_DOCUMENT_ACCESS_ENABLED=true` in one coordinated maintenance window. A private bucket cannot support the legacy public-URL client path.
    
    d. Configure Authentication:
    - Go to **Authentication** → **Providers**

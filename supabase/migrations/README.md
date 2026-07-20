@@ -31,4 +31,5 @@ The numbered migration files (001–011) are historical reference and must not b
 - All RPC functions use `SECURITY DEFINER` with `search_path = public`
 - `cleanup_old_documents()` and `rls_auto_enable()` have EXECUTE revoked from anon/authenticated
 - Unauthenticated signers and viewers access data via token-based RPCs, not direct table access
+- The `documents` bucket is private after the secure public-access migration. Deploy `get-document-access`, apply that migration, and enable `VITE_SECURE_DOCUMENT_ACCESS_ENABLED` as one coordinated production rollout.
 - The Edge Function `send-signing-email` handles email delivery via Resend

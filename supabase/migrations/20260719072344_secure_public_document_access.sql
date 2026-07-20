@@ -850,6 +850,7 @@ begin
       'id', d.id,
       'title', d.title,
       'original_pdf_url', d.original_pdf_url,
+      'final_pdf_url', case when d.status = 'completed' then d.final_pdf_url else null end,
       'status', d.status
     ),
     'signers', coalesce((

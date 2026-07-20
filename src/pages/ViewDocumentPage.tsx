@@ -80,6 +80,9 @@ export default function ViewDocumentPage() {
         setDocument({
           ...viewerPackage.document,
           original_pdf_url: getLegacyPublicDocumentUrl(viewerPackage.document.original_pdf_url),
+          final_pdf_url: viewerPackage.document.final_pdf_url
+            ? getLegacyPublicDocumentUrl(viewerPackage.document.final_pdf_url)
+            : null,
         })
         setSigners(viewerPackage.signers || [])
         setLoading(false)
