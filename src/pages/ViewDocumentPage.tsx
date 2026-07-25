@@ -13,6 +13,7 @@ import type { ViewerPackageResult } from '@/types/database'
 import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { isViewerReference } from '@/lib/publicAccessReference'
 
 interface DocumentData {
   id: string
@@ -28,21 +29,19 @@ interface SignerInfo {
   status: string
 }
 
-const isMissingRpc = (error: { code?: string; message?: string } | null) =>
-  error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
-
 export default function ViewDocumentPage() {
   const { documentId } = useParams<{ documentId: string }>()
+  const referenceIsValid = isViewerReference(documentId, secureDocumentAccessEnabled)
   const { lang, toggle: toggleLang, t } = useLanguageStore()
   const { isDark, toggle } = useThemeStore()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(referenceIsValid)
   const [error, setError] = useState<string | null>(null)
   const [document, setDocument] = useState<DocumentData | null>(null)
   const [signers, setSigners] = useState<SignerInfo[]>([])
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
 
   useEffect(() => {
-    if (!documentId) return
+    if (!isViewerReference(documentId, secureDocumentAccessEnabled)) return
     const load = async () => {
       setLoading(true)
       setError(null)
@@ -64,33 +63,6 @@ export default function ViewDocumentPage() {
         }
         setDocument(securePackage.document)
         setSigners(securePackage.signers || [])
-        setLoading(false)
-        return
-      }
-
-      const { data: viewerPackage, error: packageError } = await supabase
-        .rpc('get_viewer_package', { p_token: documentId })
-
-      if (!packageError) {
-        if (!viewerPackage?.document) {
-          setError(t('signee.docNotFoundDesc'))
-          setLoading(false)
-          return
-        }
-        setDocument({
-          ...viewerPackage.document,
-          original_pdf_url: getLegacyPublicDocumentUrl(viewerPackage.document.original_pdf_url),
-          final_pdf_url: viewerPackage.document.final_pdf_url
-            ? getLegacyPublicDocumentUrl(viewerPackage.document.final_pdf_url)
-            : null,
-        })
-        setSigners(viewerPackage.signers || [])
-        setLoading(false)
-        return
-      }
-
-      if (!isMissingRpc(packageError)) {
-        setError(t('signee.docNotFoundDesc'))
         setLoading(false)
         return
       }
@@ -126,7 +98,7 @@ export default function ViewDocumentPage() {
     load()
   }, [documentId, t])
 
-  if (loading) {
+  if (loading && referenceIsValid) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]" role="status" aria-live="polite">
         <a href="/">
@@ -138,13 +110,13 @@ export default function ViewDocumentPage() {
     )
   }
 
-  if (error || !document) {
+  if (!referenceIsValid || error || !document) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md" role="alert">
           <div className="w-16 h-16 rounded-full bg-[hsl(var(--destructive))]/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
           </div>

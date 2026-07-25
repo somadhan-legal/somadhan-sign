@@ -32,6 +32,7 @@ import { downloadBlob, safePdfFilename } from '@/lib/download'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { isSigningToken } from '@/lib/publicAccessReference'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -74,6 +75,7 @@ interface SignerData {
 
 export default function InviteSigningPage() {
   const { token } = useParams<{ token: string }>()
+  const tokenIsValid = isSigningToken(token)
   const { lang, toggle: toggleLang, t } = useLanguageStore()
   const {
     signatureFields,
@@ -86,7 +88,7 @@ export default function InviteSigningPage() {
   } = useDocumentStore()
 
   const [signerData, setSignerData] = useState<SignerData | null>(null)
-  const [pageLoading, setPageLoading] = useState(true)
+  const [pageLoading, setPageLoading] = useState(tokenIsValid)
   const [error, setError] = useState<string | null>(null)
 
   const [showSignatureModal, setShowSignatureModal] = useState(false)
@@ -117,7 +119,7 @@ export default function InviteSigningPage() {
   const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!token) return
+    if (!isSigningToken(token)) return
     const load = async () => {
       setPageLoading(true)
       const data = await fetchSignerByToken(token)
@@ -598,7 +600,7 @@ export default function InviteSigningPage() {
     (f) => f.document_id === documentId && f.page_number === pageNumber
   )
 
-  if (pageLoading) {
+  if (pageLoading && tokenIsValid) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]" role="status" aria-live="polite">
         <a href="/">
@@ -612,13 +614,13 @@ export default function InviteSigningPage() {
     )
   }
 
-  if (error || !signerData) {
+  if (!tokenIsValid || error || !signerData) {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">
           <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
         </a>
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md" role="alert">
           <div className="w-16 h-16 rounded-full bg-[hsl(var(--destructive))]/10 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">!</span>
           </div>

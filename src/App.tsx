@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
@@ -79,6 +79,16 @@ function HomeRedirect() {
   return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
 }
 
+function PublicSigningRoute() {
+  const { token } = useParams<{ token: string }>()
+  return <Suspense fallback={<PageLoader />}><InviteSigningPage key={token} /></Suspense>
+}
+
+function PublicViewerRoute() {
+  const { documentId } = useParams<{ documentId: string }>()
+  return <Suspense fallback={<PageLoader />}><ViewDocumentPage key={documentId} /></Suspense>
+}
+
 function RouteMetadata() {
   const { pathname } = useLocation()
 
@@ -103,9 +113,9 @@ export default function App() {
       <RouteMetadata />
       <Routes>
         {/* Public signing route. No account authentication is required. */}
-        <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />
+        <Route path="/sign/:token" element={<PublicSigningRoute />} />
         {/* Public view-only route for CC recipients. No account authentication is required. */}
-        <Route path="/view/:documentId" element={<Suspense fallback={<PageLoader />}><ViewDocumentPage /></Suspense>} />
+        <Route path="/view/:documentId" element={<PublicViewerRoute />} />
         <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
         <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
         <Route path="/" element={<HomeRedirect />} />

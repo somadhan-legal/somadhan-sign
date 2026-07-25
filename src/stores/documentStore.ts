@@ -9,7 +9,6 @@ import type {
   SignaturePlacement,
   AuditTrailEntry,
   SignerByTokenResult,
-  SigningPackageResult,
 } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import {
@@ -79,28 +78,15 @@ interface DocumentState {
   sendReminder: (documentId: string, senderName?: string) => Promise<{ sent: number; failed: number }>
 }
 
-let activeDocumentFetch = 0
+let activeDocumentContextFetch = 0
 let activeDocumentsFetch = 0
 let activeAuditFetch = 0
+let activePlacementFetch = 0
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
-const normalizeSigningPackageUrl = (signingPackage: SigningPackageResult): SigningPackageResult => ({
-  ...signingPackage,
-  signer: {
-    ...signingPackage.signer,
-    documents: {
-      ...signingPackage.signer.documents,
-      original_pdf_url: getLegacyPublicDocumentUrl(signingPackage.signer.documents.original_pdf_url),
-      final_pdf_url: signingPackage.signer.documents.final_pdf_url
-        ? getLegacyPublicDocumentUrl(signingPackage.signer.documents.final_pdf_url)
-        : null,
-    },
-  },
-})
-
-const fetchSigningAccessPackage = async (token: string): Promise<SigningPackageResult | null | undefined> => {
+const fetchSigningAccessPackage = async (token: string) => {
   // Legacy access is a deliberate deployment mode. Once the secure service is
   // enabled, every service error fails closed instead of silently downgrading.
   if (!secureDocumentAccessEnabled) return undefined
@@ -147,7 +133,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchDocument: async (id: string) => {
-    const requestId = ++activeDocumentFetch
+    const requestId = ++activeDocumentContextFetch
+    activePlacementFetch += 1
+    activeAuditFetch += 1
     set({
       currentDocument: null,
       signatureFields: [],
@@ -171,7 +159,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         createOwnerDocumentUrl(document.original_pdf_url),
         document.final_pdf_url ? createOwnerDocumentUrl(document.final_pdf_url) : Promise.resolve(null),
       ])
-      if (requestId !== activeDocumentFetch) return
+      if (requestId !== activeDocumentContextFetch) return
       set({
         currentDocument: {
           ...document,
@@ -185,7 +173,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       })
     } catch (documentError) {
       console.error('Error loading document:', documentError)
-      if (requestId === activeDocumentFetch) set({ currentDocument: null, loading: false })
+      if (requestId === activeDocumentContextFetch) set({ currentDocument: null, loading: false })
     }
   },
 
@@ -551,8 +539,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchPlacements: async (documentId: string, signingToken?: string) => {
+    const requestId = ++activePlacementFetch
     if (signingToken) {
       const securePackage = await fetchSigningAccessPackage(signingToken)
+      if (requestId !== activePlacementFetch) return
       if (securePackage) {
         set({
           signatureFields: securePackage.fields || [],
@@ -563,21 +553,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
       if (securePackage === null) return
 
-      const { data: signingPackage, error: packageError } = await supabase
-        .rpc('get_signing_package', { p_token: signingToken })
-      if (!packageError) {
-        const normalizedPackage = signingPackage ? normalizeSigningPackageUrl(signingPackage) : null
-        set({
-          signatureFields: normalizedPackage?.fields || [],
-          placements: normalizedPackage?.placements || [],
-          auditTrail: normalizedPackage?.audit_trail || [],
-        })
-        return
-      }
-      if (!isMissingRpc(packageError)) {
-        console.error('Error refreshing signing package:', packageError)
-        return
-      }
     }
     const { data, error } = await supabase
       .from('signature_placements')
@@ -587,7 +562,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       console.error('Error fetching placements:', error)
       return
     }
-    set({ placements: (data as SignaturePlacement[]) || [] })
+    if (requestId === activePlacementFetch) {
+      set({ placements: (data as SignaturePlacement[]) || [] })
+    }
   },
 
   addPlacement: async (placement, signingToken) => {
@@ -622,7 +599,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   fetchSignerByToken: async (token: string) => {
+    const requestId = ++activeDocumentContextFetch
+    activePlacementFetch += 1
+    activeAuditFetch += 1
+    set({
+      signatureFields: [],
+      placements: [],
+      auditTrail: [],
+    })
     const securePackage = await fetchSigningAccessPackage(token)
+    if (requestId !== activeDocumentContextFetch) return null
     if (securePackage) {
       set({
         signatureFields: securePackage.fields || [],
@@ -633,23 +619,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
     if (securePackage === null) return null
 
-    const { data: signingPackage, error: packageError } = await supabase
-      .rpc('get_signing_package', { p_token: token })
-    if (!packageError) {
-      if (!signingPackage?.signer) return null
-      const normalizedPackage = normalizeSigningPackageUrl(signingPackage)
-      set({
-        signatureFields: normalizedPackage.fields || [],
-        placements: normalizedPackage.placements || [],
-        auditTrail: normalizedPackage.audit_trail || [],
-      })
-      return normalizedPackage.signer
-    }
-    if (!isMissingRpc(packageError)) {
-      console.error('Error fetching signing package:', packageError)
-      return null
-    }
-
     const { data, error } = await supabase
       .rpc('get_signer_by_token', { p_token: token })
     if (error) {
@@ -657,11 +626,33 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return null
     }
     if (!data) return null
-    await Promise.all([
-      get().fetchSignatureFields(data.document_id),
-      get().fetchPlacements(data.document_id),
-      get().fetchAuditTrail(data.document_id),
+    const [fieldsResult, placementsResult, auditResult] = await Promise.all([
+      supabase
+        .from('signature_fields')
+        .select('*')
+        .eq('document_id', data.document_id)
+        .order('field_order'),
+      supabase
+        .from('signature_placements')
+        .select('*')
+        .eq('document_id', data.document_id),
+      supabase
+        .from('audit_trail')
+        .select('*')
+        .eq('document_id', data.document_id)
+        .order('created_at', { ascending: true }),
     ])
+    if (requestId !== activeDocumentContextFetch) return null
+    const packageError = fieldsResult.error || placementsResult.error || auditResult.error
+    if (packageError) {
+      console.error('Error fetching signing document details:', packageError)
+      return null
+    }
+    set({
+      signatureFields: (fieldsResult.data as SignatureFieldLocal[]) || [],
+      placements: (placementsResult.data as SignaturePlacement[]) || [],
+      auditTrail: (auditResult.data as AuditTrailEntry[]) || [],
+    })
     return {
       ...data,
       documents: {
