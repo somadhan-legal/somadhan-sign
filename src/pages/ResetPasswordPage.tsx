@@ -14,11 +14,12 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  const { updatePassword, isRecovery, user } = useAuthStore()
+  const { updatePassword, isRecovery, user, initialized, loading } = useAuthStore()
   const navigate = useNavigate()
   const { isDark } = useThemeStore()
   const { t, lang } = useLanguageStore()
@@ -35,10 +36,10 @@ export default function ResetPasswordPage() {
       : recoveryErrorDescription || t('reset.errorOccurred')
     : ''
   const displayedError = error || recoveryError
+  const recoveryReady = isRecovery || Boolean(user)
 
   useEffect(() => {
-    // If no recovery session and no user, redirect to login after showing error
-    if (!isRecovery && !user && !recoveryErrorParam) {
+    if (initialized && !loading && !isRecovery && !user && !recoveryErrorParam) {
       const timer = setTimeout(() => {
         if (!useAuthStore.getState().isRecovery && !useAuthStore.getState().user) {
           navigate('/login', { replace: true })
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [isRecovery, user, navigate, recoveryErrorParam])
+  }, [initialized, isRecovery, loading, user, navigate, recoveryErrorParam])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -130,6 +131,14 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
+        {!recoveryErrorParam && !recoveryReady && (
+          <div className="flex items-center justify-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/60 p-4 text-sm text-[hsl(var(--muted-foreground))]" role="status" aria-live="polite">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent" aria-hidden="true" />
+            {t('reset.validatingLink')}
+          </div>
+        )}
+
+        {!recoveryErrorParam && recoveryReady && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input
@@ -153,17 +162,27 @@ export default function ResetPasswordPage() {
             </button>
           </div>
 
-          <Input
-            label={t('reset.confirmPassword')}
-            name="confirm-password"
-            autoComplete="new-password"
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-          />
+          <div className="relative">
+            <Input
+              label={t('reset.confirmPassword')}
+              name="confirm-password"
+              autoComplete="new-password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? t('login.hidePassword') : t('login.showPassword')}
+              className="absolute right-1 bottom-0 flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors cursor-pointer"
+            >
+              {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
 
           <Button type="submit" className="w-full h-11" disabled={submitting}>
             {submitting ? (
@@ -173,6 +192,7 @@ export default function ResetPasswordPage() {
             )}
           </Button>
         </form>
+        )}
       </div>
     </div>
   )

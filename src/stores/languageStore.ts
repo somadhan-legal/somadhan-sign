@@ -253,6 +253,7 @@ const translations: Record<string, Record<Language, string>> = {
   // ─── Password Reset ───
   'reset.setNewPassword': { en: 'Set New Password', bn: 'নতুন পাসওয়ার্ড সেট করুন' },
   'reset.enterNewPassword': { en: 'Enter your new password below', bn: 'নিচে আপনার নতুন পাসওয়ার্ড দিন' },
+  'reset.validatingLink': { en: 'Validating your secure reset link...', bn: 'আপনার নিরাপদ রিসেট লিংক যাচাই করা হচ্ছে...' },
   'reset.newPassword': { en: 'New Password', bn: 'নতুন পাসওয়ার্ড' },
   'reset.confirmPassword': { en: 'Confirm Password', bn: 'পাসওয়ার্ড নিশ্চিত করুন' },
   'reset.updatePassword': { en: 'Update Password', bn: 'পাসওয়ার্ড আপডেট করুন' },
