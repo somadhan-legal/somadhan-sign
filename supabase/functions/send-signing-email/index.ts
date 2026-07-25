@@ -99,14 +99,14 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured')
     }
 
-    const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, ccEmails, type, downloadUrl: requestedDownloadUrl, pdfBase64, viewLink, signeeEmails } = await req.json()
+    const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, ccEmails, type, downloadUrl: requestedDownloadUrl, pdfBase64, viewLink, signeeEmails: requestedSigneeEmails } = await req.json()
     if (String(documentTitle || '').length > 200 || String(senderName || '').length > 200 || String(message || '').length > 5000) {
       return new Response(JSON.stringify({ error: 'Email content is too long' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
-    if ((Array.isArray(to) && to.length > 100) || (Array.isArray(ccEmails) && ccEmails.length > 100) || (Array.isArray(signeeEmails) && signeeEmails.length > 100)) {
+    if ((Array.isArray(to) && to.length > 100) || (Array.isArray(ccEmails) && ccEmails.length > 100) || (Array.isArray(requestedSigneeEmails) && requestedSigneeEmails.length > 100)) {
       return new Response(JSON.stringify({ error: 'Too many email recipients' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -143,6 +143,8 @@ serve(async (req) => {
     let resolvedViewLink = viewLink
     let verifiedRecipient: string | null = null
     let verifiedPdfBase64 = ''
+    let verifiedSenderName = senderName
+    let verifiedSigneeEmails: string[] = []
 
     if (isCompletion) {
       if (!completionServiceClient) throw new Error('Secure document storage is not configured')
@@ -309,6 +311,7 @@ serve(async (req) => {
       }
       verifiedDocumentId = ownedDocument.id
       verifiedDocumentTitle = ownedDocument.title
+      verifiedSenderName = authData.user.user_metadata?.full_name || authData.user.email || 'A user'
 
       const recipient = Array.isArray(to) ? to[0] : to
       if (!isEmail(recipient)) {
@@ -318,6 +321,16 @@ serve(async (req) => {
         })
       }
       if (isCcNotification) {
+        const { data: documentSigners, error: documentSignersError } = await authClient
+          .from('document_signers')
+          .select('signer_email')
+          .eq('document_id', documentId)
+          .order('created_at')
+        if (documentSignersError) throw documentSignersError
+        verifiedSigneeEmails = (documentSigners || [])
+          .map((signer) => signer.signer_email)
+          .filter(isEmail)
+
         const { data: viewer } = await authClient
           .from('document_viewers')
           .select('id')
@@ -355,13 +368,13 @@ serve(async (req) => {
     }
 
     const safeDocumentTitle = escapeHtml(verifiedDocumentTitle)
-    const safeSenderName = escapeHtml(senderName || 'Someone')
+    const safeSenderName = escapeHtml(verifiedSenderName || 'Someone')
     const safeMessage = escapeHtml(message)
     const safeSigningLink = safeHttpUrl(resolvedSigningLink)
     const safeViewLink = safeHttpUrl(resolvedViewLink || resolvedSigningLink)
     const safeDownloadUrl = safeHttpUrl(resolvedDownloadUrl)
     const subjectTitle = cleanSubjectText(verifiedDocumentTitle || 'Document')
-    const subjectSender = cleanSubjectText(senderName || 'Someone')
+    const subjectSender = cleanSubjectText(verifiedSenderName || 'Someone')
 
     // --- Completion email ---
     const downloadButton = safeDownloadUrl !== '#' ? `
@@ -399,8 +412,8 @@ serve(async (req) => {
     // --- CC Notification email (view-only) ---
 
     let signeeListHtml = ''
-    if (signeeEmails && Array.isArray(signeeEmails) && signeeEmails.length > 0) {
-      const pills = signeeEmails.map((email: unknown) => `<span style="background: #f3f4f6; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #374151; display: inline-block; margin: 2px 4px 2px 0;">${escapeHtml(email)}</span>`).join('')
+    if (verifiedSigneeEmails.length > 0) {
+      const pills = verifiedSigneeEmails.map((email) => `<span style="background: #f3f4f6; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: #374151; display: inline-block; margin: 2px 4px 2px 0;">${escapeHtml(email)}</span>`).join('')
       signeeListHtml = `
         <div style="margin: 12px 0 20px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 600;">Signees</p>
