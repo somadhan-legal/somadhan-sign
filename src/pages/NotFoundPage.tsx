@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { FileQuestion, Home } from 'lucide-react'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import { useLanguageStore } from '@/stores/languageStore'

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router'
 import {
   Plus,
   FileText,
@@ -219,14 +219,10 @@ export default function DashboardPage() {
   })
 
   const totalPages = Math.ceil(filteredDocs.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1))
+  const startIndex = (activePage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedDocs = filteredDocs.slice(startIndex, endIndex)
-
-  useEffect(() => setCurrentPage(1), [searchQuery, filterStatus])
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, Math.max(totalPages, 1)))
-  }, [totalPages])
 
   const statusConfig: Record<string, { icon: React.ReactNode; variant: 'default' | 'success' | 'warning' | 'destructive' | 'outline'; label: string }> = {
     draft: { icon: <FileText className="w-3 h-3" />, variant: 'outline', label: t('dashboard.draft') },
@@ -336,7 +332,7 @@ export default function DashboardPage() {
               {t('dashboard.uploadPdf')}
             </Button>
           ) : (
-            <Button variant="outline" onClick={() => { setSearchQuery(''); setFilterStatus('all') }}>
+            <Button variant="outline" onClick={() => { setSearchQuery(''); setFilterStatus('all'); setCurrentPage(1) }}>
               {t('dashboard.clearFilters')}
             </Button>
           )}
@@ -621,19 +617,19 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
+                disabled={activePage === 1}
               >
                 {t('dashboard.previous')}
               </Button>
               <span aria-live="polite" className="text-sm font-medium">
-                {t('dashboard.pageOf').replace('{page}', String(currentPage)).replace('{total}', String(totalPages))}
+                {t('dashboard.pageOf').replace('{page}', String(activePage)).replace('{total}', String(totalPages))}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(totalPages, activePage + 1))}
+                disabled={activePage === totalPages}
               >
                 {t('dashboard.next')}
               </Button>

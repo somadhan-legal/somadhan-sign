@@ -186,7 +186,9 @@ export async function generateSignedPdf(
             })
           } catch (error) {
             console.error('Error embedding signature image:', error)
-            throw new Error(`Could not embed the ${placement.field_type} on page ${pageNum}`)
+            throw new Error(`Could not embed the ${placement.field_type} on page ${pageNum}`, {
+              cause: error,
+            })
           }
       } else if (placement.field_type === 'date') {
         // Draw date text

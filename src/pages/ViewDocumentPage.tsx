@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import PdfViewer from '@/components/PdfViewer'
 import Button from '@/components/ui/Button'

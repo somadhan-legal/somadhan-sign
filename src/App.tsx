@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { MotionConfig } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'

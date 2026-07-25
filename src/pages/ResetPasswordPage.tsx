@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -23,22 +23,22 @@ export default function ResetPasswordPage() {
   const { isDark } = useThemeStore()
   const { t, lang } = useLanguageStore()
 
-  useEffect(() => {
-    // Check URL for error parameters
-    const params = new URLSearchParams(window.location.hash.substring(1))
-    const errorParam = params.get('error')
-    const errorDesc = params.get('error_description')
-    
-    if (errorParam) {
-      if (errorParam === 'access_denied' || errorDesc?.includes('expired') || errorDesc?.includes('invalid')) {
-        setError(t('reset.linkExpired'))
-      } else {
-        setError(errorDesc || t('reset.errorOccurred'))
-      }
-    }
+  const recoveryParams = new URLSearchParams(window.location.hash.substring(1))
+  const recoveryErrorParam = recoveryParams.get('error')
+  const recoveryErrorDescription = recoveryParams.get('error_description')
+  const hasExpiredRecoveryLink = recoveryErrorParam === 'access_denied'
+    || recoveryErrorDescription?.includes('expired')
+    || recoveryErrorDescription?.includes('invalid')
+  const recoveryError = recoveryErrorParam
+    ? hasExpiredRecoveryLink
+      ? t('reset.linkExpired')
+      : recoveryErrorDescription || t('reset.errorOccurred')
+    : ''
+  const displayedError = error || recoveryError
 
+  useEffect(() => {
     // If no recovery session and no user, redirect to login after showing error
-    if (!isRecovery && !user && !errorParam) {
+    if (!isRecovery && !user && !recoveryErrorParam) {
       const timer = setTimeout(() => {
         if (!useAuthStore.getState().isRecovery && !useAuthStore.getState().user) {
           navigate('/login', { replace: true })
@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [isRecovery, user, navigate, t])
+  }, [isRecovery, user, navigate, recoveryErrorParam])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,10 +112,10 @@ export default function ResetPasswordPage() {
           {t('reset.enterNewPassword')}
         </p>
 
-        {error && (
+        {displayedError && (
           <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
-            {error}
-            {error.includes('expired') || error.includes('invalid') ? (
+            {displayedError}
+            {hasExpiredRecoveryLink ? (
               <div className="mt-3">
                 <Button
                   variant="outline"

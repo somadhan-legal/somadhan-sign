@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import {
   ChevronLeft,
   ChevronRight,
@@ -225,15 +225,12 @@ export default function InviteSigningPage() {
     }, 300)
   }, [])
 
-  const navigateToField = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < allMyUnsigned.length) {
-        setCurrentFieldIndex(index)
-        scrollToField(allMyUnsigned[index])
-      }
-    },
-    [allMyUnsigned, scrollToField]
-  )
+  const navigateToField = (index: number) => {
+    if (index >= 0 && index < allMyUnsigned.length) {
+      setCurrentFieldIndex(index)
+      scrollToField(allMyUnsigned[index])
+    }
+  }
 
   const handleSaveSignature = (dataUrl: string) => {
     setSignatureData(dataUrl)

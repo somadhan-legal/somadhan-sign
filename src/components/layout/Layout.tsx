@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router'
 import Navbar from './Navbar'
 import { useLanguageStore } from '@/stores/languageStore'
 
