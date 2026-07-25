@@ -22,7 +22,7 @@
     --muted-foreground: 0 0% 40%;      /* gray for muted text */
     --accent: 190 30% 92%;             /* #E4EEF0 Mist White */
     --accent-foreground: 0 0% 14%;     /* #232323 Charcoal */
-    --destructive: 5 95% 62%;          /* #F95943 Coral Red */
+    --destructive: 5 80% 48%;          /* Accessible coral red */
     --destructive-foreground: 0 0% 100%;
     --border: 190 20% 85%;             /* light border from Mist White */
     --input: 190 20% 85%;
@@ -41,7 +41,7 @@
     --card-foreground: 0 0% 100%;      /* #FFFFFF Absolute White */
     --popover: 0 0% 14%;               /* #232323 Charcoal */
     --popover-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
-    --primary: 5 95% 62%;              /* #F95943 Coral Red (dark mode) */
+    --primary: 5 80% 49%;              /* Accessible coral red */
     --primary-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
     --secondary: 0 0% 14%;             /* #232323 Charcoal */
     --secondary-foreground: 0 0% 100%; /* #FFFFFF Absolute White */
@@ -49,12 +49,12 @@
     --muted-foreground: 0 0% 55%;      /* gray for muted text */
     --accent: 0 0% 14%;                /* #232323 Charcoal */
     --accent-foreground: 0 0% 100%;    /* #FFFFFF Absolute White */
-    --destructive: 5 95% 62%;          /* #F95943 Coral Red */
+    --destructive: 5 80% 49%;          /* Accessible coral red */
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 20%;                /* subtle border */
     --input: 0 0% 20%;
     --ring: 5 95% 62%;                 /* #F95943 Coral Red (dark mode) */
-    --accent-coral: 5 95% 62%;         /* #F95943 Coral Red */
+    --accent-coral: 5 80% 49%;         /* Accessible coral red */
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
   }

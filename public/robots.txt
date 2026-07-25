@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /document/
+Disallow: /login
+Disallow: /reset-password
+Disallow: /sign/
+Disallow: /view/
