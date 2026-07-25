@@ -524,6 +524,7 @@ declare
   document_status text;
   signature_bytes bytea;
   parsed_date date;
+  audit_action text;
 begin
   select * into signer_row from public.document_signers where signing_token = p_token for update;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
@@ -585,6 +586,29 @@ begin
   ) values (
     signer_row.document_id, p_field_id, signer_row.signer_email, p_signature_id
   ) returning * into placement_row;
+
+  audit_action := case field_row.field_type
+    when 'signature' then 'Signature Applied'
+    when 'initials' then 'Initials Added'
+    when 'date' then 'Date Filled'
+    when 'checkbox' then 'Checkbox Checked'
+    when 'text' then 'Text Entered'
+  end;
+
+  insert into public.audit_trail (
+    document_id, action, user_email, user_name, metadata
+  ) values (
+    signer_row.document_id,
+    audit_action,
+    signer_row.signer_email,
+    signer_row.signer_name,
+    json_build_object(
+      'source', 'database',
+      'fieldId', field_row.id,
+      'fieldType', field_row.field_type,
+      'pageNumber', field_row.page_number
+    )::text
+  );
 
   return placement_row;
 end;
@@ -684,6 +708,22 @@ begin
     'Checkbox Checked', 'Text Entered', 'All Fields Signed',
     'Electronic Signature Consent Given'
   ) then raise exception 'Invalid audit action'; end if;
+  if p_action in (
+    'Signature Applied', 'Initials Added', 'Date Filled',
+    'Checkbox Checked', 'Text Entered'
+  ) then
+    select * into audit_row
+    from public.audit_trail existing
+    where existing.document_id = signer_row.document_id
+      and existing.action = p_action
+      and lower(existing.user_email) = lower(signer_row.signer_email)
+    order by existing.created_at desc
+    limit 1;
+    if audit_row.id is null then
+      raise exception 'A completed field is required for this audit action';
+    end if;
+    return audit_row;
+  end if;
   if p_action in ('Document Viewed', 'Electronic Signature Consent Given') then
     select * into audit_row
     from public.audit_trail existing

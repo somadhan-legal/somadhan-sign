@@ -30,4 +30,12 @@ describe('secure document access migration privileges', () => {
       'create or replace function public.save_final_pdf_url_by_token',
     )
   })
+
+  it('records field audit evidence inside the placement transaction', () => {
+    expect(migration).toContain("'source', 'database'")
+    expect(migration).toContain("'fieldid', field_row.id")
+    expect(migration).toContain(
+      "raise exception 'a completed field is required for this audit action';",
+    )
+  })
 })
