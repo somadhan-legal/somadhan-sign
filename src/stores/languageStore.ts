@@ -151,12 +151,12 @@ const translations: Record<string, Record<Language, string>> = {
   'landing.feat.track': { en: 'Send & Track', bn: 'পাঠান ও ট্র্যাক করুন' },
   'landing.feat.trackDesc': {
     en: 'Send documents for signing and track progress from your dashboard.',
-    bn: 'স্বাক্ষরের জন্য ডকুমেন্ট পাঠান এবং ড্যাশবোর্ড থেকে রিয়েল-টাইমে অগ্রগতি ট্র্যাক করুন।',
+    bn: 'স্বাক্ষরের জন্য ডকুমেন্ট পাঠান এবং ড্যাশবোর্ড থেকে অগ্রগতি ট্র্যাক করুন।',
   },
-  'landing.feat.secure': { en: 'Secure & Private', bn: 'সুরক্ষিত ও গোপনীয়' },
+  'landing.feat.secure': { en: 'Controlled Access', bn: 'নিয়ন্ত্রিত অ্যাক্সেস' },
   'landing.feat.secureDesc': {
-    en: 'Built on Supabase with Row Level Security. Your documents are encrypted and protected.',
-    bn: 'Row Level Security সহ Supabase-এ নির্মিত। আপনার ডকুমেন্ট এনক্রিপ্টেড এবং সুরক্ষিত।',
+    en: 'Unique signer links and a detailed activity history make document access and events easier to track.',
+    bn: 'অনন্য স্বাক্ষর লিঙ্ক ও বিস্তারিত কার্যক্রমের ইতিহাস ডকুমেন্ট অ্যাক্সেস এবং ঘটনাগুলো ট্র্যাক করা সহজ করে।',
   },
   'landing.feat.anywhere': { en: 'Sign Anywhere', bn: 'যেকোনো জায়গায় সাইন করুন' },
   'landing.feat.anywhereDesc': {
