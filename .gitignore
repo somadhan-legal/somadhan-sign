@@ -31,3 +31,4 @@ client_secret_*.json
 *.sln
 *.sw?
 supabase/.temp/
+supabase/.branches/

@@ -806,27 +806,6 @@ as $$
     );
 $$;
 
-create or replace function public.save_final_pdf_url_by_token(p_token text, p_final_pdf_url text)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  target_document_id uuid;
-begin
-  select ds.document_id into target_document_id
-  from public.document_signers ds
-  join public.documents d on d.id = ds.document_id and d.status = 'completed'
-  where ds.signing_token = p_token;
-  if target_document_id is null then raise exception 'Document is not completed'; end if;
-
-  update public.documents
-  set final_pdf_url = p_final_pdf_url, updated_at = now()
-  where id = target_document_id;
-end;
-$$;
-
 create or replace function public.create_document_viewer(p_document_id uuid, p_viewer_email text)
 returns text
 language plpgsql
@@ -907,6 +886,7 @@ revoke execute on function public.check_all_signers_signed(uuid, uuid) from publ
 revoke execute on function public.get_document_for_completion(uuid) from public, anon, authenticated;
 revoke execute on function public.get_document_for_viewer(uuid) from public, anon, authenticated;
 revoke execute on function public.get_signers_for_viewer(uuid) from public, anon, authenticated;
+revoke execute on function public.get_signer_by_token(text) from public, anon, authenticated;
 
 revoke execute on function public.get_signing_package(text) from public;
 revoke execute on function public.replace_signature_fields(uuid, jsonb) from public;
@@ -918,9 +898,46 @@ revoke execute on function public.add_audit_entry_by_token(text, text, text) fro
 revoke execute on function public.check_all_signers_signed_by_token(text) from public;
 revoke execute on function public.mark_document_completed_by_token(text) from public;
 revoke execute on function public.get_document_for_completion_by_token(text) from public;
-revoke execute on function public.save_final_pdf_url_by_token(text, text) from public;
 revoke execute on function public.create_document_viewer(uuid, text) from public;
 revoke execute on function public.get_viewer_package(text) from public;
+
+-- Older migrations created privileged maintenance RPCs with the default PUBLIC
+-- execute grant. Keep them available only to trusted service operations.
+create or replace function public.cleanup_old_documents()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  delete from public.documents
+  where created_at < now() - interval '12 months';
+end;
+$$;
+
+create or replace function public.rls_auto_enable()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  table_name text;
+begin
+  for table_name in
+    select tablename from pg_catalog.pg_tables where schemaname = 'public'
+  loop
+    execute format('alter table public.%I enable row level security', table_name);
+  end loop;
+end;
+$$;
+
+revoke execute on function public.cleanup_old_documents() from public, anon, authenticated;
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+grant execute on function public.cleanup_old_documents() to service_role;
+grant execute on function public.rls_auto_enable() to service_role;
+
+drop function if exists public.save_final_pdf_url_by_token(text, text);
 
 grant execute on function public.get_signing_package(text) to anon, authenticated;
 grant execute on function public.replace_signature_fields(uuid, jsonb) to authenticated;

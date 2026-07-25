@@ -304,15 +304,9 @@ somadhan_sign/
 │   ├── functions/
 │   │   └── send-signing-email/  # Email sending edge function
 │   │       └── index.ts
-│   └── migrations/              # Database migrations
-│       ├── 001_initial_schema.sql
-│       ├── 002_fix_rls_policies.sql
-│       ├── 003_fix_rls_recursion.sql
-│       ├── 004_fix_signing_rls.sql
-│       ├── 005_fix_audit_trail_filtering.sql
-│       ├── 006_auto_cleanup_old_documents.sql
-│       ├── 007_add_signer_update_policy.sql
-│       └── 008_strict_audit_cleanup.sql
+│   ├── migrations/              # Active baseline, history markers, and timestamped migrations
+│   ├── legacy-migrations/       # Historical numbered SQL; never applied after the baseline
+│   └── tests/                   # Migration security regression tests
 ├── .env                         # Environment variables (gitignored)
 ├── .gitignore
 ├── DEPLOYMENT_GUIDE.md          # Complete deployment instructions
@@ -440,13 +434,13 @@ Complete audit log of all document actions.
 | `created_at` | TIMESTAMPTZ | Action timestamp |
 
 **Retention helper:**
-- Migration `006_auto_cleanup_old_documents.sql` defines a cleanup function for documents older than 12 months. Scheduling and retention policy approval are deployment responsibilities.
+- The consolidated baseline defines a cleanup function for documents older than 12 months. The current security migration limits it to `service_role`. Scheduling and retention policy approval are deployment responsibilities.
 
 ---
 
 ### Database Migrations
 
-All migrations are located in `supabase/migrations/`. Apply every tracked migration through the Supabase CLI in migration order. See `supabase/migrations/README.md` for the current rollout notes. Do not use `000_complete_setup.sql` as an additional migration on a database that already has the numbered migrations.
+Active migrations are located in `supabase/migrations/`. A fresh CLI deployment applies the consolidated baseline, no-op history markers, and then timestamped migrations. The markers retain version compatibility with existing environments. Historical numbered SQL is kept separately in `supabase/legacy-migrations/` for reference and must not be applied after the baseline. See `supabase/migrations/README.md` for current rollout notes.
 
 ---
 

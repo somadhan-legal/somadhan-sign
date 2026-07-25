@@ -145,6 +145,7 @@ serve(async (req) => {
     let verifiedPdfBase64 = ''
 
     if (isCompletion) {
+      if (!completionServiceClient) throw new Error('Secure document storage is not configured')
       if (typeof signingToken !== 'string' || signingToken.length < 32) {
         return new Response(JSON.stringify({ error: 'A valid signing token is required' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -152,7 +153,11 @@ serve(async (req) => {
         })
       }
 
-      const { data: signer, error: signerError } = await authClient.rpc('get_signer_by_token', { p_token: signingToken })
+      const { data: signer, error: signerError } = await completionServiceClient
+        .from('document_signers')
+        .select('document_id')
+        .eq('signing_token', signingToken)
+        .maybeSingle()
       if (signerError || !signer?.document_id) {
         return new Response(JSON.stringify({ error: 'Signing authorization failed' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -197,7 +202,6 @@ serve(async (req) => {
       }
       allowedCompletionRecipients = new Set(allowed.map((email) => email.toLowerCase()))
 
-      if (!completionServiceClient) throw new Error('Secure document storage is not configured')
       const { data: existingDocument, error: existingDocumentError } = await completionServiceClient
         .from('documents')
         .select('final_pdf_url, status')

@@ -373,10 +373,6 @@ export interface Database {
         Args: { p_token: string }
         Returns: DocumentCompletionResult | null
       }
-      save_final_pdf_url_by_token: {
-        Args: { p_token: string; p_final_pdf_url: string }
-        Returns: undefined
-      }
       create_document_viewer: {
         Args: { p_document_id: string; p_viewer_email: string }
         Returns: string
