@@ -33,6 +33,7 @@ import { Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import { isSigningToken } from '@/lib/publicAccessReference'
+import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -45,9 +46,6 @@ const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   }
   reader.readAsDataURL(blob)
 })
-
-const isMissingRpc = (error: { code?: string; message?: string } | null) =>
-  error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
 
 const CONSENT_VERSION = 'somadhan-esign-consent-v1'
 
@@ -436,41 +434,24 @@ export default function InviteSigningPage() {
       }
       await addAuditEntry(documentId, 'All Fields Signed', userEmail, userName, undefined, token)
       
-      // Use RPC because unauthenticated signers cannot read document_signers through RLS.
-      // Retry up to 3 times with increasing delay to handle race conditions
-      let allSigned = false
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        await new Promise(r => setTimeout(r, attempt * 1500))
-        let { data, error: checkErr } = await supabase
-          .rpc('check_all_signers_signed_by_token', { p_token: token || '' })
-        if (isMissingRpc(checkErr)) {
-          const legacyResult = await supabase
-            .rpc('check_all_signers_signed', { p_document_id: documentId, p_current_signer_id: signerData.id })
-          data = legacyResult.data
-          checkErr = legacyResult.error
-        }
-        if (data) {
-          allSigned = true
-          break
-        }
-        if (checkErr) {
-          console.error('[checkCompletion] Error checking all signers signed:', checkErr)
-          break
-        }
+      // The status update has committed before it returns, so one authoritative
+      // check is enough. The secure database path serializes concurrent final
+      // signers on the document row.
+      const { data: allSignedData, error: checkErr } = secureDocumentAccessEnabled
+        ? await supabase.rpc('check_all_signers_signed_by_token', { p_token: token || '' })
+        : await supabase.rpc('check_all_signers_signed', {
+            p_document_id: documentId,
+            p_current_signer_id: signerData.id,
+          })
+      if (checkErr) {
+        console.error('[checkCompletion] Error checking all signers signed:', checkErr)
       }
-      
-      if (!allSigned) {
-        console.warn('[checkCompletion] All retries exhausted. Other signers may not have completed yet.')
-      }
+      const allSigned = Boolean(allSignedData)
       
       if (allSigned) {
-        let { error: rpcError } = await supabase
-          .rpc('mark_document_completed_by_token', { p_token: token || '' })
-        if (isMissingRpc(rpcError)) {
-          const legacyResult = await supabase
-            .rpc('mark_document_completed', { p_document_id: documentId })
-          rpcError = legacyResult.error
-        }
+        const { error: rpcError } = secureDocumentAccessEnabled
+          ? await supabase.rpc('mark_document_completed_by_token', { p_token: token || '' })
+          : await supabase.rpc('mark_document_completed', { p_document_id: documentId })
         
         if (rpcError) {
           console.error('RPC mark_document_completed failed:', rpcError)
@@ -482,25 +463,24 @@ export default function InviteSigningPage() {
         // The Edge Function builds the durable final PDF from authoritative
         // data and derives every recipient from the completed document.
         try {
-          let { error: emailFnErr } = await supabase.functions.invoke('send-signing-email', {
-            body: {
-              signingToken: token,
-              type: 'completion',
-            },
-          })
-          if (emailFnErr) {
+          let emailFnErr = null
+          if (secureDocumentAccessEnabled) {
+            const secureResult = await supabase.functions.invoke('send-signing-email', {
+              body: {
+                signingToken: token,
+                type: 'completion',
+              },
+            })
+            emailFnErr = secureResult.error
+          }
+          if (!secureDocumentAccessEnabled || emailFnErr) {
             // Compatibility path for the currently deployed function. The new
             // function ignores these browser-derived fields and remains
             // authoritative after the coordinated Edge rollout.
             let completionData: DocumentCompletionResult | null = null
-            let { data, error: completionError } = await supabase
-              .rpc('get_document_for_completion_by_token', { p_token: token || '' })
-            if (isMissingRpc(completionError)) {
-              const legacyResult = await supabase
-                .rpc('get_document_for_completion', { p_document_id: documentId })
-              data = legacyResult.data
-              completionError = legacyResult.error
-            }
+            const { data, error: completionError } = secureDocumentAccessEnabled
+              ? await supabase.rpc('get_document_for_completion_by_token', { p_token: token || '' })
+              : await supabase.rpc('get_document_for_completion', { p_document_id: documentId })
             if (completionError || !data) throw completionError || new Error('Completion data is unavailable')
             completionData = data
 

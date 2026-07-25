@@ -568,7 +568,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   addPlacement: async (placement, signingToken) => {
-    if (signingToken) {
+    if (signingToken && secureDocumentAccessEnabled) {
       const { data, error } = await supabase.rpc('add_signature_placement_by_token', {
         p_token: signingToken,
         p_field_id: placement.field_id,
@@ -578,10 +578,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         set((state) => ({ placements: [...state.placements, data as SignaturePlacement] }))
         return true
       }
-      if (!isMissingRpc(error)) {
-        console.error('Error adding placement:', error)
-        return false
-      }
+      console.error('Error adding placement:', error)
+      return false
     }
     const { data, error } = await supabase
       .from('signature_placements')
@@ -663,16 +661,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   updateSignerStatus: async (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => {
-    if (signingToken) {
+    if (signingToken && secureDocumentAccessEnabled) {
       const { error } = await supabase.rpc('update_signer_status_by_token', {
         p_token: signingToken,
         p_status: status,
       })
       if (!error) return true
-      if (!isMissingRpc(error)) {
-        console.error('Error updating signer status:', error)
-        return false
-      }
+      console.error('Error updating signer status:', error)
+      return false
     }
     const { error } = await supabase
       .rpc('update_signer_status_by_id', { p_signer_id: signerId, p_status: status })
@@ -702,7 +698,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => {
-    if (signingToken) {
+    if (signingToken && secureDocumentAccessEnabled) {
       const { data, error } = await supabase.rpc('add_audit_entry_by_token', {
         p_token: signingToken,
         p_action: action,
@@ -712,10 +708,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         set((state) => ({ auditTrail: [...state.auditTrail, data as AuditTrailEntry] }))
         return true
       }
-      if (!isMissingRpc(error)) {
-        console.error('Error adding audit entry:', error)
-        return false
-      }
+      console.error('Error adding audit entry:', error)
+      return false
     }
     const { data, error } = await supabase
       .from('audit_trail')
