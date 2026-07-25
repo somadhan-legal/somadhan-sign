@@ -64,7 +64,7 @@ function DraggableField({ children, onStop, bounds, style, className, fieldId }:
   const nodeRef = useRef<HTMLDivElement>(null)
   return (
     <Draggable nodeRef={nodeRef as React.RefObject<HTMLElement>} position={{ x: 0, y: 0 }} onStop={onStop} bounds={bounds}>
-      <div ref={nodeRef} style={style} className={className} data-field-id={fieldId}>{children}</div>
+      <div ref={nodeRef} style={{ ...style, touchAction: 'none' }} className={className} data-field-id={fieldId}>{children}</div>
     </Draggable>
   )
 }
@@ -285,28 +285,46 @@ export default function DocumentEditorPage() {
       return { newW, newH, newLeft, newTop }
     }
 
-    const handlePointerMove = (ev: PointerEvent) => {
-      ev.preventDefault()
-      const { newW, newH, newLeft, newTop } = calculateSize(ev.clientX, ev.clientY)
-
+    let latestSize = calculateSize(startX, startY)
+    const applySize = ({ newW, newH, newLeft, newTop }: typeof latestSize) => {
       fieldEl.style.width = `${newW}%`
       fieldEl.style.height = `${newH}%`
       fieldEl.style.left = `${newLeft}%`
       fieldEl.style.top = `${newTop}%`
     }
-
-    const handlePointerUp = (ev: PointerEvent) => {
+    const stopListening = () => {
       document.removeEventListener('pointermove', handlePointerMove)
       document.removeEventListener('pointerup', handlePointerUp)
-
-      const { newW, newH, newLeft, newTop } = calculateSize(ev.clientX, ev.clientY)
-      updateSignatureField(fieldId, { width: newW, height: newH, x: newLeft, y: newTop })
-
+      document.removeEventListener('pointercancel', handlePointerCancel)
+    }
+    const commitLatestSize = () => {
+      updateSignatureField(fieldId, {
+        width: latestSize.newW,
+        height: latestSize.newH,
+        x: latestSize.newLeft,
+        y: latestSize.newTop,
+      })
       setTimeout(() => { isInteracting.current = false }, 100)
+    }
+    const handlePointerMove = (ev: PointerEvent) => {
+      ev.preventDefault()
+      latestSize = calculateSize(ev.clientX, ev.clientY)
+      applySize(latestSize)
+    }
+
+    const handlePointerUp = (ev: PointerEvent) => {
+      latestSize = calculateSize(ev.clientX, ev.clientY)
+      stopListening()
+      commitLatestSize()
+    }
+    const handlePointerCancel = () => {
+      stopListening()
+      commitLatestSize()
     }
 
     document.addEventListener('pointermove', handlePointerMove)
     document.addEventListener('pointerup', handlePointerUp)
+    document.addEventListener('pointercancel', handlePointerCancel)
   }, [signatureFields, updateSignatureField])
 
   const handlePageClick = useCallback(
