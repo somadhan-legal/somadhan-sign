@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "supabase"
+import { generateAuthoritativeFinalPdf } from "../_shared/finalPdf.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -96,14 +97,14 @@ serve(async (req) => {
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
-    const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, ccEmails, type, downloadUrl: requestedDownloadUrl, pdfBase64, viewLink, signeeEmails: requestedSigneeEmails } = await req.json()
+    const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, type, downloadUrl: requestedDownloadUrl, viewLink } = await req.json()
     if (String(documentTitle || '').length > 200 || String(senderName || '').length > 200 || String(message || '').length > 5000) {
       return new Response(JSON.stringify({ error: 'Email content is too long' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
-    if ((Array.isArray(to) && to.length > 100) || (Array.isArray(ccEmails) && ccEmails.length > 100) || (Array.isArray(requestedSigneeEmails) && requestedSigneeEmails.length > 100)) {
+    if (Array.isArray(to) && to.length > 100) {
       return new Response(JSON.stringify({ error: 'Too many email recipients' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -133,7 +134,7 @@ serve(async (req) => {
       : null
 
     let verifiedDocumentTitle = documentTitle
-    let allowedCompletionRecipients: Set<string> | null = null
+    let verifiedCompletionRecipients: string[] = []
     let verifiedDocumentId: string | null = null
     let resolvedDownloadUrl = requestedDownloadUrl
     let resolvedSigningLink = signingLink
@@ -199,7 +200,15 @@ serve(async (req) => {
           // Ignore legacy non-JSON audit metadata.
         }
       }
-      allowedCompletionRecipients = new Set(allowed.map((email) => email.toLowerCase()))
+      verifiedCompletionRecipients = [...new Map(
+        allowed.map((email) => [email.toLowerCase(), email.trim()]),
+      ).values()]
+      if (verifiedCompletionRecipients.length > 200) {
+        return new Response(JSON.stringify({ error: 'Too many completion recipients' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        })
+      }
 
       const { data: existingDocument, error: existingDocumentError } = await completionServiceClient
         .from('documents')
@@ -215,20 +224,19 @@ serve(async (req) => {
       }
 
       let finalPdfReference = existingDocument?.final_pdf_url || null
-      if (!finalPdfReference && typeof pdfBase64 === 'string' && pdfBase64.length > 0) {
-        if (pdfBase64.length > 28_000_000) {
-          return new Response(JSON.stringify({ error: 'The completed PDF is too large' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 413,
-          })
+      if (!finalPdfReference) {
+        const originalPath = storagePath(completionData.original_pdf_url)
+        if (!originalPath) throw new Error('The original document file reference is invalid')
+        const { data: originalPdf, error: originalPdfError } = await completionServiceClient.storage
+          .from('documents')
+          .download(originalPath)
+        if (originalPdfError || !originalPdf) {
+          throw originalPdfError || new Error('The original document could not be loaded')
         }
-        const pdfBytes = Uint8Array.from(atob(pdfBase64), (character) => character.charCodeAt(0))
-        if (new TextDecoder().decode(pdfBytes.slice(0, 5)) !== '%PDF-') {
-          return new Response(JSON.stringify({ error: 'The completed PDF is invalid' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          })
-        }
+        const pdfBytes = await generateAuthoritativeFinalPdf(
+          new Uint8Array(await originalPdf.arrayBuffer()),
+          completionData,
+        )
         const uploadedReference = `signed/${completionDocumentId}_${crypto.randomUUID()}.pdf`
         const { error: uploadError } = await completionServiceClient.storage
           .from('documents')
@@ -488,11 +496,9 @@ serve(async (req) => {
 
     const emailHtml = isCcNotification ? ccNotificationHtml : isCompletion ? completionHtml : invitationHtml
 
-    // Build email payload - 'to' can be a string or array (array for completion emails)
+    // Completion recipients come only from the authoritative document record.
     const toRecipients = isCompletion
-      ? (Array.isArray(to) ? to : [to])
-          .filter(isEmail)
-          .filter((email) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
+      ? verifiedCompletionRecipients
       : verifiedRecipient ? [verifiedRecipient] : []
     if (toRecipients.length === 0) {
       return new Response(JSON.stringify({ error: 'A valid recipient email is required' }), {
@@ -530,13 +536,7 @@ serve(async (req) => {
     }
 
     const completionRecipients = isCompletion
-      ? [...new Map([
-          ...toRecipients,
-          ...(Array.isArray(ccEmails) ? ccEmails : []),
-        ]
-          .filter(isEmail)
-          .filter((email) => !allowedCompletionRecipients || allowedCompletionRecipients.has(email.toLowerCase()))
-          .map((email) => [email.toLowerCase(), email.trim()])).values()]
+      ? toRecipients
       : []
 
     if (isCompletion && completionServiceClient && verifiedDocumentId) {

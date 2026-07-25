@@ -43,5 +43,8 @@ jobs:
       - name: Check Edge Functions
         run: deno check --config supabase/functions/deno.json supabase/functions/get-document-access/index.ts supabase/functions/send-signing-email/index.ts
 
+      - name: Test final PDF generation
+        run: deno test --config supabase/functions/deno.json supabase/functions/_shared/finalPdf_test.ts
+
       - name: Audit dependencies
         run: npm audit --audit-level=high

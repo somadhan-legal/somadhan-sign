@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PDFPage } from 'pdf-lib'
-import { getPlacementRect, type SignedField } from './signedPdf'
+import { getContainedImageRect, getPlacementRect, type SignedField } from './signedPdf'
 
 const placement: SignedField = {
   field_type: 'signature',
@@ -65,6 +65,40 @@ describe('getPlacementRect', () => {
       width: 30,
       height: 20,
       rotation: 0,
+    })
+  })
+})
+
+describe('getContainedImageRect', () => {
+  it('centers a signature without distorting its aspect ratio', () => {
+    expect(getContainedImageRect({
+      x: 10,
+      y: 140,
+      width: 30,
+      height: 20,
+      rotation: 0,
+    }, 100, 50)).toEqual({
+      x: 10,
+      y: 142.5,
+      width: 30,
+      height: 15,
+      rotation: 0,
+    })
+  })
+
+  it('centers a contained signature on a rotated page', () => {
+    expect(getContainedImageRect({
+      x: 30,
+      y: 20,
+      width: 60,
+      height: 10,
+      rotation: 90,
+    }, 100, 50)).toEqual({
+      x: 30,
+      y: 40,
+      width: 20,
+      height: 10,
+      rotation: 90,
     })
   })
 })

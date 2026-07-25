@@ -12,7 +12,7 @@ export interface SignedField {
   signature_id: string
 }
 
-interface PdfPlacementRect {
+export interface PdfPlacementRect {
   x: number
   y: number
   width: number
@@ -45,6 +45,35 @@ export const getPlacementRect = (page: PDFPage, placement: SignedField): PdfPlac
     default:
       return { x: crop.x + left, y: crop.y + crop.height - top - height, width, height, rotation }
   }
+}
+
+const offsetPlacementPoint = (rect: PdfPlacementRect, horizontal: number, vertical: number) => {
+  switch (rect.rotation) {
+    case 90:
+      return { x: rect.x - vertical, y: rect.y + horizontal }
+    case 180:
+      return { x: rect.x - horizontal, y: rect.y - vertical }
+    case 270:
+      return { x: rect.x + vertical, y: rect.y - horizontal }
+    default:
+      return { x: rect.x + horizontal, y: rect.y + vertical }
+  }
+}
+
+export const getContainedImageRect = (
+  rect: PdfPlacementRect,
+  imageWidth: number,
+  imageHeight: number,
+) => {
+  const scale = Math.min(rect.width / imageWidth, rect.height / imageHeight)
+  const width = imageWidth * scale
+  const height = imageHeight * scale
+  const point = offsetPlacementPoint(
+    rect,
+    (rect.width - width) / 2,
+    (rect.height - height) / 2,
+  )
+  return { ...point, width, height, rotation: rect.rotation }
 }
 
 const fitText = (text: string, font: PDFFont, maxWidth: number, preferredSize: number) => {
@@ -177,12 +206,13 @@ export async function generateSignedPdf(
             }
             
             if (!img) throw new Error('The signature image format is not supported')
+            const contained = getContainedImageRect(rect, img.width, img.height)
             page.drawImage(img, {
-              x: rect.x,
-              y: rect.y,
-              width: rect.width,
-              height: rect.height,
-              rotate: degrees(rect.rotation),
+              x: contained.x,
+              y: contained.y,
+              width: contained.width,
+              height: contained.height,
+              rotate: degrees(contained.rotation),
             })
           } catch (error) {
             console.error('Error embedding signature image:', error)

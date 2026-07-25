@@ -30,20 +30,7 @@ import { formatSigningDate } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, safePdfFilename } from '@/lib/download'
 import { Moon, Sun, HelpCircle } from 'lucide-react'
-import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
-
-const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
-  const reader = new FileReader()
-  reader.onerror = () => reject(reader.error || new Error('The completed PDF could not be read.'))
-  reader.onload = () => {
-    const result = typeof reader.result === 'string' ? reader.result : ''
-    const separatorIndex = result.indexOf(',')
-    if (separatorIndex < 0) reject(new Error('The completed PDF could not be encoded.'))
-    else resolve(result.slice(separatorIndex + 1))
-  }
-  reader.readAsDataURL(blob)
-})
 
 const isMissingRpc = (error: { code?: string; message?: string } | null) =>
   error?.code === 'PGRST202' || error?.message?.includes('Could not find the function') === true
@@ -476,114 +463,21 @@ export default function InviteSigningPage() {
           return
         }
         setDocumentCompleted(true)
-        // Get all document data via RPC (bypasses RLS)
-        let completionData: DocumentCompletionResult | null = null
+
+        // The Edge Function builds the durable final PDF from authoritative
+        // data and derives every recipient from the completed document.
         try {
-          let { data, error: completionError } = await supabase
-            .rpc('get_document_for_completion_by_token', { p_token: token || '' })
-          if (isMissingRpc(completionError)) {
-            const legacyResult = await supabase
-              .rpc('get_document_for_completion', { p_document_id: documentId })
-            data = legacyResult.data
-            completionError = legacyResult.error
-          }
-          if (completionError) throw completionError
-          completionData = data
-        } catch (rpcErr) {
-          console.error('[completion] RPC get_document_for_completion failed:', rpcErr)
-          setCompletionDeliveryFailed(true)
-        }
-        
-        const downloadUrl = ''
-        let pdfBase64 = ''
-        
-        // Generate signed PDF + audit trail combined (non-blocking for email)
-        if (signerData.documents.original_pdf_url && completionData?.fields && completionData?.placements) {
-          try {
-            const refreshedAccess = token ? await fetchSignerByToken(token) : null
-            const completionPdfUrl = refreshedAccess?.documents.original_pdf_url || signerData.documents.original_pdf_url
-            const signedFields: SignedField[] = completionData.placements.map((p) => {
-              const field = completionData.fields?.find((candidate) => candidate.id === p.field_id)
-              return {
-                field_type: field?.field_type || 'signature',
-                page_number: field?.page_number || 1,
-                x_percent: field?.x || 0,
-                y_percent: field?.y || 0,
-                width_percent: field?.width || 10,
-                height_percent: field?.height || 5,
-                signature_id: p.signature_id,
-              }
-            })
-            
-            const { generateSignedPdf } = await import('@/lib/signedPdf')
-            const signedBlob = await generateSignedPdf(completionPdfUrl, signedFields)
-            
-            let finalBlob = signedBlob
-            if (completionData.audit_trail && completionData.audit_trail.length > 0) {
-              const signedUrl = URL.createObjectURL(signedBlob)
-              try {
-                const { generateAuditPdf } = await import('@/lib/auditPdf')
-                finalBlob = await generateAuditPdf(signedUrl, completionData.audit_trail, completionData.title || 'Document')
-              } finally {
-                URL.revokeObjectURL(signedUrl)
-              }
-            }
-            
-            pdfBase64 = await blobToBase64(finalBlob)
-          } catch (pdfErr) {
-            console.error('[completion] PDF generation error:', pdfErr)
-          }
-        }
-        
-        // Attempt the completion email even if PDF generation failed.
-        try {
-          const directRecipients: string[] = []
-          
-          if (completionData?.signers) {
-            completionData.signers.forEach((signer) => { if (signer.signer_email) directRecipients.push(signer.signer_email) })
-          }
-          
-          if (completionData?.owner_email) {
-            directRecipients.push(completionData.owner_email)
-          }
-          
-          // Extract CC emails from audit trail metadata
-          let ccEmails: string[] = []
-          if (completionData?.cc_metadata) {
-            try {
-              const meta = typeof completionData.cc_metadata === 'string'
-                ? JSON.parse(completionData.cc_metadata)
-                : completionData.cc_metadata
-              if (meta.ccEmails && Array.isArray(meta.ccEmails)) {
-                ccEmails = meta.ccEmails
-              }
-            } catch { /* not JSON */ }
-          }
-          
-          const uniqueRecipients = [...new Set(directRecipients)]
-          
-          if (uniqueRecipients.length > 0) {
-            const { error: emailFnErr } = await supabase.functions.invoke('send-signing-email', {
-              body: {
-                to: uniqueRecipients,
-                documentTitle: completionData?.title || 'Document',
-                signingLink: '',
-                signingToken: token,
-                senderName: 'SomadhanSign',
-                type: 'completion',
-                downloadUrl,
-                pdfBase64,
-                ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
-              },
-            })
-            if (emailFnErr) {
-              console.error('[completion] Edge function error:', emailFnErr)
-              setCompletionDeliveryFailed(true)
-            } else {
-              setCompletionDeliveryFailed(false)
-            }
-          } else {
+          const { error: emailFnErr } = await supabase.functions.invoke('send-signing-email', {
+            body: {
+              signingToken: token,
+              type: 'completion',
+            },
+          })
+          if (emailFnErr) {
+            console.error('[completion] Edge function error:', emailFnErr)
             setCompletionDeliveryFailed(true)
+          } else {
+            setCompletionDeliveryFailed(false)
           }
         } catch (emailErr) {
           console.error('[completion] Error sending completion email:', emailErr)

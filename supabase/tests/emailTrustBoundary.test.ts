@@ -5,6 +5,10 @@ const emailFunction = readFileSync(
   new URL('../functions/send-signing-email/index.ts', import.meta.url),
   'utf8',
 )
+const finalPdfFunction = readFileSync(
+  new URL('../functions/_shared/finalPdf.ts', import.meta.url),
+  'utf8',
+)
 
 describe('signing email trust boundary', () => {
   it('derives sender identity from the authenticated user', () => {
@@ -37,5 +41,24 @@ describe('signing email trust boundary', () => {
 
     expect(finalPdfUpload).toBeGreaterThan(-1)
     expect(providerConfigCheck).toBeGreaterThan(finalPdfUpload)
+  })
+
+  it('builds the durable PDF from authoritative server data', () => {
+    expect(emailFunction).toContain(
+      'const pdfBytes = await generateAuthoritativeFinalPdf(',
+    )
+    expect(emailFunction).toContain(
+      ".from('documents')\n          .download(originalPath)",
+    )
+    expect(emailFunction).not.toContain('pdfBase64')
+    expect(emailFunction).toContain(
+      'const toRecipients = isCompletion\n      ? verifiedCompletionRecipients',
+    )
+    expect(emailFunction).not.toContain('allowedCompletionRecipients')
+    expect(finalPdfFunction).toContain(
+      'fields.some((field) => !placementByField.has(field.id))',
+    )
+    expect(finalPdfFunction).toContain('BENGALI_FONT_SHA256')
+    expect(finalPdfFunction).toContain('RESVG_WASM_SHA256')
   })
 })
