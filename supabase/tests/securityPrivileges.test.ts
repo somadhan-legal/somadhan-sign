@@ -38,4 +38,19 @@ describe('secure document access migration privileges', () => {
       "raise exception 'a completed field is required for this audit action';",
     )
   })
+
+  it('keeps API table privileges aligned with RLS and Edge Functions', () => {
+    expect(migration).toContain(
+      'grant select on table public.signature_placements to authenticated;',
+    )
+    expect(migration).toContain(
+      'grant select, insert on table public.audit_trail to authenticated;',
+    )
+    expect(migration).toContain(
+      'public.signature_placements,\n  public.audit_trail\nto service_role;',
+    )
+    expect(migration).toContain(
+      'grant all privileges on table public.document_viewers to service_role;',
+    )
+  })
 })

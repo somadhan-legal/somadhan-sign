@@ -8,6 +8,36 @@ drop policy if exists "Anyone can add audit entries" on public.audit_trail;
 drop policy if exists "Anyone can upload signed PDFs" on storage.objects;
 drop policy if exists "Anyone can view documents" on storage.objects;
 
+-- SQL-created tables do not inherit the Dashboard's API grants. Keep public
+-- access RPC-only, restore the operations protected by owner RLS, and give
+-- trusted Edge Functions the table privileges required by service_role.
+revoke select, insert, update, delete on table
+  public.documents,
+  public.signature_fields,
+  public.document_signers,
+  public.signatures,
+  public.signature_placements,
+  public.audit_trail
+from anon;
+
+grant select, insert, update, delete on table
+  public.documents,
+  public.signature_fields,
+  public.document_signers,
+  public.signatures
+to authenticated;
+grant select on table public.signature_placements to authenticated;
+grant select, insert on table public.audit_trail to authenticated;
+
+grant all privileges on table
+  public.documents,
+  public.signature_fields,
+  public.document_signers,
+  public.signatures,
+  public.signature_placements,
+  public.audit_trail
+to service_role;
+
 update storage.buckets set public = false where id = 'documents';
 
 drop policy if exists "Authenticated users can upload" on storage.objects;
@@ -281,6 +311,7 @@ end $$;
 alter table public.document_viewers enable row level security;
 revoke all on table public.document_viewers from anon, authenticated;
 grant select, insert, update, delete on table public.document_viewers to authenticated;
+grant all privileges on table public.document_viewers to service_role;
 
 drop policy if exists "Owner can manage document viewers" on public.document_viewers;
 create policy "Owner can manage document viewers"
