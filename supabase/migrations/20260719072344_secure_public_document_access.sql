@@ -38,6 +38,46 @@ grant all privileges on table
   public.audit_trail
 to service_role;
 
+drop policy if exists "Owner can view documents" on public.documents;
+create policy "Owner can view documents"
+  on public.documents for select
+  to authenticated
+  using ((select auth.uid()) = created_by);
+drop policy if exists "Users can create documents" on public.documents;
+create policy "Users can create documents"
+  on public.documents for insert
+  to authenticated
+  with check ((select auth.uid()) = created_by);
+drop policy if exists "Users can update own documents" on public.documents;
+create policy "Users can update own documents"
+  on public.documents for update
+  to authenticated
+  using ((select auth.uid()) = created_by)
+  with check ((select auth.uid()) = created_by);
+drop policy if exists "Users can delete own documents" on public.documents;
+create policy "Users can delete own documents"
+  on public.documents for delete
+  to authenticated
+  using ((select auth.uid()) = created_by);
+
+drop policy if exists "Owner can view signers" on public.document_signers;
+create policy "Owner can view signers"
+  on public.document_signers for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.documents d
+      where d.id = document_id and d.created_by = (select auth.uid())
+    )
+  );
+
+drop policy if exists "Users can manage own signatures" on public.signatures;
+create policy "Users can manage own signatures"
+  on public.signatures for all
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 update storage.buckets set public = false where id = 'documents';
 
 drop policy if exists "Authenticated users can upload" on storage.objects;
@@ -80,7 +120,7 @@ create policy "Owner can view signature fields"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
   );
 create policy "Owner can add draft signature fields"
@@ -89,7 +129,7 @@ create policy "Owner can add draft signature fields"
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 create policy "Owner can update draft signature fields"
@@ -98,13 +138,13 @@ create policy "Owner can update draft signature fields"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   )
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 create policy "Owner can delete draft signature fields"
@@ -113,7 +153,7 @@ create policy "Owner can delete draft signature fields"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 
@@ -124,7 +164,7 @@ create policy "Owner can add signers"
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 drop policy if exists "Owner can update signers" on public.document_signers;
@@ -134,13 +174,13 @@ create policy "Owner can update signers"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   )
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 drop policy if exists "Owner can delete signers" on public.document_signers;
@@ -150,7 +190,7 @@ create policy "Owner can delete signers"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid() and d.status = 'draft'
+      where d.id = document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
     )
   );
 
@@ -162,7 +202,7 @@ create policy "Owner can view placements"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
   );
 
@@ -174,7 +214,7 @@ create policy "Owner can view audit trail"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
   );
 
@@ -185,7 +225,7 @@ create policy "Owner can add audit entries"
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
     and action in ('Document Created', 'Document Sent for Signing', 'Reminder Sent')
   );
@@ -227,6 +267,17 @@ where audit.action = 'Document Completed'
 create unique index if not exists audit_trail_document_completed_unique
   on public.audit_trail (document_id)
   where action = 'Document Completed';
+create index if not exists signature_fields_document_assignee_idx
+  on public.signature_fields (document_id, lower(assigned_to_email));
+create index if not exists document_signers_document_status_idx
+  on public.document_signers (document_id, status);
+create index if not exists audit_trail_document_action_email_created_idx
+  on public.audit_trail (document_id, action, lower(user_email), created_at);
+create index if not exists signature_placements_signer_id_idx
+  on public.signature_placements (signer_id)
+  where signer_id is not null;
+create index if not exists documents_owner_created_idx
+  on public.documents (created_by, created_at desc);
 
 do $$
 begin
@@ -243,12 +294,12 @@ end $$;
 create or replace function public.protect_document_integrity()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = ''
 as $$
 begin
-  -- Service-role operations and security-definer signer transactions have no
-  -- authenticated user id and are validated by their own narrow functions.
-  if auth.uid() is null then return new; end if;
+  -- Trusted service-role and security-definer operations run as a privileged
+  -- database role. Token-scoped RPCs validate their own narrow transitions.
+  if current_user not in ('anon', 'authenticated') then return new; end if;
 
   if new.created_by is distinct from old.created_by
     or new.original_pdf_url is distinct from old.original_pdf_url
@@ -320,13 +371,13 @@ create policy "Owner can manage document viewers"
   using (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
   )
   with check (
     exists (
       select 1 from public.documents d
-      where d.id = document_id and d.created_by = auth.uid()
+      where d.id = document_id and d.created_by = (select auth.uid())
     )
   );
 
@@ -334,7 +385,7 @@ create or replace function public.get_signing_package(p_token text)
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   result json;
@@ -414,14 +465,14 @@ create or replace function public.replace_signature_fields(p_document_id uuid, p
 returns setof public.signature_fields
 language plpgsql
 security invoker
-set search_path = public
+set search_path = ''
 as $$
 declare
   inserted_count integer;
 begin
   if not exists (
     select 1 from public.documents d
-    where d.id = p_document_id and d.created_by = auth.uid() and d.status = 'draft'
+    where d.id = p_document_id and d.created_by = (select auth.uid()) and d.status = 'draft'
   ) then raise exception 'Document access denied'; end if;
   if jsonb_typeof(p_fields) <> 'array' then raise exception 'Fields must be an array'; end if;
 
@@ -477,7 +528,7 @@ create or replace function public.update_document_signer_with_fields(
 returns public.document_signers
 language plpgsql
 security invoker
-set search_path = public
+set search_path = ''
 as $$
 declare
   signer_row public.document_signers;
@@ -488,7 +539,7 @@ begin
   from public.document_signers signer
   join public.documents document on document.id = signer.document_id
   where signer.id = p_signer_id
-    and document.created_by = auth.uid()
+    and document.created_by = (select auth.uid())
     and document.status = 'draft'
   for update of signer;
 
@@ -516,7 +567,7 @@ create or replace function public.remove_document_signer_with_fields(p_signer_id
 returns void
 language plpgsql
 security invoker
-set search_path = public
+set search_path = ''
 as $$
 declare
   signer_row public.document_signers;
@@ -525,7 +576,7 @@ begin
   from public.document_signers signer
   join public.documents document on document.id = signer.document_id
   where signer.id = p_signer_id
-    and document.created_by = auth.uid()
+    and document.created_by = (select auth.uid())
     and document.status = 'draft'
   for update of signer;
 
@@ -546,7 +597,7 @@ create or replace function public.add_signature_placement_by_token(
 returns public.signature_placements
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   signer_row public.document_signers;
@@ -554,12 +605,17 @@ declare
   placement_row public.signature_placements;
   document_status text;
   signature_bytes bytea;
+  image_width bigint;
+  image_height bigint;
   parsed_date date;
   audit_action text;
 begin
   select * into signer_row from public.document_signers where signing_token = p_token for update;
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
-  select status into document_status from public.documents where id = signer_row.document_id;
+  select status into document_status
+  from public.documents
+  where id = signer_row.document_id
+  for update;
   if document_status <> 'pending' or signer_row.status = 'signed' then
     raise exception 'This signing request is no longer active';
   end if;
@@ -591,6 +647,25 @@ begin
     if octet_length(signature_bytes) < 8
       or substring(signature_bytes from 1 for 8) <> decode('89504E470D0A1A0A', 'hex') then
       raise exception 'Invalid signature image';
+    end if;
+    if octet_length(signature_bytes) < 24
+      or substring(signature_bytes from 13 for 4) <> decode('49484452', 'hex') then
+      raise exception 'Invalid signature image';
+    end if;
+    image_width :=
+      get_byte(signature_bytes, 16)::bigint * 16777216
+      + get_byte(signature_bytes, 17)::bigint * 65536
+      + get_byte(signature_bytes, 18)::bigint * 256
+      + get_byte(signature_bytes, 19)::bigint;
+    image_height :=
+      get_byte(signature_bytes, 20)::bigint * 16777216
+      + get_byte(signature_bytes, 21)::bigint * 65536
+      + get_byte(signature_bytes, 22)::bigint * 256
+      + get_byte(signature_bytes, 23)::bigint;
+    if image_width < 1 or image_height < 1
+      or image_width > 4096 or image_height > 4096
+      or image_width * image_height > 8000000 then
+      raise exception 'Invalid signature image dimensions';
     end if;
   end if;
   if field_row.field_type = 'date' then
@@ -649,7 +724,7 @@ create or replace function public.update_signer_status_by_token(p_token text, p_
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   signer_row public.document_signers;
@@ -659,7 +734,10 @@ begin
   if signer_row.id is null then raise exception 'Invalid signing token'; end if;
   if p_status not in ('viewed', 'signed') then raise exception 'Invalid signer status'; end if;
   if signer_row.status = 'signed' then return; end if;
-  select status into document_status from public.documents where id = signer_row.document_id;
+  select status into document_status
+  from public.documents
+  where id = signer_row.document_id
+  for update;
   if document_status <> 'pending' then raise exception 'This signing request is no longer active'; end if;
   if p_status = 'signed' and not exists (
     select 1 from public.signature_fields f
@@ -723,7 +801,7 @@ create or replace function public.add_audit_entry_by_token(
 returns public.audit_trail
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   signer_row public.document_signers;
@@ -809,7 +887,7 @@ create or replace function public.check_all_signers_signed_by_token(p_token text
 returns boolean
 language sql
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select not exists (
     select 1
@@ -829,25 +907,34 @@ create or replace function public.mark_document_completed_by_token(p_token text)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   target_document_id uuid;
   completing_signer public.document_signers;
+  document_status text;
 begin
   select * into completing_signer
   from public.document_signers
   where signing_token = p_token;
   target_document_id := completing_signer.document_id;
   if target_document_id is null then raise exception 'Invalid signing token'; end if;
+  select status into document_status
+  from public.documents
+  where id = target_document_id
+  for update;
+  if document_status not in ('pending', 'completed') then
+    raise exception 'This signing request is no longer active';
+  end if;
   if exists (
     select 1 from public.document_signers
     where document_id = target_document_id and status <> 'signed'
   ) then raise exception 'All signers must sign first'; end if;
+  if document_status = 'completed' then return; end if;
 
   update public.documents
   set status = 'completed', updated_at = now()
-  where id = target_document_id and status <> 'completed';
+  where id = target_document_id and status = 'pending';
 
   insert into public.audit_trail (
     document_id, action, user_email, user_name, metadata
@@ -865,7 +952,7 @@ create or replace function public.get_document_for_completion_by_token(p_token t
 returns json
 language sql
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select public.get_document_for_completion(ds.document_id)
   from public.document_signers ds
@@ -881,14 +968,14 @@ create or replace function public.create_document_viewer(p_document_id uuid, p_v
 returns text
 language plpgsql
 security invoker
-set search_path = public
+set search_path = ''
 as $$
 declare
   result_token text;
 begin
   if not exists (
     select 1 from public.documents d
-    where d.id = p_document_id and d.created_by = auth.uid() and d.status = 'pending'
+    where d.id = p_document_id and d.created_by = (select auth.uid()) and d.status = 'pending'
   ) then raise exception 'Document access denied'; end if;
   if length(p_viewer_email) > 320 or p_viewer_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
     raise exception 'A valid viewer email is required';
@@ -920,7 +1007,7 @@ create or replace function public.get_viewer_package(p_token text)
 returns json
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 declare
   result json;

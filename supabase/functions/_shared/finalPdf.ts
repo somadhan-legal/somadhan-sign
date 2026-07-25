@@ -79,6 +79,8 @@ const RESVG_WASM_SHA256 = "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35
 const MAX_ORIGINAL_PDF_BYTES = 25_000_000
 const MAX_FINAL_PDF_BYTES = 30_000_000
 const MAX_SIGNATURE_BYTES = 2_300_000
+const MAX_SIGNATURE_DIMENSION = 4096
+const MAX_SIGNATURE_PIXELS = 8_000_000
 const UNSAFE_PDF_FEATURE = /\/(?:AA|EmbeddedFiles|ImportData|JavaScript|JS|Launch|Movie|OpenAction|Rendition|RichMedia|Sound|SubmitForm|XFA)(?=[\s<>[\]()/]|$)/
 
 let bengaliFontBytesPromise: Promise<Uint8Array> | null = null
@@ -348,6 +350,24 @@ const decodeSignaturePng = (value: string) => {
   const pngHeader = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
   if (!pngHeader.every((byte, index) => bytes[index] === byte)) {
     throw new Error("A completed signature is not a valid PNG")
+  }
+  if (
+    bytes.length < 24 ||
+    String.fromCharCode(...bytes.slice(12, 16)) !== "IHDR"
+  ) {
+    throw new Error("A completed signature has an invalid PNG header")
+  }
+  const dimensions = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const width = dimensions.getUint32(16)
+  const height = dimensions.getUint32(20)
+  if (
+    width < 1 ||
+    height < 1 ||
+    width > MAX_SIGNATURE_DIMENSION ||
+    height > MAX_SIGNATURE_DIMENSION ||
+    width * height > MAX_SIGNATURE_PIXELS
+  ) {
+    throw new Error("A completed signature has invalid image dimensions")
   }
   return bytes
 }

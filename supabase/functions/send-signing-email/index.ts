@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "supabase"
 import { generateAuthoritativeFinalPdf } from "../_shared/finalPdf.ts"
+import { getFinalPdfStoragePath } from "../_shared/completionStorage.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -237,7 +238,11 @@ serve(async (req) => {
           new Uint8Array(await originalPdf.arrayBuffer()),
           completionData,
         )
-        const uploadedReference = `signed/${completionDocumentId}_${crypto.randomUUID()}.pdf`
+        const uploadedReference = getFinalPdfStoragePath(
+          completionData.created_by,
+          completionDocumentId,
+          crypto.randomUUID(),
+        )
         const { error: uploadError } = await completionServiceClient.storage
           .from('documents')
           .upload(uploadedReference, pdfBytes, { contentType: 'application/pdf', upsert: false })
