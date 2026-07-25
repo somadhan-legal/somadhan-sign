@@ -8,7 +8,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { getAuthErrorMessage } from '@/lib/authError'
+import { getAuthErrorMessage, getRecoveryLinkError } from '@/lib/authError'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -24,22 +24,18 @@ export default function ResetPasswordPage() {
   const { isDark } = useThemeStore()
   const { t, lang } = useLanguageStore()
 
-  const recoveryParams = new URLSearchParams(window.location.hash.substring(1))
-  const recoveryErrorParam = recoveryParams.get('error')
-  const recoveryErrorDescription = recoveryParams.get('error_description')
-  const hasExpiredRecoveryLink = recoveryErrorParam === 'access_denied'
-    || recoveryErrorDescription?.includes('expired')
-    || recoveryErrorDescription?.includes('invalid')
-  const recoveryError = recoveryErrorParam
-    ? hasExpiredRecoveryLink
-      ? t('reset.linkExpired')
-      : recoveryErrorDescription || t('reset.errorOccurred')
-    : ''
+  const recoveryLinkError = getRecoveryLinkError(window.location.hash)
+  const hasExpiredRecoveryLink = recoveryLinkError === 'expired'
+  const recoveryError = recoveryLinkError === 'expired'
+    ? t('reset.linkExpired')
+    : recoveryLinkError === 'invalid'
+      ? t('reset.errorOccurred')
+      : ''
   const displayedError = error || recoveryError
   const recoveryReady = isRecovery || Boolean(user)
 
   useEffect(() => {
-    if (initialized && !loading && !isRecovery && !user && !recoveryErrorParam) {
+    if (initialized && !loading && !isRecovery && !user && !recoveryLinkError) {
       const timer = setTimeout(() => {
         if (!useAuthStore.getState().isRecovery && !useAuthStore.getState().user) {
           navigate('/login', { replace: true })
@@ -47,7 +43,7 @@ export default function ResetPasswordPage() {
       }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [initialized, isRecovery, loading, user, navigate, recoveryErrorParam])
+  }, [initialized, isRecovery, loading, user, navigate, recoveryLinkError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,14 +127,14 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        {!recoveryErrorParam && !recoveryReady && (
+        {!recoveryLinkError && !recoveryReady && (
           <div className="flex items-center justify-center gap-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))]/60 p-4 text-sm text-[hsl(var(--muted-foreground))]" role="status" aria-live="polite">
             <span className="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--primary))] border-t-transparent" aria-hidden="true" />
             {t('reset.validatingLink')}
           </div>
         )}
 
-        {!recoveryErrorParam && recoveryReady && (
+        {!recoveryLinkError && recoveryReady && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <Input

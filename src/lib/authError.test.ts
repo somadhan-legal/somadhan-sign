@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getAuthErrorMessage } from './authError'
+import { getAuthErrorMessage, getRecoveryLinkError } from './authError'
 
 describe('getAuthErrorMessage', () => {
   it('turns provider codes into clear guidance', () => {
@@ -18,5 +18,19 @@ describe('getAuthErrorMessage', () => {
   it('returns localized guidance without exposing provider details', () => {
     expect(getAuthErrorMessage({ code: 'invalid_credentials' }, 'আবার চেষ্টা করুন।', 'bn')).toBe('ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।')
     expect(getAuthErrorMessage({ message: 'internal database detail' }, 'আবার চেষ্টা করুন।', 'bn')).toBe('আবার চেষ্টা করুন।')
+  })
+})
+
+describe('getRecoveryLinkError', () => {
+  it('recognizes expired recovery links without exposing provider text', () => {
+    expect(getRecoveryLinkError('#error=access_denied&error_description=Email+link+is+invalid')).toBe('expired')
+  })
+
+  it('maps arbitrary URL error text to a controlled invalid state', () => {
+    expect(getRecoveryLinkError('#error=server_error&error_description=Call+this+phone+number')).toBe('invalid')
+  })
+
+  it('allows a recovery URL with no error', () => {
+    expect(getRecoveryLinkError('#access_token=secret&type=recovery')).toBeNull()
   })
 })

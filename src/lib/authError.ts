@@ -33,3 +33,17 @@ export function getAuthErrorMessage(
   }
   return fallback
 }
+
+export type RecoveryLinkError = 'expired' | 'invalid' | null
+
+export function getRecoveryLinkError(hash: string): RecoveryLinkError {
+  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+  const error = params.get('error')
+  if (!error) return null
+
+  const description = params.get('error_description')?.toLowerCase() || ''
+  if (error === 'access_denied' || description.includes('expired') || description.includes('invalid')) {
+    return 'expired'
+  }
+  return 'invalid'
+}

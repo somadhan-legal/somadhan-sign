@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
@@ -40,6 +40,22 @@ function HomeRedirect() {
   return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
 }
 
+function RoutePrivacyMetadata() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (!robots) {
+      robots = document.createElement('meta')
+      robots.name = 'robots'
+      document.head.appendChild(robots)
+    }
+    robots.content = pathname === '/' ? 'index,follow' : 'noindex,nofollow,noarchive'
+  }, [pathname])
+
+  return null
+}
+
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
 
@@ -49,6 +65,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <RoutePrivacyMetadata />
       <Routes>
         {/* Public signing route. No account authentication is required. */}
         <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />
