@@ -33,6 +33,11 @@ import type { Document, DocumentSigner } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 import { downloadPdfUrl, safePdfFilename } from '@/lib/download'
+import {
+  getSuggestedDocumentTitle,
+  MAX_DOCUMENT_TITLE_LENGTH,
+  normalizeDocumentTitle,
+} from '@/lib/documentTitle'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -80,6 +85,7 @@ export default function DashboardPage() {
       'This file does not contain a valid PDF header.': 'dashboard.pdfInvalidHeader',
       'The PDF is damaged, encrypted, or unsupported.': 'dashboard.pdfUnsupported',
       'The PDF does not contain any pages.': 'dashboard.pdfNoPages',
+      'This PDF contains active content or attachments that cannot be signed safely.': 'dashboard.pdfUnsafeContent',
     }
     return keys[message] ? t(keys[message]) : message
   }
@@ -168,9 +174,13 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!file || !user) return
 
-    const normalizedTitle = title.trim()
+    const normalizedTitle = normalizeDocumentTitle(title)
     if (!normalizedTitle) {
       setUploadError(t('dashboard.enterTitle'))
+      return
+    }
+    if (normalizedTitle.length > MAX_DOCUMENT_TITLE_LENGTH) {
+      setUploadError(t('dashboard.titleTooLong'))
       return
     }
 
@@ -688,7 +698,7 @@ export default function DashboardPage() {
             onChange={(e) => setTitle(e.target.value)}
             disabled={uploading}
             required
-            maxLength={160}
+            maxLength={MAX_DOCUMENT_TITLE_LENGTH}
           />
           <div>
             <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">{t('dashboard.pdfFile')}</label>
@@ -701,7 +711,7 @@ export default function DashboardPage() {
                   const selectedFile = e.target.files?.[0] || null
                   setFile(selectedFile)
                   if (selectedFile && !title.trim()) {
-                    setTitle(selectedFile.name.replace(/\.pdf$/i, ''))
+                    setTitle(getSuggestedDocumentTitle(selectedFile.name))
                   }
                   const validationError = selectedFile ? await validatePdfFile(selectedFile) : ''
                   if (requestId === uploadValidationRequestRef.current) {

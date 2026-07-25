@@ -393,7 +393,7 @@ export default function LoginPage() {
                       name="password"
                       autoComplete="current-password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
+                      placeholder={t('login.passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -417,7 +417,7 @@ export default function LoginPage() {
                         name="new-password"
                         autoComplete="new-password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
+                        placeholder={t('login.passwordPlaceholder')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

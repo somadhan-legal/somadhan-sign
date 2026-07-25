@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { useLanguageStore } from '@/stores/languageStore'
+import { getRouteTitle } from '@/lib/routeMetadata'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -78,10 +79,11 @@ function HomeRedirect() {
   return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
 }
 
-function RoutePrivacyMetadata() {
+function RouteMetadata() {
   const { pathname } = useLocation()
 
   useEffect(() => {
+    document.title = getRouteTitle(pathname)
     let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
     if (!robots) {
       robots = document.createElement('meta')
@@ -98,7 +100,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthInitializer />
-      <RoutePrivacyMetadata />
+      <RouteMetadata />
       <Routes>
         {/* Public signing route. No account authentication is required. */}
         <Route path="/sign/:token" element={<Suspense fallback={<PageLoader />}><InviteSigningPage /></Suspense>} />

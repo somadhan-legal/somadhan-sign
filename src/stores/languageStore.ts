@@ -231,6 +231,7 @@ const translations: Record<string, Record<Language, string>> = {
   'login.showPassword': { en: 'Show password', bn: 'পাসওয়ার্ড দেখান' },
   'login.hidePassword': { en: 'Hide password', bn: 'পাসওয়ার্ড লুকান' },
   'login.passwordHint': { en: 'Use at least 8 characters.', bn: 'কমপক্ষে ৮ অক্ষর ব্যবহার করুন।' },
+  'login.passwordPlaceholder': { en: 'Enter your password', bn: 'আপনার পাসওয়ার্ড লিখুন' },
   'login.brandingTitle': { en: 'Sign documents with', bn: 'ডকুমেন্ট সাইন করুন' },
   'login.brandingDesc': {
     en: 'Upload, define signature fields, invite signers, and get documents signed in one place.',
@@ -317,6 +318,7 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.deleteConfirmMessage': { en: 'Delete', bn: 'মুছুন' },
   'dashboard.cannotUndo': { en: 'This cannot be undone.', bn: 'এটি পূর্বাবস্থায় ফেরানো যাবে না।' },
   'dashboard.enterTitle': { en: 'Enter a document title.', bn: 'ডকুমেন্টের শিরোনাম লিখুন।' },
+  'dashboard.titleTooLong': { en: 'Use 160 characters or fewer for the document title.', bn: 'ডকুমেন্টের শিরোনাম ১৬০ অক্ষর বা তার কম রাখুন।' },
   'dashboard.loadingDocuments': { en: 'Loading documents...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
   'dashboard.documentsLoadFailed': { en: 'Your documents could not be loaded', bn: 'আপনার ডকুমেন্টগুলো লোড করা যায়নি' },
   'dashboard.documentsLoadFailedDesc': {
@@ -359,6 +361,10 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.pdfInvalidHeader': { en: 'This file does not contain a valid PDF header.', bn: 'এই ফাইলটিতে বৈধ PDF হেডার নেই।' },
   'dashboard.pdfUnsupported': { en: 'The PDF is damaged, encrypted, or unsupported.', bn: 'PDF ফাইলটি ক্ষতিগ্রস্ত, এনক্রিপ্ট করা, অথবা সমর্থিত নয়।' },
   'dashboard.pdfNoPages': { en: 'The PDF does not contain any pages.', bn: 'PDF ফাইলটিতে কোনো পৃষ্ঠা নেই।' },
+  'dashboard.pdfUnsafeContent': {
+    en: 'This PDF contains active content or attachments that cannot be signed safely.',
+    bn: 'এই PDF-এ সক্রিয় কনটেন্ট বা সংযুক্তি আছে, তাই এটি নিরাপদভাবে স্বাক্ষর করা যাবে না।',
+  },
 
   // ─── Document Editor ───
   'editor.signers': { en: 'Signers', bn: 'স্বাক্ষরকারী' },

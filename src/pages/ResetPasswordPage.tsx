@@ -142,7 +142,7 @@ export default function ResetPasswordPage() {
               name="new-password"
               autoComplete="new-password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('login.passwordPlaceholder')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -164,7 +164,7 @@ export default function ResetPasswordPage() {
               name="confirm-password"
               autoComplete="new-password"
               type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('login.passwordPlaceholder')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
