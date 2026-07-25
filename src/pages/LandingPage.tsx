@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { motion } from 'framer-motion'
+import { motion, MotionConfig } from 'framer-motion'
 import {
   ArrowRight,
   Check,
@@ -66,7 +66,8 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
+    <MotionConfig reducedMotion="user">
+      <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
       <a
         href="#main-content"
         className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
@@ -341,6 +342,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-5 text-sm font-semibold"><Link to="/login">{t('landing.signIn')}</Link><Link to="/login?mode=signup">{t('nav.getStarted')}</Link></div>
         </div>
       </footer>
-    </div>
+      </div>
+    </MotionConfig>
   )
 }
