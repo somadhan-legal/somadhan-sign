@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
@@ -25,11 +25,49 @@ function PageLoader() {
   )
 }
 
+function hasStoredAuthSession() {
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index)
+      if (key?.startsWith('sb-') && key.endsWith('-auth-token') && window.localStorage.getItem(key)) {
+        return true
+      }
+    }
+  } catch {
+    // Storage can be unavailable in strict browser privacy modes.
+  }
+  return false
+}
+
+function hasAuthCallbackParameters() {
+  const query = new URLSearchParams(window.location.search)
+  const hash = new URLSearchParams(window.location.hash.slice(1))
+  return query.has('code')
+    || hash.has('access_token')
+    || hash.get('type') === 'recovery'
+    || hash.has('error')
+}
+
+function AuthInitializer() {
+  const { pathname } = useLocation()
+  const initialize = useAuthStore((state) => state.initialize)
+
+  useEffect(() => {
+    if (pathname !== '/' || hasStoredAuthSession() || hasAuthCallbackParameters()) {
+      void initialize()
+    }
+  }, [initialize, pathname])
+
+  return null
+}
+
 function HomeRedirect() {
   const { user, initialized, loading } = useAuthStore()
+  const [shouldWaitForSession] = useState(() => hasStoredAuthSession() || hasAuthCallbackParameters())
   
-  // Show loading while checking auth state
-  if (!initialized || loading) {
+  // Avoid flashing the public page for a returning authenticated user. A visitor
+  // with no stored session can see the landing page while auth initializes.
+  if ((!initialized || loading) && shouldWaitForSession) {
     return <PageLoader />
   }
   
@@ -57,14 +95,9 @@ function RoutePrivacyMetadata() {
 }
 
 export default function App() {
-  const initialize = useAuthStore((s) => s.initialize)
-
-  useEffect(() => {
-    initialize()
-  }, [initialize])
-
   return (
     <BrowserRouter>
+      <AuthInitializer />
       <RoutePrivacyMetadata />
       <Routes>
         {/* Public signing route. No account authentication is required. */}

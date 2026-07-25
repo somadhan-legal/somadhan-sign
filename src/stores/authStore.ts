@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import type { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
 
 let initializationPromise: Promise<void> | null = null
+const getSupabase = async () => (await import('@/lib/supabase')).supabase
 
 interface AuthState {
   user: User | null
@@ -41,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (!initializationPromise) {
       initializationPromise = (async () => {
         try {
+          const supabase = await getSupabase()
           const { data: { session } } = await supabase.auth.getSession()
           set({
             session,
@@ -69,6 +70,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signInWithGoogle: async () => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}` },
@@ -84,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signInWithEmail: async (email: string, password: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
@@ -99,6 +102,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUpWithEmail: async (email: string, password: string, name: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -118,6 +122,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   resendSignupOtp: async (email: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim().toLowerCase(),
@@ -133,6 +138,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   verifySignupOtp: async (email: string, token: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.trim().toLowerCase(),
         token,
@@ -149,6 +155,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   resetPassword: async (email: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
       })
@@ -163,6 +170,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   updatePassword: async (newPassword: string) => {
     set({ loading: true })
     try {
+      const supabase = await getSupabase()
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
       set({ loading: false, isRecovery: false })
@@ -173,6 +181,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    const supabase = await getSupabase()
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     set({ user: null, session: null })
