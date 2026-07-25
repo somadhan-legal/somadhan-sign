@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, PDFName } from 'pdf-lib'
 import { validatePdfFile } from './fileValidation'
 
 describe('validatePdfFile', () => {
@@ -21,5 +21,26 @@ describe('validatePdfFile', () => {
     pdf.addPage([200, 200])
     const file = new File([new Uint8Array(await pdf.save())], 'agreement.txt', { type: 'application/pdf' })
     await expect(validatePdfFile(file)).resolves.toBe('Please select a PDF file.')
+  })
+
+  it('rejects a PDF that runs an action when opened', async () => {
+    const pdf = await PDFDocument.create()
+    pdf.addPage([200, 200])
+    pdf.catalog.set(PDFName.of('OpenAction'), pdf.context.obj({
+      S: 'JavaScript',
+      JS: 'app.alert(1)',
+    }))
+    const file = new File([new Uint8Array(await pdf.save())], 'active.pdf', { type: 'application/pdf' })
+    await expect(validatePdfFile(file)).resolves.toContain('active content')
+  })
+
+  it('rejects a PDF that contains embedded files', async () => {
+    const pdf = await PDFDocument.create()
+    pdf.addPage([200, 200])
+    pdf.catalog.set(PDFName.of('Names'), pdf.context.obj({
+      EmbeddedFiles: { Names: [] },
+    }))
+    const file = new File([new Uint8Array(await pdf.save())], 'attachment.pdf', { type: 'application/pdf' })
+    await expect(validatePdfFile(file)).resolves.toContain('attachments')
   })
 })

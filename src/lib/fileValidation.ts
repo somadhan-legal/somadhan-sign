@@ -4,6 +4,12 @@ const SIGNATURE_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
 const NORMALIZED_SIGNATURE_MAX_DATA_URL_LENGTH = 3_000_000
 const NORMALIZED_SIGNATURE_MAX_WIDTH = 1000
 const NORMALIZED_SIGNATURE_MAX_HEIGHT = 500
+const UNSAFE_PDF_FEATURE = /\/(?:AA|EmbeddedFiles|ImportData|JavaScript|JS|Launch|Movie|OpenAction|Rendition|RichMedia|Sound|SubmitForm|XFA)(?=[\s<>[\]()/]|$)/
+
+function hasUnsafePdfFeatures(pdf: { context: { enumerateIndirectObjects: () => [unknown, { toString: () => string }][] } }): boolean {
+  return pdf.context.enumerateIndirectObjects()
+    .some(([, object]) => UNSAFE_PDF_FEATURE.test(object.toString()))
+}
 
 export async function validatePdfFile(file: File): Promise<string | null> {
   if (file.size === 0) return 'The selected PDF is empty.'
@@ -16,6 +22,9 @@ export async function validatePdfFile(file: File): Promise<string | null> {
     const { PDFDocument } = await import('pdf-lib')
     const pdf = await PDFDocument.load(await file.arrayBuffer())
     if (pdf.getPageCount() === 0) return 'The PDF does not contain any pages.'
+    if (hasUnsafePdfFeatures(pdf)) {
+      return 'This PDF contains active content or attachments that cannot be signed safely.'
+    }
   } catch {
     return 'The PDF is damaged, encrypted, or unsupported.'
   }

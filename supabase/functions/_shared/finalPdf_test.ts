@@ -1,4 +1,4 @@
-import { PDFDocument } from "pdf-lib"
+import { PDFDocument, PDFName } from "pdf-lib"
 import { generateAuthoritativeFinalPdf } from "./finalPdf.ts"
 
 Deno.test("authoritative final PDF uses stored field data", async () => {
@@ -66,4 +66,31 @@ Deno.test("authoritative final PDF rejects missing field values", async () => {
     rejected = true
   }
   if (!rejected) throw new Error("A missing required field was accepted")
+})
+
+Deno.test("authoritative final PDF rejects active document actions", async () => {
+  const original = await PDFDocument.create()
+  original.addPage([612, 792])
+  original.catalog.set(PDFName.of("OpenAction"), original.context.obj({
+    S: "JavaScript",
+    JS: "app.alert(1)",
+  }))
+  let rejected = false
+  try {
+    await generateAuthoritativeFinalPdf(await original.save(), {
+      fields: [{
+        id: "required-field",
+        field_type: "text",
+        page_number: 1,
+        x: 10,
+        y: 10,
+        width: 25,
+        height: 8,
+      }],
+      placements: [{ field_id: "required-field", signature_id: "Approved" }],
+    })
+  } catch {
+    rejected = true
+  }
+  if (!rejected) throw new Error("An active document action was accepted")
 })

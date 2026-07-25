@@ -79,6 +79,7 @@ const RESVG_WASM_SHA256 = "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35
 const MAX_ORIGINAL_PDF_BYTES = 25_000_000
 const MAX_FINAL_PDF_BYTES = 30_000_000
 const MAX_SIGNATURE_BYTES = 2_300_000
+const UNSAFE_PDF_FEATURE = /\/(?:AA|EmbeddedFiles|ImportData|JavaScript|JS|Launch|Movie|OpenAction|Rendition|RichMedia|Sound|SubmitForm|XFA)(?=[\s<>[\]()/]|$)/
 
 let bengaliFontBytesPromise: Promise<Uint8Array> | null = null
 let latinFontBytesPromise: Promise<Uint8Array> | null = null
@@ -691,6 +692,12 @@ export async function generateAuthoritativeFinalPdf(
   }
 
   const pdfDoc = await PDFDocument.load(originalPdfBytes, { ignoreEncryption: true })
+  if (
+    pdfDoc.context.enumerateIndirectObjects()
+      .some(([, object]) => UNSAFE_PDF_FEATURE.test(object.toString()))
+  ) {
+    throw new Error("The original document contains unsupported active content")
+  }
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica)
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
   const fonts: PdfFonts = { regular, bold, complexTextCache: new Map() }
