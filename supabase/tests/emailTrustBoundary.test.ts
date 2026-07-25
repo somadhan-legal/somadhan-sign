@@ -26,4 +26,16 @@ describe('signing email trust boundary', () => {
     expect(emailFunction).toContain('if (verifiedSigneeEmails.length > 0)')
     expect(emailFunction).not.toContain('signeeEmails.map(')
   })
+
+  it('stores a completed PDF before requiring email provider configuration', () => {
+    const finalPdfUpload = emailFunction.indexOf(
+      ".from('documents')\n          .update({ final_pdf_url: uploadedReference",
+    )
+    const providerConfigCheck = emailFunction.indexOf(
+      "if (!RESEND_API_KEY) {\n      throw new Error('RESEND_API_KEY not configured')",
+    )
+
+    expect(finalPdfUpload).toBeGreaterThan(-1)
+    expect(providerConfigCheck).toBeGreaterThan(finalPdfUpload)
+  })
 })

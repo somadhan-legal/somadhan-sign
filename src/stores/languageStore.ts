@@ -625,6 +625,11 @@ const translations: Record<string, Record<Language, string>> = {
   'viewer.signingProgress': { en: 'Document signing progress', bn: 'ডকুমেন্ট স্বাক্ষরের অগ্রগতি' },
   'viewer.hideDetails': { en: 'Hide details', bn: 'বিস্তারিত লুকান' },
   'viewer.showDetails': { en: 'Show document details', bn: 'ডকুমেন্টের বিস্তারিত দেখান' },
+  'viewer.finalCopyPending': { en: 'Final signed copy is being prepared', bn: 'চূড়ান্ত স্বাক্ষরিত কপি প্রস্তুত হচ্ছে' },
+  'viewer.finalCopyPendingDesc': {
+    en: 'Everyone has signed, but the final PDF is not ready yet. Please try this link again shortly.',
+    bn: 'সবাই স্বাক্ষর করেছেন, তবে চূড়ান্ত PDF এখনো প্রস্তুত নয়। কিছুক্ষণ পর এই লিংকটি আবার চেষ্টা করুন।',
+  },
 
   // ─── Audit trail ───
   'audit.title': { en: 'Audit trail', bn: 'অডিট ইতিহাস' },

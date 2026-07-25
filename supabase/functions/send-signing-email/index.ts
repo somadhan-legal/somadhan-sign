@@ -95,9 +95,6 @@ serve(async (req) => {
     }
 
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY not configured')
-    }
 
     const { to, documentTitle, documentId, signingLink, signingToken, viewerToken, senderName, message, ccEmails, type, downloadUrl: requestedDownloadUrl, pdfBase64, viewLink, signeeEmails: requestedSigneeEmails } = await req.json()
     if (String(documentTitle || '').length > 200 || String(senderName || '').length > 200 || String(message || '').length > 5000) {
@@ -563,6 +560,13 @@ serve(async (req) => {
           status: 200,
         })
       }
+    }
+
+    // Completion finalization must remain durable even when email delivery is
+    // temporarily unavailable. Check provider configuration only after the
+    // final PDF has been validated and stored.
+    if (!RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY not configured')
     }
 
     const providerIds: string[] = []

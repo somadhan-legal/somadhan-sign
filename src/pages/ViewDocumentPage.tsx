@@ -159,6 +159,7 @@ export default function ViewDocumentPage() {
 
   const signedCount = signers.filter(s => s.status === 'signed').length
   const totalSigners = signers.length
+  const finalCopyPending = document.status === 'completed' && !document.final_pdf_url
 
   return (
     <div className="relative flex h-dvh min-w-0">
@@ -276,7 +277,19 @@ export default function ViewDocumentPage() {
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
         </div>
-        <PdfViewer fileUrl={document.final_pdf_url || document.original_pdf_url} />
+        {finalCopyPending ? (
+          <div className="m-auto max-w-md rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-8 text-center shadow-sm" role="status">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--warning))]/10">
+              <Clock className="h-7 w-7 text-[hsl(var(--warning))]" />
+            </div>
+            <h2 className="text-xl font-semibold">{t('viewer.finalCopyPending')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
+              {t('viewer.finalCopyPendingDesc')}
+            </p>
+          </div>
+        ) : (
+          <PdfViewer fileUrl={document.final_pdf_url || document.original_pdf_url} />
+        )}
       </div>
     </div>
   )
