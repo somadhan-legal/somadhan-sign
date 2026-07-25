@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import Button from './Button'
 import { useLanguageStore } from '@/stores/languageStore'
@@ -6,7 +6,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 interface ConfirmDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   title: string
   message: string
   confirmText?: string
@@ -29,6 +29,9 @@ export default function ConfirmDialog({
   const messageId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
+  const confirmingRef = useRef(false)
+  const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState('')
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -43,7 +46,10 @@ export default function ConfirmDialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
-        onCloseRef.current()
+        if (!confirmingRef.current) {
+          setConfirmError('')
+          onCloseRef.current()
+        }
         return
       }
       if (event.key !== 'Tab' || !dialogRef.current) return
@@ -75,20 +81,45 @@ export default function ConfirmDialog({
 
   if (!isOpen) return null
 
-  const handleConfirm = () => {
-    onConfirm()
+  const handleClose = () => {
+    if (confirmingRef.current) return
+    setConfirmError('')
     onClose()
+  }
+
+  const handleConfirm = async () => {
+    if (confirmingRef.current) return
+    confirmingRef.current = true
+    setConfirming(true)
+    setConfirmError('')
+    try {
+      await onConfirm()
+      onClose()
+    } catch {
+      setConfirmError(t('common.confirmActionFailed'))
+    } finally {
+      confirmingRef.current = false
+      setConfirming(false)
+    }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" tabIndex={-1} aria-label={t('common.closeConfirmation')} className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default" onClick={onClose} />
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label={t('common.closeConfirmation')}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-default"
+        onClick={handleClose}
+        disabled={confirming}
+      />
       <div
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
+        aria-busy={confirming}
         tabIndex={-1}
         className="relative bg-[hsl(var(--card))] rounded-2xl shadow-2xl w-full max-w-md z-10 overflow-hidden outline-none"
       >
@@ -111,19 +142,29 @@ export default function ConfirmDialog({
             </div>
           </div>
         </div>
+        {confirmError && (
+          <p role="alert" className="px-6 pb-3 text-sm font-medium text-[hsl(var(--destructive))]">
+            {confirmError}
+          </p>
+        )}
         <div className="flex gap-3 px-6 pb-6">
           <Button
             variant="outline"
             className="flex-1"
-            onClick={onClose}
+            onClick={handleClose}
+            disabled={confirming}
           >
             {cancelText}
           </Button>
           <Button
             variant={variant === 'danger' ? 'destructive' : 'primary'}
             className="flex-1"
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
+            disabled={confirming}
           >
+            {confirming && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
+            )}
             {confirmText}
           </Button>
         </div>

@@ -37,7 +37,16 @@ import { downloadPdfUrl, safePdfFilename } from '@/lib/download'
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { t } = useLanguageStore()
-  const { documents, fetchDocuments, createDocument, deleteDocument, sendReminder, addAuditEntry, loading } = useDocumentStore()
+  const {
+    documents,
+    documentsError,
+    fetchDocuments,
+    createDocument,
+    deleteDocument,
+    sendReminder,
+    addAuditEntry,
+    loading,
+  } = useDocumentStore()
   const navigate = useNavigate()
 
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -314,6 +323,17 @@ export default function DashboardPage() {
         <div className="flex items-center justify-center py-20" role="status" aria-live="polite">
           <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" aria-hidden="true" />
           <span className="sr-only">{t('dashboard.loadingDocuments')}</span>
+        </div>
+      ) : documentsError ? (
+        <div className="mx-auto max-w-md py-20 text-center" role="alert">
+          <XCircle className="mx-auto mb-4 h-14 w-14 text-[hsl(var(--destructive))]/70" />
+          <h3 className="text-lg font-semibold">{t('dashboard.documentsLoadFailed')}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
+            {t('dashboard.documentsLoadFailedDesc')}
+          </p>
+          <Button variant="outline" className="mt-5" onClick={() => void fetchDocuments()}>
+            {t('viewer.tryAgain')}
+          </Button>
         </div>
       ) : filteredDocs.length === 0 ? (
         <div className="text-center py-20">

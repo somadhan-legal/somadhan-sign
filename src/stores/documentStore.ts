@@ -41,6 +41,7 @@ interface DocumentState {
   placements: SignaturePlacement[]
   auditTrail: AuditTrailEntry[]
   loading: boolean
+  documentsError: boolean
   currentPage: number
   totalPages: number
 
@@ -120,6 +121,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   placements: [],
   auditTrail: [],
   loading: false,
+  documentsError: false,
   currentPage: 1,
   totalPages: 0,
 
@@ -129,17 +131,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   fetchDocuments: async () => {
     const requestId = ++activeDocumentsFetch
-    set({ loading: true, documents: [] })
+    set({ loading: true, documents: [], documentsError: false })
     const { data, error } = await supabase
       .from('documents')
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('Error fetching documents:', error)
-      if (requestId === activeDocumentsFetch) set({ loading: false })
+      if (requestId === activeDocumentsFetch) set({ loading: false, documentsError: true })
       return
     }
-    if (requestId === activeDocumentsFetch) set({ documents: (data as Document[]) || [], loading: false })
+    if (requestId === activeDocumentsFetch) {
+      set({ documents: (data as Document[]) || [], loading: false, documentsError: false })
+    }
   },
 
   fetchDocument: async (id: string) => {

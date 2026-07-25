@@ -19,6 +19,10 @@ const translations: Record<string, Record<Language, string>> = {
   'common.dialog': { en: 'Dialog', bn: 'ডায়ালগ' },
   'common.closeConfirmation': { en: 'Close confirmation', bn: 'নিশ্চিতকরণ বন্ধ করুন' },
   'common.confirmation': { en: 'Confirmation', bn: 'নিশ্চিতকরণ' },
+  'common.confirmActionFailed': {
+    en: 'The action could not be completed. Check your connection and try again.',
+    bn: 'কাজটি সম্পন্ন করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
   'common.skipToContent': { en: 'Skip to main content', bn: 'মূল কনটেন্টে যান' },
   'common.loadingPage': { en: 'Loading page...', bn: 'পৃষ্ঠা লোড হচ্ছে...' },
   'common.loadingDocument': { en: 'Loading document...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
@@ -313,6 +317,11 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.cannotUndo': { en: 'This cannot be undone.', bn: 'এটি পূর্বাবস্থায় ফেরানো যাবে না।' },
   'dashboard.enterTitle': { en: 'Enter a document title.', bn: 'ডকুমেন্টের শিরোনাম লিখুন।' },
   'dashboard.loadingDocuments': { en: 'Loading documents...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },
+  'dashboard.documentsLoadFailed': { en: 'Your documents could not be loaded', bn: 'আপনার ডকুমেন্টগুলো লোড করা যায়নি' },
+  'dashboard.documentsLoadFailedDesc': {
+    en: 'Your files have not been removed. Check your connection and try loading them again.',
+    bn: 'আপনার ফাইলগুলো মুছে যায়নি। সংযোগ পরীক্ষা করে আবার লোড করার চেষ্টা করুন।',
+  },
   'dashboard.uploadFailed': { en: 'The document could not be uploaded. Check your connection and try again.', bn: 'ডকুমেন্ট আপলোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
   'dashboard.loadingSigners': { en: 'Loading signers...', bn: 'স্বাক্ষরকারীদের লোড করা হচ্ছে...' },
   'dashboard.signersLoadFailed': { en: 'Signer details could not be loaded.', bn: 'স্বাক্ষরকারীর বিস্তারিত লোড করা যায়নি।' },
