@@ -215,15 +215,21 @@ export default function InviteSigningPage() {
   const currentField = allMyUnsigned[currentFieldIndex] || null
 
   const scrollToField = useCallback((field: { id: string; page_number: number }) => {
-    // Scroll the PDF viewer to the page containing this field
-    const pageEl = document.querySelector(`[data-page-number="${field.page_number}"]`)
-    if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    // Then try to scroll the specific field element into view
-    setTimeout(() => {
+    const revealField = () => {
+      const pageEl = document.querySelector(`[data-page-number="${field.page_number}"]`)
+      if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
       const fieldEl = document.querySelector(`[data-field-id="${field.id}"]`)
       if (fieldEl) fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 300)
-  }, [])
+    }
+
+    if (window.matchMedia('(max-width: 1023px)').matches && !leftPanelCollapsed) {
+      setLeftPanelCollapsed(true)
+      window.setTimeout(revealField, 100)
+      return
+    }
+
+    revealField()
+  }, [leftPanelCollapsed, setLeftPanelCollapsed])
 
   const navigateToField = (index: number) => {
     if (index >= 0 && index < allMyUnsigned.length) {
@@ -905,7 +911,7 @@ export default function InviteSigningPage() {
               ) : (
                 <div className="space-y-1.5">
                   <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillSignatures(signatureData)}>
-                    {t('signee.applyToAll')} ({myUnsignedSignatureFields.length})
+                    {t('signee.applyToAllSignatures')} ({myUnsignedSignatureFields.length})
                   </Button>
                   <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowSignatureModal(true)}>
                     {t('signee.changeSignature')}
@@ -940,7 +946,7 @@ export default function InviteSigningPage() {
                 ) : (
                   <div className="space-y-1.5">
                     <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillInitials(initialsData)}>
-                      {t('signee.applyToAll')} ({myUnsignedInitialsFields.length})
+                      {t('signee.applyToAllInitials')} ({myUnsignedInitialsFields.length})
                     </Button>
                     <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowInitialsModal(true)}>
                       {t('signee.changeInitials')}

@@ -32,3 +32,4 @@ client_secret_*.json
 *.sw?
 supabase/.temp/
 supabase/.branches/
+.playwright-cli/
