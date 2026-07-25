@@ -977,6 +977,11 @@ export default function DocumentEditorPage() {
                         color: color,
                       }}
                       onClick={(e) => { e.stopPropagation(); if (!isLocked) setSelectedField(field.id) }}
+                      onPointerUp={(event) => {
+                        if (event.pointerType !== 'touch') return
+                        event.stopPropagation()
+                        if (!isLocked) setSelectedField(field.id)
+                      }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
