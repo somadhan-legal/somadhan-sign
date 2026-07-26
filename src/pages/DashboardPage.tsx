@@ -172,7 +172,7 @@ export default function DashboardPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !user) return
+    if (!file || !user || uploading) return
 
     const normalizedTitle = normalizeDocumentTitle(title)
     if (!normalizedTitle) {
@@ -184,26 +184,29 @@ export default function DashboardPage() {
       return
     }
 
-    const validationError = await validatePdfFile(file)
-    if (validationError) {
-      setUploadError(localizePdfValidationError(validationError))
-      return
-    }
-
     setUploadError('')
     setUploading(true)
-    const doc = await createDocument(
-      { title: normalizedTitle, original_pdf_url: '', created_by: user.id },
-      file
-    )
-    setUploading(false)
+    try {
+      const validationError = await validatePdfFile(file)
+      if (validationError) {
+        setUploadError(localizePdfValidationError(validationError))
+        return
+      }
 
-    if (doc) {
-      setShowUploadModal(false)
-      resetUploadForm()
-      navigate(`/document/${doc.id}/edit`)
-    } else {
-      setUploadError(t('dashboard.uploadFailed'))
+      const doc = await createDocument(
+        { title: normalizedTitle, original_pdf_url: '', created_by: user.id },
+        file
+      )
+
+      if (doc) {
+        setShowUploadModal(false)
+        resetUploadForm()
+        navigate(`/document/${doc.id}/edit`)
+      } else {
+        setUploadError(t('dashboard.uploadFailed'))
+      }
+    } finally {
+      setUploading(false)
     }
   }
 

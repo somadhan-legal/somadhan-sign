@@ -128,6 +128,10 @@ export default function DocumentEditorPage() {
   const latestFingerprintRef = useRef('')
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
   const pendingSaveCountRef = useRef(0)
+  const savedToastTimerRef = useRef<number | null>(null)
+  const signerScrollTimerRef = useRef<number | null>(null)
+  const sendCountdownTimerRef = useRef<number | null>(null)
+  const activeResizeCleanupRef = useRef<() => void>(() => undefined)
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -143,6 +147,13 @@ export default function DocumentEditorPage() {
   
   // Panel collapse state
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+
+  useEffect(() => () => {
+    activeResizeCleanupRef.current()
+    if (savedToastTimerRef.current !== null) window.clearTimeout(savedToastTimerRef.current)
+    if (signerScrollTimerRef.current !== null) window.clearTimeout(signerScrollTimerRef.current)
+    if (sendCountdownTimerRef.current !== null) window.clearInterval(sendCountdownTimerRef.current)
+  }, [])
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -160,6 +171,15 @@ export default function DocumentEditorPage() {
 
   const docFields = signatureFields.filter((f) => f.document_id === id)
 
+  const showSavedConfirmation = useCallback(() => {
+    if (savedToastTimerRef.current !== null) window.clearTimeout(savedToastTimerRef.current)
+    setSavedToast(true)
+    savedToastTimerRef.current = window.setTimeout(() => {
+      setSavedToast(false)
+      savedToastTimerRef.current = null
+    }, 2500)
+  }, [])
+
   const persistCurrentFields = useCallback(async (showConfirmation = false) => {
     if (!id || currentDocument?.status !== 'draft') return
     const snapshot = useDocumentStore.getState().signatureFields
@@ -167,10 +187,7 @@ export default function DocumentEditorPage() {
       .map((field) => ({ ...field }))
     const fingerprint = getFieldDraftFingerprint(snapshot, id)
     if (fingerprint === lastSavedFingerprintRef.current) {
-      if (showConfirmation) {
-        setSavedToast(true)
-        setTimeout(() => setSavedToast(false), 2500)
-      }
+      if (showConfirmation) showSavedConfirmation()
       return
     }
 
@@ -185,8 +202,7 @@ export default function DocumentEditorPage() {
         if (latestFingerprintRef.current === fingerprint) setDraftSaveState('saved')
         if (showConfirmation) {
           setSelectedField(null)
-          setSavedToast(true)
-          setTimeout(() => setSavedToast(false), 2500)
+          showSavedConfirmation()
         }
       })
       .catch((error) => {
@@ -199,7 +215,7 @@ export default function DocumentEditorPage() {
       })
     saveQueueRef.current = operation
     return operation
-  }, [currentDocument?.status, id, saveSignatureFields])
+  }, [currentDocument?.status, id, saveSignatureFields, showSavedConfirmation])
 
   useEffect(() => {
     if (!id || loading || currentDocument?.id !== id) return
@@ -240,6 +256,7 @@ export default function DocumentEditorPage() {
     const field = signatureFields.find((f) => f.id === fieldId)
     if (!field) return
 
+    activeResizeCleanupRef.current()
     isInteracting.current = true
     const startX = e.clientX
     const startY = e.clientY
@@ -249,7 +266,10 @@ export default function DocumentEditorPage() {
     const startTop = field.y
 
     const fieldEl = (e.target as HTMLElement).closest('[data-field-id]') as HTMLElement
-    if (!fieldEl) return
+    if (!fieldEl) {
+      isInteracting.current = false
+      return
+    }
     const pageEl = fieldEl.closest('[data-page-number]')?.querySelector('.react-pdf__Page') as HTMLElement | null
     if (!pageEl) {
       isInteracting.current = false
@@ -292,10 +312,16 @@ export default function DocumentEditorPage() {
       fieldEl.style.left = `${newLeft}%`
       fieldEl.style.top = `${newTop}%`
     }
+    let listening = true
     const stopListening = () => {
+      if (!listening) return
+      listening = false
       document.removeEventListener('pointermove', handlePointerMove)
       document.removeEventListener('pointerup', handlePointerUp)
       document.removeEventListener('pointercancel', handlePointerCancel)
+      if (activeResizeCleanupRef.current === stopListening) {
+        activeResizeCleanupRef.current = () => undefined
+      }
     }
     const commitLatestSize = () => {
       updateSignatureField(fieldId, {
@@ -325,6 +351,7 @@ export default function DocumentEditorPage() {
     document.addEventListener('pointermove', handlePointerMove)
     document.addEventListener('pointerup', handlePointerUp)
     document.addEventListener('pointercancel', handlePointerCancel)
+    activeResizeCleanupRef.current = stopListening
   }, [signatureFields, updateSignatureField])
 
   const handlePageClick = useCallback(
@@ -395,11 +422,13 @@ export default function DocumentEditorPage() {
       
       // Auto-scroll to newly added signer
       if (!editingSignerId) {
-        setTimeout(() => {
+        if (signerScrollTimerRef.current !== null) window.clearTimeout(signerScrollTimerRef.current)
+        signerScrollTimerRef.current = window.setTimeout(() => {
           if (signerListRef.current) {
             signerListRef.current.scrollTop = signerListRef.current.scrollHeight
           }
           setSelectedSignerIdx(signers.length) // select the new one (will be at end)
+          signerScrollTimerRef.current = null
         }, 100)
       }
 
@@ -575,10 +604,14 @@ export default function DocumentEditorPage() {
       setSentToast(true)
       setCountdown(5)
 
-      const timer = setInterval(() => {
+      if (sendCountdownTimerRef.current !== null) window.clearInterval(sendCountdownTimerRef.current)
+      sendCountdownTimerRef.current = window.setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            clearInterval(timer)
+            if (sendCountdownTimerRef.current !== null) {
+              window.clearInterval(sendCountdownTimerRef.current)
+              sendCountdownTimerRef.current = null
+            }
             setSentToast(false)
             navigate('/dashboard')
             return 0
@@ -803,6 +836,8 @@ export default function DocumentEditorPage() {
               {fieldTypeOptions.map((opt) => (
                 <button
                   key={opt.type}
+                  type="button"
+                  aria-pressed={selectedFieldType === opt.type}
                   onClick={() => {
                     setSelectedFieldType(opt.type)
                     if (window.innerWidth < 1024) setLeftPanelCollapsed(true)

@@ -112,6 +112,7 @@ export default function InviteSigningPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const hasLoggedView = useRef(false)
+  const finishTimerRef = useRef<number | null>(null)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -170,6 +171,10 @@ export default function InviteSigningPage() {
   useEffect(() => () => {
     if (auditPdfUrl) URL.revokeObjectURL(auditPdfUrl)
   }, [auditPdfUrl])
+
+  useEffect(() => () => {
+    if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current)
+  }, [])
 
   const userEmail = signerData?.signer_email || ''
   const userName = signerData?.signer_name || null
@@ -559,8 +564,10 @@ export default function InviteSigningPage() {
       setCountdown(3)
       
       // Wait for countdown to finish, then transition
-      setTimeout(() => {
+      if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current)
+      finishTimerRef.current = window.setTimeout(() => {
         setFinished(true)
+        finishTimerRef.current = null
       }, 3000)
     }
   }
