@@ -131,6 +131,7 @@ export default function DocumentEditorPage() {
   const savedToastTimerRef = useRef<number | null>(null)
   const signerScrollTimerRef = useRef<number | null>(null)
   const sendCountdownTimerRef = useRef<number | null>(null)
+  const interactionReleaseTimerRef = useRef<number | null>(null)
   const activeResizeCleanupRef = useRef<() => void>(() => undefined)
   
   // Confirmation dialog state
@@ -153,6 +154,7 @@ export default function DocumentEditorPage() {
     if (savedToastTimerRef.current !== null) window.clearTimeout(savedToastTimerRef.current)
     if (signerScrollTimerRef.current !== null) window.clearTimeout(signerScrollTimerRef.current)
     if (sendCountdownTimerRef.current !== null) window.clearInterval(sendCountdownTimerRef.current)
+    if (interactionReleaseTimerRef.current !== null) window.clearTimeout(interactionReleaseTimerRef.current)
   }, [])
 
   useEffect(() => {
@@ -330,7 +332,11 @@ export default function DocumentEditorPage() {
         x: latestSize.newLeft,
         y: latestSize.newTop,
       })
-      setTimeout(() => { isInteracting.current = false }, 100)
+      if (interactionReleaseTimerRef.current !== null) window.clearTimeout(interactionReleaseTimerRef.current)
+      interactionReleaseTimerRef.current = window.setTimeout(() => {
+        isInteracting.current = false
+        interactionReleaseTimerRef.current = null
+      }, 100)
     }
     const handlePointerMove = (ev: PointerEvent) => {
       ev.preventDefault()

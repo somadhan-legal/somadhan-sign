@@ -113,6 +113,7 @@ export default function InviteSigningPage() {
   const [pdfError, setPdfError] = useState('')
   const hasLoggedView = useRef(false)
   const finishTimerRef = useRef<number | null>(null)
+  const fieldRevealTimerRef = useRef<number | null>(null)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -174,6 +175,7 @@ export default function InviteSigningPage() {
 
   useEffect(() => () => {
     if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current)
+    if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
   }, [])
 
   const userEmail = signerData?.signer_email || ''
@@ -229,10 +231,18 @@ export default function InviteSigningPage() {
 
     if (window.matchMedia('(max-width: 1023px)').matches && !leftPanelCollapsed) {
       setLeftPanelCollapsed(true)
-      window.setTimeout(revealField, 100)
+      if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
+      fieldRevealTimerRef.current = window.setTimeout(() => {
+        revealField()
+        fieldRevealTimerRef.current = null
+      }, 100)
       return
     }
 
+    if (fieldRevealTimerRef.current !== null) {
+      window.clearTimeout(fieldRevealTimerRef.current)
+      fieldRevealTimerRef.current = null
+    }
     revealField()
   }, [leftPanelCollapsed, setLeftPanelCollapsed])
 
