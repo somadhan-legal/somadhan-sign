@@ -339,7 +339,10 @@ export default function LandingPage() {
         <div className="landing-container flex flex-col items-center justify-between gap-5 sm:flex-row">
           <img src={logo} alt="Somadhan Sign" className="h-9 w-auto" />
           <p className="text-sm text-[hsl(var(--muted-foreground))]">&copy; {new Date().getFullYear()} {t('landing.footer')}</p>
-          <div className="flex items-center gap-5 text-sm font-semibold"><Link to="/login">{t('landing.signIn')}</Link><Link to="/login?mode=signup">{t('nav.getStarted')}</Link></div>
+          <div className="flex items-center gap-1 text-sm font-semibold">
+            <Link to="/login" className="inline-flex min-h-11 items-center px-2">{t('landing.signIn')}</Link>
+            <Link to="/login?mode=signup" className="inline-flex min-h-11 items-center px-2">{t('nav.getStarted')}</Link>
+          </div>
         </div>
       </footer>
       </div>

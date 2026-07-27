@@ -201,8 +201,9 @@ export default function LoginPage() {
 
               <div className="mt-4 flex justify-center">
                 <button
+                  type="button"
                   onClick={() => { setMode('login'); setError(''); setMessage('') }}
-                  className="text-xs text-[hsl(var(--muted-foreground))] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="flex min-h-11 items-center gap-1 px-2 text-xs text-[hsl(var(--muted-foreground))] hover:underline cursor-pointer"
                 >
                   <ArrowLeft className="w-3 h-3" /> {t('login.backToSignIn')}
                 </button>
@@ -294,7 +295,7 @@ export default function LoginPage() {
                       setSubmitting(false)
                     }
                   }}
-                  className="text-[hsl(var(--primary))] hover:underline cursor-pointer font-medium disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center px-1 text-[hsl(var(--primary))] hover:underline cursor-pointer font-medium disabled:opacity-50"
                 >
                   {resendTimer > 0
                     ? t('login.resendOtpCountdown').replace('{seconds}', String(resendTimer))
@@ -304,8 +305,9 @@ export default function LoginPage() {
 
               <div className="mt-4 flex justify-center">
                 <button
+                  type="button"
                   onClick={() => { setMode('signup'); setError(''); setMessage(''); setOtpCode('') }}
-                  className="text-xs text-[hsl(var(--muted-foreground))] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="flex min-h-11 items-center gap-1 px-2 text-xs text-[hsl(var(--muted-foreground))] hover:underline cursor-pointer"
                 >
                   <ArrowLeft className="w-3 h-3" /> {t('login.backToSignup')}
                 </button>
@@ -441,7 +443,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => { setMode('forgot-password'); setError(''); setMessage('') }}
-                      className="text-xs text-[hsl(var(--primary))] hover:underline cursor-pointer"
+                      className="min-h-11 px-1 text-xs text-[hsl(var(--primary))] hover:underline cursor-pointer"
                     >
                       {t('login.forgotPassword')}
                     </button>
@@ -464,8 +466,9 @@ export default function LoginPage() {
                   <p>
                     {t('login.noAccount')}{' '}
                     <button
+                      type="button"
                       onClick={() => { setMode('signup'); setError(''); setMessage('') }}
-                      className="text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
+                      className="inline-flex min-h-11 items-center px-1 text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
                     >
                       {t('login.signUpLink')}
                     </button>
@@ -474,8 +477,9 @@ export default function LoginPage() {
                   <p>
                     {t('login.hasAccount')}{' '}
                     <button
+                      type="button"
                       onClick={() => { setMode('login'); setError(''); setMessage('') }}
-                      className="text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
+                      className="inline-flex min-h-11 items-center px-1 text-[hsl(var(--primary))] font-medium hover:underline cursor-pointer"
                     >
                       {t('login.signInLink')}
                     </button>
