@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import PdfViewer from '@/components/PdfViewer'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
-import { Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Home, Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
@@ -14,6 +14,7 @@ import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import { isViewerReference } from '@/lib/publicAccessReference'
+import { buttonStyles } from '@/components/ui/buttonStyles'
 
 interface DocumentData {
   id: string
@@ -129,6 +130,10 @@ export default function ViewDocumentPage() {
           <p className="text-[hsl(var(--muted-foreground))]">
             {error || t('signee.docNotFoundDesc')}
           </p>
+          <Link to="/" className={buttonStyles({ size: 'lg', className: 'mt-6' })}>
+            <Home className="mr-2 h-4 w-4" />
+            {t('notFound.returnHome')}
+          </Link>
         </div>
       </div>
     )

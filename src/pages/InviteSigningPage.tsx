@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,13 +29,14 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, safePdfFilename } from '@/lib/download'
-import { Moon, Sun, HelpCircle } from 'lucide-react'
+import { Home, Moon, Sun, HelpCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import { isSigningToken } from '@/lib/publicAccessReference'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getSignedSignerRecoveryAction } from '@/lib/signingCompletion'
 import { mapPlacementsToSignedFields } from '@/lib/signedFields'
+import { buttonStyles } from '@/components/ui/buttonStyles'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -672,6 +673,10 @@ export default function InviteSigningPage() {
           <p className="text-[hsl(var(--muted-foreground))]">
             {error || t('signee.docNotFoundDesc')}
           </p>
+          <Link to="/" className={buttonStyles({ size: 'lg', className: 'mt-6' })}>
+            <Home className="mr-2 h-4 w-4" />
+            {t('notFound.returnHome')}
+          </Link>
         </div>
       </div>
     )
