@@ -17,6 +17,7 @@ interface PdfViewerProps {
   scale?: number
   onPagePointerMove?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number, pointerType: string) => void
   onPageMouseLeave?: () => void
+  onRetry?: () => Promise<void>
 }
 
 function PageWithOverlay({
@@ -38,6 +39,25 @@ function PageWithOverlay({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const { t } = useLanguageStore()
+  const [isNearViewport, setIsNearViewport] = useState(
+    () => typeof IntersectionObserver === 'undefined',
+  )
+  const [pageAspectRatio, setPageAspectRatio] = useState(1.414)
+  const displayWidth = Math.max(Math.round(width * scale), 1)
+  const estimatedHeight = Math.max(Math.round(displayWidth * pageAspectRatio), 1)
+
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    if (typeof IntersectionObserver === 'undefined') return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsNearViewport(entry.isIntersecting),
+      { rootMargin: '1000px 0px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -87,15 +107,30 @@ function PageWithOverlay({
       role={onPageClick ? 'region' : undefined}
       tabIndex={onPageClick ? 0 : undefined}
       aria-label={onPageClick ? `${t('viewer.pdfPage')} ${pageNumber}. ${t('viewer.placeCenterHint')}` : undefined}
-      style={{ userSelect: 'none', touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom' }}
+      style={{
+        minHeight: `${estimatedHeight}px`,
+        width: `${displayWidth}px`,
+        userSelect: 'none',
+        touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom',
+      }}
     >
-      <Page
-        pageNumber={pageNumber}
-        width={width}
-        scale={scale}
-        renderTextLayer={false}
-        renderAnnotationLayer={false}
-      />
+      {isNearViewport ? (
+        <Page
+          pageNumber={pageNumber}
+          width={width}
+          scale={scale}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          onRenderSuccess={(page) => {
+            const viewport = page.getViewport({ scale: 1 })
+            if (viewport.width > 0 && viewport.height > 0) {
+              setPageAspectRatio(viewport.height / viewport.width)
+            }
+          }}
+        />
+      ) : (
+        <div className="w-full" style={{ height: `${estimatedHeight}px` }} aria-hidden="true" />
+      )}
       {renderPageOverlay && (
         <div className="absolute inset-0 pointer-events-none overflow-visible" style={{ zIndex: 10 }}>
           <div className="relative w-full h-full pointer-events-auto overflow-visible">
@@ -115,6 +150,7 @@ export default function PdfViewer({
   scale: externalScale,
   onPagePointerMove,
   onPageMouseLeave,
+  onRetry,
 }: PdfViewerProps) {
   const { t } = useLanguageStore()
   const [totalPages, setTotalPages] = useState(0)
@@ -122,6 +158,7 @@ export default function PdfViewer({
   const [availableWidth, setAvailableWidth] = useState(680)
   const [reloadKey, setReloadKey] = useState(0)
   const [loadError, setLoadError] = useState('')
+  const [retrying, setRetrying] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const scale = externalScale ?? internalScale
@@ -145,6 +182,20 @@ export default function PdfViewer({
     },
     [onTotalPages]
   )
+
+  const handleRetry = async () => {
+    if (retrying) return
+    setRetrying(true)
+    setLoadError('')
+    try {
+      await onRetry?.()
+      setReloadKey((key) => key + 1)
+    } catch {
+      setLoadError(t('viewer.pdfLoadFailed'))
+    } finally {
+      setRetrying(false)
+    }
+  }
 
   return (
     <div ref={containerRef} className="flex flex-col items-center w-full min-w-0">
@@ -196,8 +247,8 @@ export default function PdfViewer({
         error={
           <div role="alert" className="w-full min-w-[260px] max-w-[680px] h-[50vh] px-6 text-center flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))]">
             <p>{loadError || t('viewer.pdfLoadFailed')}</p>
-            <Button className="mt-4" variant="outline" onClick={() => { setLoadError(''); setReloadKey((key) => key + 1) }}>
-              {t('viewer.tryAgain')}
+            <Button className="mt-4" variant="outline" onClick={handleRetry} disabled={retrying}>
+              {retrying ? t('viewer.retrying') : t('viewer.tryAgain')}
             </Button>
           </div>
         }

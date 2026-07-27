@@ -937,6 +937,13 @@ export default function DocumentEditorPage() {
       >
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
+          onRetry={async () => {
+            if (!id) throw new Error('The document could not be refreshed.')
+            await fetchDocument(id)
+            if (useDocumentStore.getState().currentDocument?.id !== id) {
+              throw new Error('The document could not be refreshed.')
+            }
+          }}
           onPageClick={handlePageClick}
           onPagePointerMove={(pageNumber, x, y, pageWidth, pageHeight, pointerType) => {
             if (!isLocked && signers.length > 0 && pointerType !== 'touch') {

@@ -1158,6 +1158,12 @@ export default function InviteSigningPage() {
         </div>
         <PdfViewer
           fileUrl={signerData.documents.original_pdf_url}
+          onRetry={async () => {
+            if (!token) throw new Error('The document could not be refreshed.')
+            const refreshedSigner = await fetchSignerByToken(token)
+            if (!refreshedSigner) throw new Error('The document could not be refreshed.')
+            setSignerData(refreshedSigner as unknown as SignerData)
+          }}
           renderPageOverlay={(pageNumber) => {
             const pageFields = getPageFields(pageNumber)
             return (

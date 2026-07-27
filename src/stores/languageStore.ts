@@ -642,6 +642,7 @@ const translations: Record<string, Record<Language, string>> = {
   'viewer.pdfLoadFailed': { en: 'The PDF could not be loaded. Check your connection and try again.', bn: 'PDF লোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
   'viewer.loadingPdf': { en: 'Loading PDF...', bn: 'PDF লোড হচ্ছে...' },
   'viewer.tryAgain': { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
+  'viewer.retrying': { en: 'Refreshing...', bn: 'রিফ্রেশ হচ্ছে...' },
   'viewer.pdfPage': { en: 'PDF page', bn: 'PDF পৃষ্ঠা' },
   'viewer.placeCenterHint': { en: 'Press Enter to place the selected field in the center.', bn: 'নির্বাচিত ক্ষেত্রটি মাঝখানে রাখতে Enter চাপুন।' },
   'viewer.signingProgress': { en: 'Document signing progress', bn: 'ডকুমেন্ট স্বাক্ষরের অগ্রগতি' },

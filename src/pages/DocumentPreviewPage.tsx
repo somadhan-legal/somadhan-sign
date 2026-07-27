@@ -366,6 +366,13 @@ export default function DocumentPreviewPage() {
       <div className="min-w-0 flex-1 overflow-auto bg-[hsl(var(--muted))] p-3 sm:p-6 flex justify-center">
         <PdfViewer
           fileUrl={currentDocument.original_pdf_url}
+          onRetry={async () => {
+            if (!id) throw new Error('The document could not be refreshed.')
+            await fetchDocument(id)
+            if (useDocumentStore.getState().currentDocument?.id !== id) {
+              throw new Error('The document could not be refreshed.')
+            }
+          }}
           renderPageOverlay={(pageNumber) => {
             const pageFields = getPageFields(pageNumber)
             return (

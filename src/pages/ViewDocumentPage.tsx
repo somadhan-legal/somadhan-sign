@@ -29,6 +29,43 @@ interface SignerInfo {
   status: string
 }
 
+async function fetchViewerPagePackage(reference: string): Promise<{
+  document: DocumentData
+  signers: SignerInfo[]
+}> {
+  if (secureDocumentAccessEnabled) {
+    const { data: accessData, error: accessError } = await supabase.functions.invoke('get-document-access', {
+      body: { viewerToken: reference },
+    })
+    const securePackage = accessData?.viewerPackage as ViewerPackageResult | undefined
+    if (accessError || !securePackage?.document) {
+      throw accessError || new Error('The document could not be loaded.')
+    }
+    return {
+      document: securePackage.document,
+      signers: securePackage.signers || [],
+    }
+  }
+
+  const [{ data: documentRows, error: documentError }, { data: signers, error: signersError }] = await Promise.all([
+    supabase.rpc('get_document_for_viewer', { p_document_id: reference }),
+    supabase.rpc('get_signers_for_viewer', { p_document_id: reference }),
+  ])
+  const document = documentRows?.[0]
+  if (documentError || signersError || !document) {
+    throw documentError || signersError || new Error('The document could not be loaded.')
+  }
+  return {
+    document: {
+      id: document.id,
+      title: document.title,
+      original_pdf_url: getLegacyPublicDocumentUrl(document.original_pdf_url),
+      status: document.status,
+    },
+    signers: signers || [],
+  }
+}
+
 export default function ViewDocumentPage() {
   const { documentId } = useParams<{ documentId: string }>()
   const referenceIsValid = isViewerReference(documentId, secureDocumentAccessEnabled)
@@ -42,60 +79,28 @@ export default function ViewDocumentPage() {
 
   useEffect(() => {
     if (!isViewerReference(documentId, secureDocumentAccessEnabled)) return
+    let active = true
     const load = async () => {
       setLoading(true)
       setError(null)
-
-      if (secureDocumentAccessEnabled) {
-        const { data: accessData, error: accessError } = await supabase.functions.invoke('get-document-access', {
-          body: { viewerToken: documentId },
-        })
-        if (accessError) {
-          setError(t('signee.docNotFoundDesc'))
-          setLoading(false)
-          return
-        }
-        const securePackage = accessData?.viewerPackage as ViewerPackageResult | undefined
-        if (!securePackage?.document) {
-          setError(t('signee.docNotFoundDesc'))
-          setLoading(false)
-          return
-        }
-        setDocument(securePackage.document)
-        setSigners(securePackage.signers || [])
-        setLoading(false)
-        return
-      }
-
-      // Compatibility for links issued before the secure viewer-token migration.
-      const { data: doc, error: docErr } = await supabase
-        .rpc('get_document_for_viewer', { p_document_id: documentId })
-
-      if (docErr || !doc || doc.length === 0) {
+      try {
+        const viewerPackage = await fetchViewerPagePackage(documentId)
+        if (!active) return
+        setDocument(viewerPackage.document)
+        setSigners(viewerPackage.signers)
+      } catch {
+        if (!active) return
+        setDocument(null)
+        setSigners([])
         setError(t('signee.docNotFoundDesc'))
-        setLoading(false)
-        return
+      } finally {
+        if (active) setLoading(false)
       }
-
-      const docData = doc[0]
-      setDocument({
-        id: docData.id,
-        title: docData.title,
-        original_pdf_url: getLegacyPublicDocumentUrl(docData.original_pdf_url),
-        status: docData.status,
-      })
-
-      // Fetch signers
-      const { data: signersData } = await supabase
-        .rpc('get_signers_for_viewer', { p_document_id: documentId })
-
-      if (signersData) {
-        setSigners(signersData)
-      }
-
-      setLoading(false)
     }
-    load()
+    void load()
+    return () => {
+      active = false
+    }
   }, [documentId, t])
 
   if (loading && referenceIsValid) {
@@ -260,7 +265,14 @@ export default function ViewDocumentPage() {
             </p>
           </div>
         ) : (
-          <PdfViewer fileUrl={document.final_pdf_url || document.original_pdf_url} />
+          <PdfViewer
+            fileUrl={document.final_pdf_url || document.original_pdf_url}
+            onRetry={async () => {
+              const refreshedPackage = await fetchViewerPagePackage(documentId!)
+              setDocument(refreshedPackage.document)
+              setSigners(refreshedPackage.signers)
+            }}
+          />
         )}
       </div>
     </div>
