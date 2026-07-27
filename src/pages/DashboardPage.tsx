@@ -710,7 +710,7 @@ export default function DashboardPage() {
           />
           <div>
             <label htmlFor="pdf-upload" className="block text-sm font-medium mb-1.5">{t('dashboard.pdfFile')}</label>
-            <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-lg p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
+            <div className="overflow-hidden rounded-lg border-2 border-dashed border-[hsl(var(--border))] text-center transition-colors hover:border-[hsl(var(--primary))]">
               <input
                 type="file"
                 accept=".pdf"
@@ -731,7 +731,12 @@ export default function DashboardPage() {
                 required
                 disabled={uploading}
               />
-              <label htmlFor="pdf-upload" className={uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}>
+              <label
+                htmlFor="pdf-upload"
+                className={`flex min-h-40 w-full flex-col items-center justify-center p-6 ${
+                  uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                }`}
+              >
                 <FileText className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))]/50 mb-2" />
                 {file ? (
                   <p className="text-sm font-medium">{file.name}</p>

@@ -210,7 +210,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
               setActiveTab(tab.id)
               if (tab.id === 'draw') setHasDrawing(false)
             }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+            className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-[hsl(var(--card))] shadow-sm text-[hsl(var(--foreground))]'
                 : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
@@ -264,7 +264,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
 
       {activeTab === 'upload' && (
         <div>
-          <div className="border-2 border-dashed border-[hsl(var(--border))] rounded-lg p-6 text-center hover:border-[hsl(var(--primary))] transition-colors">
+          <div className="overflow-hidden rounded-lg border-2 border-dashed border-[hsl(var(--border))] text-center transition-colors hover:border-[hsl(var(--primary))]">
             <input
               type="file"
               accept=".png,.jpg,.jpeg,.webp"
@@ -273,7 +273,12 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
               id="sig-upload"
               disabled={processingUpload}
             />
-            <label htmlFor="sig-upload" className="cursor-pointer">
+            <label
+              htmlFor="sig-upload"
+              className={`flex min-h-40 w-full flex-col items-center justify-center p-6 ${
+                processingUpload ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+              }`}
+            >
               {uploadedImage ? (
                 <img
                   src={uploadedImage}

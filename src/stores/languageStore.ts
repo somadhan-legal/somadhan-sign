@@ -596,6 +596,11 @@ const translations: Record<string, Record<Language, string>> = {
     en: 'Your fields were saved, but completion could not be confirmed. Check your connection and try again.',
     bn: 'আপনার ক্ষেত্রগুলো সংরক্ষিত হয়েছে, কিন্তু সম্পন্ন হওয়া নিশ্চিত করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
   },
+  'signee.completionCheckFailed': {
+    en: 'Your fields were saved, but document completion could not be verified. Check your connection and try again.',
+    bn: 'আপনার ক্ষেত্রগুলো সংরক্ষিত হয়েছে, কিন্তু ডকুমেন্ট সম্পন্ন হওয়া যাচাই করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+  'signee.retryingCompletion': { en: 'Checking...', bn: 'যাচাই হচ্ছে...' },
   'signee.finalizeFailed': {
     en: 'Everyone has signed, but the document could not be finalized. Please try again.',
     bn: 'সকলেই স্বাক্ষর করেছেন, কিন্তু ডকুমেন্টটি চূড়ান্ত করা যায়নি। আবার চেষ্টা করুন।',

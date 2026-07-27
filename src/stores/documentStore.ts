@@ -48,6 +48,7 @@ interface DocumentState {
   setCurrentPage: (page: number) => void
   setTotalPages: (total: number) => void
   setLoading: (loading: boolean) => void
+  resetDocumentState: () => void
 
   fetchDocuments: () => Promise<void>
   fetchDocument: (id: string) => Promise<void>
@@ -115,6 +116,24 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   setCurrentPage: (page) => set({ currentPage: page }),
   setTotalPages: (total) => set({ totalPages: total }),
   setLoading: (loading) => set({ loading }),
+  resetDocumentState: () => {
+    activeDocumentContextFetch += 1
+    activeDocumentsFetch += 1
+    activeAuditFetch += 1
+    activePlacementFetch += 1
+    set({
+      documents: [],
+      currentDocument: null,
+      signatureFields: [],
+      signers: [],
+      placements: [],
+      auditTrail: [],
+      loading: false,
+      documentsError: false,
+      currentPage: 1,
+      totalPages: 0,
+    })
+  },
 
   fetchDocuments: async () => {
     const requestId = ++activeDocumentsFetch

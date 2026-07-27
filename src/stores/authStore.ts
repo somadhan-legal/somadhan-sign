@@ -3,6 +3,12 @@ import type { User, Session } from '@supabase/supabase-js'
 
 let initializationPromise: Promise<void> | null = null
 const getSupabase = async () => (await import('@/lib/supabase')).supabase
+const resetDocumentStateWhenSignedOut = async () => {
+  const { useDocumentStore } = await import('@/stores/documentStore')
+  if (!useAuthStore.getState().session) {
+    useDocumentStore.getState().resetDocumentState()
+  }
+}
 
 interface AuthState {
   user: User | null
@@ -55,6 +61,9 @@ export const useAuthStore = create<AuthState>((set) => ({
               session: nextSession,
               user: nextSession?.user ?? null,
             })
+            if (event === 'SIGNED_OUT') {
+              void resetDocumentStateWhenSignedOut()
+            }
             if (event === 'PASSWORD_RECOVERY') {
               set({ isRecovery: true })
             }
@@ -185,5 +194,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     set({ user: null, session: null })
+    await resetDocumentStateWhenSignedOut()
   },
 }))

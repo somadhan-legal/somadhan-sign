@@ -34,6 +34,8 @@ import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import { isSigningToken } from '@/lib/publicAccessReference'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
+import { getSignedSignerRecoveryAction } from '@/lib/signingCompletion'
+import { mapPlacementsToSignedFields } from '@/lib/signedFields'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -146,9 +148,34 @@ export default function InviteSigningPage() {
         && entry.user_email.trim().toLowerCase() === data.signer_email.trim().toLowerCase()
       ))
 
-      // If signer already signed, show finished state
+      // A signed signer normally sees their finished state immediately. If the
+      // document is still pending, verify whether an interrupted finalization
+      // needs to be recovered.
       if (data.status === 'signed') {
-        setFinished(true)
+        let allSigned = false
+        let completionCheckFailed = false
+        if (data.documents.status !== 'completed') {
+          const { data: allSignedData, error: completionCheckError } = secureDocumentAccessEnabled
+            ? await supabase.rpc('check_all_signers_signed_by_token', { p_token: token })
+            : await supabase.rpc('check_all_signers_signed', {
+                p_document_id: data.document_id,
+                p_current_signer_id: data.id,
+              })
+          allSigned = Boolean(allSignedData)
+          completionCheckFailed = Boolean(completionCheckError)
+        }
+        const recoveryAction = getSignedSignerRecoveryAction(
+          data.documents.status,
+          allSigned,
+          completionCheckFailed,
+        )
+        if (recoveryAction === 'show-finished') {
+          setFinished(true)
+        } else if (recoveryAction === 'retry-completion-check') {
+          setActionError(t('signee.completionCheckFailed'))
+        } else {
+          setActionError(t('signee.finalizeFailed'))
+        }
         setPageLoading(false)
         return
       }
@@ -269,7 +296,7 @@ export default function InviteSigningPage() {
   const myUnsignedSignatureFields = mySignatureFields.filter((f) => !signedFieldIds.has(f.id))
 
   const handleAutoFillSignatures = async (data: string) => {
-    if (!documentId || !signerData || !requireConsent()) return
+    if (!documentId || !signerData || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setShowSignatureModal(false)
@@ -291,12 +318,15 @@ export default function InviteSigningPage() {
     }
     setSignatureData(data)
     await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
-    setSubmitting(false)
-    await checkCompletion()
+    try {
+      await checkCompletion()
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleAutoFillInitials = async (data: string) => {
-    if (!documentId || !signerData || !requireConsent()) return
+    if (!documentId || !signerData || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setTappedFieldId(null)
@@ -317,12 +347,15 @@ export default function InviteSigningPage() {
     }
     setInitialsData(data)
     await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
-    setSubmitting(false)
-    await checkCompletion()
+    try {
+      await checkCompletion()
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleTapToSign = async (fieldId: string) => {
-    if (!requireConsent()) return
+    if (submitting || !requireConsent()) return
     const field = signatureFields.find((f) => f.id === fieldId)
     const isInitials = field?.field_type === 'initials'
     const dataToUse = isInitials ? initialsData : signatureData
@@ -350,13 +383,15 @@ export default function InviteSigningPage() {
     await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`, token)
 
     setTappedFieldId(null)
-    setSubmitting(false)
-
-    await checkCompletion(fieldId)
+    try {
+      await checkCompletion(fieldId)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleDateField = async (fieldId: string, dateValue: string) => {
-    if (!documentId || !signerData || !dateValue || !requireConsent()) return
+    if (!documentId || !signerData || !dateValue || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setDatePickerFieldId(null)
@@ -375,12 +410,15 @@ export default function InviteSigningPage() {
     }
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
-    setSubmitting(false)
-    await checkCompletion(fieldId)
+    try {
+      await checkCompletion(fieldId)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleCheckboxField = async (fieldId: string) => {
-    if (!documentId || !signerData || !requireConsent()) return
+    if (!documentId || !signerData || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     const saved = await addPlacement({
@@ -398,12 +436,15 @@ export default function InviteSigningPage() {
     }
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
-    setSubmitting(false)
-    await checkCompletion(fieldId)
+    try {
+      await checkCompletion(fieldId)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleTextFieldSubmit = async (fieldId: string) => {
-    if (!documentId || !signerData || !textInputValue.trim() || !requireConsent()) return
+    if (!documentId || !signerData || !textInputValue.trim() || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
     setTextInputFieldId(null)
@@ -423,12 +464,16 @@ export default function InviteSigningPage() {
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
     setTextInputValue('')
-    setSubmitting(false)
-    await checkCompletion(fieldId)
+    try {
+      await checkCompletion(fieldId)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const checkCompletion = async (completedFieldId?: string) => {
     if (!documentId || !signerData) return
+    setActionError('')
     // Re-fetch placements to get accurate count
     await fetchPlacements(documentId, token)
     const latestPlacements = useDocumentStore.getState().placements
@@ -460,6 +505,8 @@ export default function InviteSigningPage() {
           })
       if (checkErr) {
         console.error('[checkCompletion] Error checking all signers signed:', checkErr)
+        setActionError(t('signee.completionCheckFailed'))
+        return
       }
       const allSigned = Boolean(allSignedData)
       
@@ -630,23 +677,14 @@ export default function InviteSigningPage() {
     )
   }
 
-  const fetchSignedFields = (): SignedField[] => {
+  const getLatestSignedFields = (): SignedField[] => {
     if (!documentId) return []
-    const fieldsMap = new Map(signatureFields.map(f => [f.id, f]))
-    return placements
-      .filter(p => fieldsMap.has(p.field_id))
-      .map(p => {
-        const field = fieldsMap.get(p.field_id)!
-        return {
-          field_type: field.field_type,
-          page_number: field.page_number,
-          x_percent: field.x,
-          y_percent: field.y,
-          width_percent: field.width,
-          height_percent: field.height,
-          signature_id: p.signature_id,
-        }
-      })
+    const latestState = useDocumentStore.getState()
+    return mapPlacementsToSignedFields(
+      documentId,
+      latestState.signatureFields,
+      latestState.placements,
+    )
   }
 
   const buildSignedAuditPdf = async (): Promise<Blob> => {
@@ -660,7 +698,7 @@ export default function InviteSigningPage() {
     const title = signerData!.documents.title
 
     // Step 1: Generate signed PDF with overlays
-    const signedFields = fetchSignedFields()
+    const signedFields = getLatestSignedFields()
     let basePdfUrl = pdfUrl
     if (signedFields.length > 0) {
       const { generateSignedPdf } = await import('@/lib/signedPdf')
@@ -681,7 +719,7 @@ export default function InviteSigningPage() {
   }
 
   const handleViewDocument = async () => {
-    if (!signerData || !documentId) return
+    if (!signerData || !documentId || generatingPdf) return
     setGeneratingPdf(true)
     setPdfError('')
     try {
@@ -698,7 +736,8 @@ export default function InviteSigningPage() {
   }
 
   const handleDownloadPdf = async () => {
-    if (!signerData || !documentId) return
+    if (!signerData || !documentId || generatingPdf) return
+    setGeneratingPdf(true)
     setPdfError('')
     try {
       const blob = await buildSignedAuditPdf()
@@ -706,14 +745,19 @@ export default function InviteSigningPage() {
     } catch (err) {
       console.error('Error generating signed PDF:', err)
       setPdfError(t('signee.signedPdfGenerateFailed'))
+    } finally {
+      setGeneratingPdf(false)
     }
   }
 
   const handleRetryCompletion = async () => {
     if (retryingCompletion) return
     setRetryingCompletion(true)
-    await checkCompletion()
-    setRetryingCompletion(false)
+    try {
+      await checkCompletion()
+    } finally {
+      setRetryingCompletion(false)
+    }
   }
 
   const pdfErrorNotice = pdfError ? (
@@ -732,10 +776,10 @@ export default function InviteSigningPage() {
             </a>
             <div className="w-px h-6 bg-[hsl(var(--border))]" />
             <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))]" />
-            <h2 className="truncate font-semibold">{signerData?.documents.title} | Signed</h2>
+            <h2 className="truncate font-semibold">{signerData?.documents.title} | {t('dashboard.signed')}</h2>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownloadPdf}>
+            <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={generatingPdf}>
               <Download className="w-4 h-4 mr-1" />
               {t('signee.downloadPdf')}
             </Button>
@@ -891,7 +935,7 @@ export default function InviteSigningPage() {
                 <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allSignaturesFilled') || 'All signatures filled'}</p>
               ) : (
                 <div className="space-y-1.5">
-                  <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillSignatures(signatureData)}>
+                  <Button size="sm" className="w-full" disabled={!hasConsented || submitting} onClick={() => handleAutoFillSignatures(signatureData)}>
                     {t('signee.applyToAllSignatures')} ({myUnsignedSignatureFields.length})
                   </Button>
                   <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowSignatureModal(true)}>
@@ -920,13 +964,13 @@ export default function InviteSigningPage() {
             {initialsData ? (
               <div className="space-y-2">
                 <div className="border border-[hsl(var(--border))] rounded-lg p-3 bg-white">
-                  <img src={initialsData} alt="Your initials" className="max-h-12 mx-auto" />
+                  <img src={initialsData} alt={t('signee.yourInitials')} className="max-h-12 mx-auto" />
                 </div>
                 {myUnsignedInitialsFields.length === 0 ? (
                   <p className="text-xs text-[hsl(var(--success))] text-center">{t('signee.allInitialsFilled')}</p>
                 ) : (
                   <div className="space-y-1.5">
-                    <Button size="sm" className="w-full" disabled={!hasConsented} onClick={() => handleAutoFillInitials(initialsData)}>
+                    <Button size="sm" className="w-full" disabled={!hasConsented || submitting} onClick={() => handleAutoFillInitials(initialsData)}>
                       {t('signee.applyToAllInitials')} ({myUnsignedInitialsFields.length})
                     </Button>
                     <Button variant="outline" size="sm" className="w-full" disabled={!hasConsented} onClick={() => setShowInitialsModal(true)}>
@@ -980,12 +1024,12 @@ export default function InviteSigningPage() {
                       ? 'bg-[hsl(var(--primary))]/15 text-[hsl(var(--primary))] ring-2 ring-[hsl(var(--primary))] font-bold animate-field-pulse'
                       : 'hover:bg-[hsl(var(--muted))]'
                   }`}
-                onClick={() => {
-                  if (!hasConsented) {
-                    requireConsent()
-                    return
-                  }
-                  if (!isSigned) {
+                  onClick={() => {
+                    if (!hasConsented) {
+                      requireConsent()
+                      return
+                    }
+                    if (!isSigned) {
                       const unsignedIdx = allMyUnsigned.findIndex((f) => f.id === field.id)
                       if (unsignedIdx >= 0) setCurrentFieldIndex(unsignedIdx)
                     }
@@ -1001,7 +1045,7 @@ export default function InviteSigningPage() {
                   )}
                   <span className="flex items-center gap-1">
                     {icon}
-                    {field.field_type === 'initials' ? 'Initials' : field.field_type === 'signature' ? 'Sign' : field.field_type.charAt(0).toUpperCase() + field.field_type.slice(1)} {index + 1} | Pg {field.page_number}
+                    {t(`editor.${field.field_type}`)} {index + 1} | {t('viewer.page')} {field.page_number}
                   </span>
                 </button>
               )
@@ -1353,8 +1397,13 @@ export default function InviteSigningPage() {
         <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
           <span>{actionError}</span>
           {allMyUnsigned.length === 0 && (
-            <button type="button" onClick={() => checkCompletion()} className="min-h-11 shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
-              {t('viewer.tryAgain')}
+            <button
+              type="button"
+              onClick={handleRetryCompletion}
+              disabled={retryingCompletion}
+              className="min-h-11 shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {retryingCompletion ? t('signee.retryingCompletion') : t('viewer.tryAgain')}
             </button>
           )}
         </div>
