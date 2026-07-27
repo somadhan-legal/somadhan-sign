@@ -368,6 +368,7 @@ const translations: Record<string, Record<Language, string>> = {
 
   // ─── Document Editor ───
   'editor.signers': { en: 'Signers', bn: 'স্বাক্ষরকারী' },
+  'editor.selectNamedSigner': { en: 'Select signer {name}', bn: 'স্বাক্ষরকারী {name} নির্বাচন করুন' },
   'editor.addSigner': { en: 'Add Signer', bn: 'স্বাক্ষরকারী যোগ করুন' },
   'editor.fields': { en: 'Fields', bn: 'ক্ষেত্র' },
   'editor.signature': { en: 'Signature', bn: 'স্বাক্ষর' },

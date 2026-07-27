@@ -233,7 +233,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
             type="button"
             onClick={handleClear}
             aria-label={t('signee.clearSignature')}
-            className="absolute top-2 right-2 p-1.5 rounded-md bg-[hsl(var(--card))]/80 hover:bg-[hsl(var(--card))] shadow-sm cursor-pointer"
+            className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-md bg-[hsl(var(--card))]/80 shadow-sm hover:bg-[hsl(var(--card))] cursor-pointer"
             title={t('signee.clear')}
           >
             <RotateCcw className="w-4 h-4" />

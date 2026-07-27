@@ -18,6 +18,7 @@ import {
 } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
+import { getSigningDispatchContext } from '@/lib/signingDispatch'
 
 export interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -734,15 +735,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   sendForSigning: async (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => {
+    const { document: doc, signers } = getSigningDispatchContext(
+      documentId,
+      get().currentDocument,
+      get().signers,
+    )
+
     await get().saveSignatureFields(documentId)
     await get().updateDocumentStatus(documentId, 'pending')
     
     // Send emails to all signers (NOT to CC recipients)
-    const signers = get().signers
-    const doc = get().currentDocument
-    
-    if (!doc) throw new Error('The document could not be loaded.')
-
     let sent = 0
     let failed = 0
     let ccSent = 0

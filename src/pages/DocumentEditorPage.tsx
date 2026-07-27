@@ -704,15 +704,16 @@ export default function DocumentEditorPage() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.signers')}</h3>
             {!isLocked && (
-              <button type="button" onClick={openAddSignerModal} aria-label={t('editor.addSigner')} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+              <button type="button" onClick={openAddSignerModal} aria-label={t('editor.addSigner')} className="flex h-11 w-11 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                 <UserPlus className="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))]" />
               </button>
             )}
           </div>
           {signers.length === 0 && !isLocked ? (
             <button
+              type="button"
               onClick={openAddSignerModal}
-              className="w-full py-2.5 border border-[hsl(var(--border))] rounded-lg text-xs font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-[hsl(var(--border))] px-3 py-2.5 text-xs font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               {t('editor.addSigner')}
@@ -724,7 +725,7 @@ export default function DocumentEditorPage() {
                   type="button"
                   aria-label={t('editor.scrollSignersUp')}
                   onClick={() => signerListRef.current?.scrollBy({ top: -60, behavior: 'smooth' })}
-                  className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
+                  className="flex min-h-11 w-full items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
                 </button>
@@ -739,41 +740,40 @@ export default function DocumentEditorPage() {
                 return (
                   <div
                     key={signer.id}
-                    className="group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all"
+                    className="group flex items-center gap-0.5 rounded-lg transition-all"
                     style={{
                       backgroundColor: isActive ? `${color}30` : 'transparent',
                       borderColor: isActive ? color : 'transparent',
                     }}
-                    onClick={() => setSelectedSignerIdx(idx)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setSelectedSignerIdx(idx)
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={isActive}
                   >
-                    <div
-                      className="w-5 h-5 rounded flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate" style={{ color: isActive ? color : 'inherit' }}>
-                        {signer.signer_name || signer.signer_email.split('@')[0]}
-                      </p>
-                      <p className="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
-                        {signer.signer_email}
-                      </p>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSignerIdx(idx)}
+                      aria-pressed={isActive}
+                      aria-label={t('editor.selectNamedSigner').replace('{name}', signer.signer_name || signer.signer_email)}
+                      className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left cursor-pointer"
+                    >
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[10px] font-bold text-white shadow-sm"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-medium" style={{ color: isActive ? color : 'inherit' }}>
+                          {signer.signer_name || signer.signer_email.split('@')[0]}
+                        </span>
+                        <span className="block truncate text-[10px] text-[hsl(var(--muted-foreground))]">
+                          {signer.signer_email}
+                        </span>
+                      </span>
+                    </button>
                     {!isLocked && (
-                      <div className="shrink-0 flex items-center gap-0.5 opacity-100 transition-opacity relative lg:opacity-0 lg:group-hover:opacity-100">
+                      <div className="relative flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
                         <button
                           type="button"
                           aria-label={t('editor.editNamedSigner').replace('{name}', signer.signer_name || signer.signer_email)}
                           onClick={(e) => { e.stopPropagation(); openEditSignerModal(signer) }}
-                          className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
+                          className="flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] rounded hover:bg-[hsl(var(--primary))]/10 cursor-pointer"
                           title={t('editor.editSigner')}
                         >
                           <PenTool className="w-3 h-3" />
@@ -785,7 +785,7 @@ export default function DocumentEditorPage() {
                             e.stopPropagation()
                             setDeleteSignerId(signer.id)
                           }}
-                          className="flex h-10 w-10 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
+                          className="flex h-11 w-11 items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] rounded hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
                           title={t('editor.removeSigner')}
                         >
                           <X className="w-3 h-3" />
@@ -823,7 +823,7 @@ export default function DocumentEditorPage() {
                   type="button"
                   aria-label={t('editor.scrollSignersDown')}
                   onClick={() => signerListRef.current?.scrollBy({ top: 60, behavior: 'smooth' })}
-                  className="w-full flex justify-center py-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
+                  className="flex min-h-11 w-full items-center justify-center text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
@@ -848,7 +848,7 @@ export default function DocumentEditorPage() {
                     setSelectedFieldType(opt.type)
                     if (window.innerWidth < 1024) setLeftPanelCollapsed(true)
                   }}
-                  className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     selectedFieldType === opt.type
                       ? 'bg-[hsl(var(--primary))] text-white shadow-md ring-2 ring-[hsl(var(--primary))]/50 ring-offset-1'
                       : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
@@ -865,7 +865,7 @@ export default function DocumentEditorPage() {
         {/* Help Guide - expanded by default */}
         {!isLocked && (
           <details open className="px-2.5 pt-2 pb-1 border-b border-[hsl(var(--border))]">
-            <summary className="flex items-center gap-1.5 cursor-pointer select-none">
+            <summary className="flex min-h-11 items-center gap-1.5 cursor-pointer select-none">
               <HelpCircle className="w-3 h-3 text-[hsl(var(--primary))]" />
               <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">{t('editor.helpTitle')}</h3>
             </summary>
@@ -907,7 +907,7 @@ export default function DocumentEditorPage() {
             type="button"
             aria-label={t('editor.collapsePanel')}
             onClick={() => setLeftPanelCollapsed(true)}
-            className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer"
+            className="flex min-h-11 w-full items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] cursor-pointer"
             title={t('editor.collapsePanel')}
           >
             <PanelLeftClose className="w-5 h-5" />
@@ -1079,8 +1079,7 @@ export default function DocumentEditorPage() {
                       <button
                         type="button"
                         aria-label={t('editor.removeFieldFor').replace('{field}', ftLabel).replace('{name}', sName)}
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-md cursor-pointer z-40 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: color }}
+                        className="absolute -top-[22px] left-1/2 z-40 flex h-11 w-11 -translate-x-1/2 items-center justify-center cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation()
                           const hasPlacements = placements.some(p => p.field_id === field.id)
@@ -1098,15 +1097,35 @@ export default function DocumentEditorPage() {
                           setSelectedField(null)
                         }}
                       >
-                        ×
+                        <span
+                          className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white shadow-md transition-transform hover:scale-110"
+                          style={{ backgroundColor: color }}
+                          aria-hidden="true"
+                        >
+                          ×
+                        </span>
                       </button>
                     )}
                     {isSelected && (
                       <>
-                        <div className="absolute -top-3 -left-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-nw-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'nw', e)} />
-                        <div className="absolute -top-3 -right-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-ne-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'ne', e)} />
-                        <div className="absolute -bottom-3 -left-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-sw-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'sw', e)} />
-                        <div className="absolute -bottom-3 -right-3 w-6 h-6 border-2 bg-[hsl(var(--card))] cursor-se-resize z-30 touch-none rounded-full" style={{ borderColor: color }} onPointerDown={(e) => handleResizeStart(field.id, 'se', e)} />
+                        {([
+                          ['nw', '-top-[22px] -left-[22px] cursor-nw-resize'],
+                          ['ne', '-top-[22px] -right-[22px] cursor-ne-resize'],
+                          ['sw', '-bottom-[22px] -left-[22px] cursor-sw-resize'],
+                          ['se', '-bottom-[22px] -right-[22px] cursor-se-resize'],
+                        ] as const).map(([corner, position]) => (
+                          <div
+                            key={corner}
+                            className={`absolute z-30 flex h-11 w-11 touch-none items-center justify-center ${position}`}
+                            onPointerDown={(event) => handleResizeStart(field.id, corner, event)}
+                          >
+                            <span
+                              className="h-6 w-6 rounded-full border-2 bg-[hsl(var(--card))]"
+                              style={{ borderColor: color }}
+                              aria-hidden="true"
+                            />
+                          </div>
+                        ))}
                       </>
                     )}
                   </DraggableField>
@@ -1129,7 +1148,7 @@ export default function DocumentEditorPage() {
           return (
             <>
               <div className="flex justify-end p-2">
-                <button type="button" aria-label={t('editor.closeFieldSettings')} onClick={() => setSelectedField(null)} className="flex h-10 w-10 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+                <button type="button" aria-label={t('editor.closeFieldSettings')} onClick={() => setSelectedField(null)} className="flex h-11 w-11 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                   <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </div>
@@ -1149,10 +1168,11 @@ export default function DocumentEditorPage() {
                     const isAssigned = field.assigned_to_email === signer.signer_email
                     return (
                       <button
+                        type="button"
                         key={signer.id}
                         aria-label={t('editor.assignFieldTo').replace('{name}', signer.signer_name || signer.signer_email)}
                         onClick={() => { updateSignatureField(field.id, { assigned_to_email: signer.signer_email }); setSelectedSignerIdx(idx) }}
-                        className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg text-left transition-all cursor-pointer ${
+                        className={`flex min-h-11 items-center gap-2 w-full px-2 py-2 rounded-lg text-left transition-all cursor-pointer ${
                           isAssigned ? 'shadow-sm' : 'hover:bg-[hsl(var(--muted))]/50'
                         }`}
                         style={{

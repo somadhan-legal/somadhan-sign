@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PDFDocument, PDFName } from 'pdf-lib'
 import { validatePdfFile } from './fileValidation'
 
@@ -9,6 +9,21 @@ describe('validatePdfFile', () => {
     const bytes = await pdf.save()
     const file = new File([new Uint8Array(bytes)], 'agreement.pdf', { type: 'application/pdf' })
     await expect(validatePdfFile(file)).resolves.toBeNull()
+  })
+
+  it('reuses validation work for the same immutable file', async () => {
+    const pdf = await PDFDocument.create()
+    pdf.addPage([200, 200])
+    const file = new File([new Uint8Array(await pdf.save())], 'agreement.pdf', { type: 'application/pdf' })
+    const readFile = file.arrayBuffer.bind(file)
+    const arrayBufferSpy = vi.spyOn(file, 'arrayBuffer').mockImplementation(readFile)
+
+    const firstValidation = validatePdfFile(file)
+    const secondValidation = validatePdfFile(file)
+
+    expect(secondValidation).toBe(firstValidation)
+    await expect(Promise.all([firstValidation, secondValidation])).resolves.toEqual([null, null])
+    expect(arrayBufferSpy).toHaveBeenCalledTimes(1)
   })
 
   it('rejects files that only imitate a PDF header', async () => {

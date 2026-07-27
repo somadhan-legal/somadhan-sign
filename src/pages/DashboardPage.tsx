@@ -304,7 +304,7 @@ export default function DashboardPage() {
             placeholder={t('dashboard.searchDocs')}
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-            className="w-full h-10 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+            className="w-full h-11 pl-10 pr-4 rounded-lg border border-[hsl(var(--input))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))] text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
           />
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -319,7 +319,7 @@ export default function DashboardPage() {
               key={item.status}
               aria-pressed={filterStatus === item.status}
               onClick={() => { setFilterStatus(item.status); setCurrentPage(1) }}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`min-h-11 flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 filterStatus === item.status
                   ? 'bg-[hsl(var(--primary))] text-white'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]'
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                         aria-expanded={expandedDoc === doc.id}
                         aria-controls={`signers-${doc.id}`}
                         onClick={() => void toggleSignerDetails(doc.id)}
-                        className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
                       >
                         {expandedDoc === doc.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
@@ -425,7 +425,7 @@ export default function DashboardPage() {
                         aria-controls={`document-menu-${doc.id}`}
                         aria-haspopup="menu"
                         onClick={() => setMenuOpen(menuOpen === doc.id ? null : doc.id)}
-                        className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[hsl(var(--muted))] transition-colors cursor-pointer"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
@@ -435,7 +435,7 @@ export default function DashboardPage() {
                             <Link
                               to={`/document/${doc.id}/edit`}
                               role="menuitem"
-                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
+                              className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
                               onClick={() => setMenuOpen(null)}
                             >
                               <FileText className="w-4 h-4" />
@@ -444,8 +444,9 @@ export default function DashboardPage() {
                           )}
                           {doc.status === 'draft' && (
                             <button
+                              type="button"
                               role="menuitem"
-                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
+                              className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                               onClick={() => {
                                 navigate(`/document/${doc.id}/edit`)
                                 setMenuOpen(null)
@@ -457,8 +458,9 @@ export default function DashboardPage() {
                           )}
                           {doc.status === 'pending' && (
                             <button
+                              type="button"
                               role="menuitem"
-                              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed w-full text-left cursor-pointer"
+                              className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] disabled:opacity-50 disabled:cursor-not-allowed w-full text-left cursor-pointer"
                               onClick={() => void handleReminder(doc.id)}
                               disabled={remindingDocumentId !== null}
                             >
@@ -469,15 +471,16 @@ export default function DashboardPage() {
                           <Link
                             to={`/document/${doc.id}`}
                             role="menuitem"
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
+                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] no-underline text-[hsl(var(--foreground))]"
                             onClick={() => setMenuOpen(null)}
                           >
                             <Eye className="w-4 h-4" />
                             {t('dashboard.view')}
                           </Link>
                           <button
+                            type="button"
                             role="menuitem"
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
+                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                             onClick={async () => {
                               setMenuOpen(null)
                               const currentDoc = documents.find(d => d.id === doc.id)
@@ -575,8 +578,9 @@ export default function DashboardPage() {
                             {t('dashboard.download')}
                           </button>
                           <button
+                            type="button"
                             role="menuitem"
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
+                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
                             onClick={() => {
                               setAuditDocId(doc.id)
                               setMenuOpen(null)
@@ -586,8 +590,9 @@ export default function DashboardPage() {
                             {t('dashboard.auditTrail')}
                           </button>
                           <button
+                            type="button"
                             role="menuitem"
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
+                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
                             onClick={() => {
                               setMenuOpen(null)
                               setDeleteConfirm({ docId: doc.id, title: doc.title })

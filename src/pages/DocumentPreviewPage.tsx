@@ -216,8 +216,9 @@ export default function DocumentPreviewPage() {
         {/* Header */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <button
+            type="button"
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] mb-2 cursor-pointer"
+            className="mb-2 flex min-h-11 items-center gap-1 px-1 text-sm text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             {t('dashboard.backToDashboard')}

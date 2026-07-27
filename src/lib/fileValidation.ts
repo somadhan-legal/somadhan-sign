@@ -5,13 +5,14 @@ const NORMALIZED_SIGNATURE_MAX_DATA_URL_LENGTH = 3_000_000
 const NORMALIZED_SIGNATURE_MAX_WIDTH = 1000
 const NORMALIZED_SIGNATURE_MAX_HEIGHT = 500
 const UNSAFE_PDF_FEATURE = /\/(?:AA|EmbeddedFiles|ImportData|JavaScript|JS|Launch|Movie|OpenAction|Rendition|RichMedia|Sound|SubmitForm|XFA)(?=[\s<>[\]()/]|$)/
+const pdfValidationCache = new WeakMap<File, Promise<string | null>>()
 
 function hasUnsafePdfFeatures(pdf: { context: { enumerateIndirectObjects: () => [unknown, { toString: () => string }][] } }): boolean {
   return pdf.context.enumerateIndirectObjects()
     .some(([, object]) => UNSAFE_PDF_FEATURE.test(object.toString()))
 }
 
-export async function validatePdfFile(file: File): Promise<string | null> {
+async function inspectPdfFile(file: File): Promise<string | null> {
   if (file.size === 0) return 'The selected PDF is empty.'
   if (file.size > PDF_MAX_BYTES) return 'The PDF must be 5 MB or smaller.'
   if (!file.name.toLowerCase().endsWith('.pdf')) return 'Please select a PDF file.'
@@ -29,6 +30,15 @@ export async function validatePdfFile(file: File): Promise<string | null> {
     return 'The PDF is damaged, encrypted, or unsupported.'
   }
   return null
+}
+
+export function validatePdfFile(file: File): Promise<string | null> {
+  const cachedValidation = pdfValidationCache.get(file)
+  if (cachedValidation) return cachedValidation
+
+  const validation = inspectPdfFile(file)
+  pdfValidationCache.set(file, validation)
+  return validation
 }
 
 export function validateSignatureImage(file: File): string | null {

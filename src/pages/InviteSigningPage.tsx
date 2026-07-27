@@ -848,7 +848,7 @@ export default function InviteSigningPage() {
               type="button"
               onClick={() => setShowAuditTrail(true)}
               aria-label={t('signee.openAuditTrail')}
-              className="p-1.5 rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
+              className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
               title={t('audit.title')}
             >
               <History className="w-4 h-4" />
@@ -971,8 +971,9 @@ export default function InviteSigningPage() {
               const icon = fieldTypeIcons[field.field_type] || fieldTypeIcons.signature
               return (
                 <button
+                  type="button"
                   key={field.id}
-                  className={`flex items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-all cursor-pointer ${
+                  className={`flex min-h-11 items-center gap-2 w-full p-2 rounded-lg text-left text-sm transition-all cursor-pointer ${
                     isSigned
                       ? 'bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]'
                       : isSelected
@@ -1034,7 +1035,7 @@ export default function InviteSigningPage() {
                   aria-label={t('signee.previousUnsignedField')}
                   onClick={() => navigateToField(currentFieldIndex - 1)}
                   disabled={currentFieldIndex <= 0}
-                  className="h-9 w-9"
+                  className="h-11 w-11"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -1047,7 +1048,7 @@ export default function InviteSigningPage() {
                   aria-label={t('signee.nextUnsignedField')}
                   onClick={() => navigateToField(currentFieldIndex + 1)}
                   disabled={currentFieldIndex >= allMyUnsigned.length - 1}
-                  className="h-9 w-9"
+                  className="h-11 w-11"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -1078,7 +1079,7 @@ export default function InviteSigningPage() {
             type="button"
             aria-label={t('signee.collapsePanel')}
             onClick={() => setLeftPanelCollapsed(true)}
-            className="w-full py-2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] rounded-lg transition-colors flex items-center justify-center cursor-pointer mt-2"
+            className="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] cursor-pointer"
             title={t('signee.collapsePanel')}
           >
             <PanelLeftClose className="w-5 h-5" />
@@ -1163,7 +1164,11 @@ export default function InviteSigningPage() {
                       top: `${field.y}%`,
                       width: `${field.width}%`,
                       height: `${field.height}%`,
-                      zIndex: isTapped ? 50 : isCurrentNav ? 20 : 10,
+                      zIndex: isTapped || datePickerFieldId === field.id || textInputFieldId === field.id
+                        ? 50
+                        : isCurrentNav
+                          ? 20
+                          : 10,
                     }}
                   >
                     {/* Signed states use raw content without borders. */}
@@ -1194,21 +1199,23 @@ export default function InviteSigningPage() {
                         {/* Popover buttons below the field */}
                         <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 flex gap-1 whitespace-nowrap" style={{ zIndex: 100 }}>
                           <button
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); handleTapToSign(field.id); }}
                             disabled={submitting}
-                            className="px-3 py-1.5 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--card))] text-[10px] rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer shadow-lg"
+                            className="min-h-11 px-3 py-2 border border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--card))] text-xs rounded-md font-semibold hover:bg-[hsl(var(--primary))]/10 cursor-pointer shadow-lg"
                           >
                             {submitting ? '...' : t('signee.applyToThis')}
                           </button>
                           {(isInitials ? myUnsignedInitialsFields.length > 1 : myUnsignedSignatureFields.length > 1) && (
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (isInitials) handleAutoFillInitials(initialsData!)
                                 else handleAutoFillSignatures(signatureData!)
                               }}
                               disabled={submitting}
-                              className="px-3 py-1.5 bg-[hsl(var(--primary))] text-white text-[10px] rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
+                              className="min-h-11 px-3 py-2 bg-[hsl(var(--primary))] text-white text-xs rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
                             >
                               {submitting ? '...' : t('signee.applyToEveryField')}
                             </button>
@@ -1218,11 +1225,14 @@ export default function InviteSigningPage() {
 
                     ) : datePickerFieldId === field.id && isDate && isMine ? (
                       /* === DATE PICKER ACTIVE === */
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="relative h-full w-full">
+                        <div className="flex h-full w-full items-center justify-center rounded border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 text-[10px] font-semibold text-[hsl(var(--primary))]">
+                          {t('signee.signingDate')}
+                        </div>
                         <input
                           type="date"
                           aria-label={t('signee.signingDate')}
-                          className="text-[11px] border border-[hsl(var(--primary))] rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-[hsl(var(--primary))]"
+                          className="absolute left-1/2 top-full z-[100] mt-1 min-h-11 w-max -translate-x-1/2 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--card))] px-3 py-2 text-sm shadow-lg outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
                           onChange={(e) => {
                             if (e.target.value) {
                               handleDateField(field.id, e.target.value)
@@ -1343,7 +1353,7 @@ export default function InviteSigningPage() {
         <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
           <span>{actionError}</span>
           {allMyUnsigned.length === 0 && (
-            <button type="button" onClick={() => checkCompletion()} className="shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
+            <button type="button" onClick={() => checkCompletion()} className="min-h-11 shrink-0 rounded-lg bg-white/15 px-3 py-2 hover:bg-white/25">
               {t('viewer.tryAgain')}
             </button>
           )}

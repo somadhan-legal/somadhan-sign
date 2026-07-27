@@ -26,10 +26,10 @@ export function buttonStyles({
         variant === 'destructive',
     },
     {
-      'h-8 px-3 text-sm': size === 'sm',
-      'h-10 px-4 text-sm': size === 'md',
+      'h-10 px-3 text-sm': size === 'sm',
+      'h-11 px-4 text-sm': size === 'md',
       'h-12 px-6 text-base': size === 'lg',
-      'h-10 w-10': size === 'icon',
+      'h-11 w-11': size === 'icon',
     },
     className
   )
