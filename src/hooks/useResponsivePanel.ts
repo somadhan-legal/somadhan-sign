@@ -19,7 +19,10 @@ export const useResponsivePanel = () => {
   useEffect(() => {
     if (collapsed) return
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setCollapsed(true)
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (!window.matchMedia(TABLET_QUERY).matches) return
+      if (document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')) return
+      setCollapsed(true)
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
