@@ -72,7 +72,7 @@ interface DocumentState {
   fetchSigners: (documentId: string) => Promise<void>
   removeSigner: (signerId: string) => Promise<void>
 
-  fetchPlacements: (documentId: string, signingToken?: string) => Promise<void>
+  fetchPlacements: (documentId: string, signingToken?: string) => Promise<boolean>
   addPlacement: (placement: Omit<SignaturePlacement, 'id' | 'signed_at'>, signingToken?: string) => Promise<boolean>
 
   fetchSignerByToken: (token: string) => Promise<SignerByTokenResult | null>
@@ -443,8 +443,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     // First, get the current signer to know their old email
     const currentSigner = get().signers.find(s => s.id === signerId)
     if (!currentSigner) {
-      console.error('Signer not found')
-      return
+      throw new Error('SIGNER_NOT_FOUND')
     }
 
     const oldEmail = currentSigner.signer_email
@@ -577,16 +576,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const requestId = ++activePlacementFetch
     if (signingToken) {
       const securePackage = await fetchSigningAccessPackage(signingToken)
-      if (requestId !== activePlacementFetch) return
+      if (requestId !== activePlacementFetch) return false
       if (securePackage) {
         set({
           signatureFields: securePackage.fields || [],
           placements: securePackage.placements || [],
           auditTrail: securePackage.audit_trail || [],
         })
-        return
+        return true
       }
-      if (securePackage === null) return
+      if (securePackage === null) return false
 
     }
     const { data, error } = await supabase
@@ -595,11 +594,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .eq('document_id', documentId)
     if (error) {
       console.error('Error fetching placements:', error)
-      return
+      return false
     }
     if (requestId === activePlacementFetch) {
       set({ placements: (data as SignaturePlacement[]) || [] })
+      return true
     }
+    return false
   },
 
   addPlacement: async (placement, signingToken) => {

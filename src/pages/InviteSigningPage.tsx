@@ -476,7 +476,11 @@ export default function InviteSigningPage() {
     if (!documentId || !signerData) return
     setActionError('')
     // Re-fetch placements to get accurate count
-    await fetchPlacements(documentId, token)
+    const placementsRefreshed = await fetchPlacements(documentId, token)
+    if (!placementsRefreshed) {
+      setActionError(t('signee.completionCheckFailed'))
+      return
+    }
     const latestPlacements = useDocumentStore.getState().placements
     const latestSignedIds = new Set(latestPlacements.map((p) => p.field_id))
     const remaining = myFields.filter((f) => !latestSignedIds.has(f.id))
