@@ -70,6 +70,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           })
         } catch {
           set({ loading: false, initialized: true })
+          initializationPromise = null
         }
       })()
     }
@@ -182,7 +183,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       const supabase = await getSupabase()
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
-      set({ loading: false, isRecovery: false })
+
+      // A recovery link creates a temporary authenticated session. End only this
+      // browser's session so the success screen can truthfully return to login
+      // without signing the user out on their other devices.
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' })
+      if (signOutError) {
+        console.error('Password updated, but the recovery session could not be revoked:', signOutError)
+      }
+      set({
+        user: null,
+        session: null,
+        loading: false,
+        isRecovery: false,
+      })
+      await resetDocumentStateWhenSignedOut()
     } catch (error) {
       set({ loading: false })
       throw error

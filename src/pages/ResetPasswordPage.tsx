@@ -25,7 +25,6 @@ export default function ResetPasswordPage() {
   const { t, lang } = useLanguageStore()
 
   const recoveryLinkError = getRecoveryLinkError(window.location.hash)
-  const hasExpiredRecoveryLink = recoveryLinkError === 'expired'
   const recoveryError = recoveryLinkError === 'expired'
     ? t('reset.linkExpired')
     : recoveryLinkError === 'invalid'
@@ -112,7 +111,7 @@ export default function ResetPasswordPage() {
         {displayedError && (
           <div role="alert" className="mb-4 p-3 rounded-lg bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] text-sm">
             {displayedError}
-            {hasExpiredRecoveryLink ? (
+            {recoveryLinkError ? (
               <div className="mt-3">
                 <Button
                   variant="outline"
