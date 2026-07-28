@@ -448,7 +448,6 @@ export default function InviteSigningPage() {
     if (!documentId || !signerData || !textInputValue.trim() || submitting || !requireConsent()) return
     setSubmitting(true)
     setActionError('')
-    setTextInputFieldId(null)
     const saved = await addPlacement({
       document_id: documentId,
       field_id: fieldId,
@@ -462,6 +461,7 @@ export default function InviteSigningPage() {
       setSubmitting(false)
       return
     }
+    setTextInputFieldId(null)
     const field = signatureFields.find((f) => f.id === fieldId)
     await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
     setTextInputValue('')
@@ -1306,7 +1306,11 @@ export default function InviteSigningPage() {
                           value={textInputValue}
                           onChange={(e) => setTextInputValue(e.target.value)}
                           maxLength={1000}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleTextFieldSubmit(field.id) }}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return
+                            e.preventDefault()
+                            e.currentTarget.blur()
+                          }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
                           placeholder={t('signee.typeHere')}
                           className="w-full h-full text-[11px] font-medium text-black bg-white border-b border-[hsl(var(--primary))] outline-none px-1"

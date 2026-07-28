@@ -207,6 +207,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => {
+              if (tab.id === activeTab) return
               setActiveTab(tab.id)
               if (tab.id === 'draw') setHasDrawing(false)
             }}
