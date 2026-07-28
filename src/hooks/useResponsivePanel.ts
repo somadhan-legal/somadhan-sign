@@ -10,7 +10,7 @@ export const useResponsivePanel = () => {
   useEffect(() => {
     const media = window.matchMedia(TABLET_QUERY)
     const handleWidthChange = (event: MediaQueryListEvent) => {
-      if (event.matches) setCollapsed(true)
+      setCollapsed(event.matches)
     }
     media.addEventListener('change', handleWidthChange)
     return () => media.removeEventListener('change', handleWidthChange)

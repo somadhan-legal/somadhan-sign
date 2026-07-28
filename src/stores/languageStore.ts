@@ -23,6 +23,8 @@ const translations: Record<string, Record<Language, string>> = {
     en: 'The action could not be completed. Check your connection and try again.',
     bn: 'কাজটি সম্পন্ন করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
   },
+  'common.ok': { en: 'OK', bn: 'ঠিক আছে' },
+  'common.cancel': { en: 'Cancel', bn: 'বাতিল' },
   'common.skipToContent': { en: 'Skip to main content', bn: 'মূল কনটেন্টে যান' },
   'common.loadingPage': { en: 'Loading page...', bn: 'পৃষ্ঠা লোড হচ্ছে...' },
   'common.loadingDocument': { en: 'Loading document...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },

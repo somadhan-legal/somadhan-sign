@@ -129,20 +129,38 @@ export default function DashboardPage() {
         setMenuOpen(null)
       }
     }
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      const openDocumentId = menuOpen
-      setMenuOpen(null)
-      requestAnimationFrame(() => document.getElementById(`document-actions-${openDocumentId}`)?.focus())
+    const handleMenuKeyDown = (event: KeyboardEvent) => {
+      const menu = document.getElementById(`document-menu-${menuOpen}`)
+      if (!menu) return
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        const openDocumentId = menuOpen
+        setMenuOpen(null)
+        requestAnimationFrame(() => document.getElementById(`document-actions-${openDocumentId}`)?.focus())
+        return
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+      const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])'))
+      if (items.length === 0) return
+      event.preventDefault()
+      const currentIndex = items.indexOf(document.activeElement as HTMLElement)
+      const nextIndex = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? items.length - 1
+          : event.key === 'ArrowDown'
+            ? (currentIndex + 1) % items.length
+            : (currentIndex <= 0 ? items.length : currentIndex) - 1
+      items[nextIndex]?.focus()
     }
     document.addEventListener('click', handleClickOutside)
-    document.addEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleMenuKeyDown)
     requestAnimationFrame(() => {
-      document.getElementById(`document-menu-${menuOpen}`)?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+      document.getElementById(`document-menu-${menuOpen}`)?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus()
     })
     return () => {
       document.removeEventListener('click', handleClickOutside)
-      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('keydown', handleMenuKeyDown)
     }
   }, [menuOpen])
 

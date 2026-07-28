@@ -20,14 +20,15 @@ export default function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmText = 'OK',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   variant = 'warning'
 }: ConfirmDialogProps) {
   const { t } = useLanguageStore()
   const titleId = useId()
   const messageId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const onCloseRef = useRef(onClose)
   const confirmingRef = useRef(false)
   const [confirming, setConfirming] = useState(false)
@@ -42,7 +43,7 @@ export default function ConfirmDialog({
     const previouslyFocused = document.activeElement as HTMLElement | null
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    requestAnimationFrame(() => dialogRef.current?.focus())
+    requestAnimationFrame(() => cancelButtonRef.current?.focus())
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -149,12 +150,13 @@ export default function ConfirmDialog({
         )}
         <div className="flex gap-3 px-6 pb-6">
           <Button
+            ref={cancelButtonRef}
             variant="outline"
             className="flex-1"
             onClick={handleClose}
             disabled={confirming}
           >
-            {cancelText}
+            {cancelText ?? t('common.cancel')}
           </Button>
           <Button
             variant={variant === 'danger' ? 'destructive' : 'primary'}
@@ -165,7 +167,7 @@ export default function ConfirmDialog({
             {confirming && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />
             )}
-            {confirmText}
+            {confirmText ?? t('common.ok')}
           </Button>
         </div>
       </div>
