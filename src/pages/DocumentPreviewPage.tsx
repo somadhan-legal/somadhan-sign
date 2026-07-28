@@ -26,6 +26,7 @@ import { formatSigningDate } from '@/lib/utils'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -51,6 +52,7 @@ export default function DocumentPreviewPage() {
     signers,
     placements,
     fetchDocument,
+    documentLoadFailure,
     loading,
   } = useDocumentStore()
 
@@ -193,9 +195,13 @@ export default function DocumentPreviewPage() {
 
   if (!currentDocument) {
     return (
-      <div className="min-h-dvh flex items-center justify-center">
-        <p className="text-[hsl(var(--muted-foreground))]">{t('signee.docNotFound')}</p>
-      </div>
+      <DocumentLoadFailureState
+        failure={documentLoadFailure}
+        onBack={() => navigate('/dashboard')}
+        onRetry={async () => {
+          if (id) await fetchDocument(id)
+        }}
+      />
     )
   }
 

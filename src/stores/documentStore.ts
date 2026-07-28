@@ -19,6 +19,10 @@ import {
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 import { getSigningDispatchContext } from '@/lib/signingDispatch'
+import {
+  classifyDocumentLoadFailure,
+  type DocumentLoadFailure,
+} from '@/lib/documentLoadFailure'
 
 export interface SignatureFieldLocal extends Omit<SignatureField, 'id' | 'created_at'> {
   id: string
@@ -42,6 +46,7 @@ interface DocumentState {
   auditTrail: AuditTrailEntry[]
   loading: boolean
   documentsError: boolean
+  documentLoadFailure: DocumentLoadFailure | null
   currentPage: number
   totalPages: number
 
@@ -110,6 +115,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   auditTrail: [],
   loading: false,
   documentsError: false,
+  documentLoadFailure: null,
   currentPage: 1,
   totalPages: 0,
 
@@ -130,6 +136,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       auditTrail: [],
       loading: false,
       documentsError: false,
+      documentLoadFailure: null,
       currentPage: 1,
       totalPages: 0,
     })
@@ -163,6 +170,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       placements: [],
       auditTrail: [],
       loading: true,
+      documentLoadFailure: null,
     })
     try {
       const [documentResult, fieldsResult, signersResult, placementsResult] = await Promise.all([
@@ -190,10 +198,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         signers: (signersResult.data as DocumentSigner[]) || [],
         placements: (placementsResult.data as SignaturePlacement[]) || [],
         loading: false,
+        documentLoadFailure: null,
       })
     } catch (documentError) {
       console.error('Error loading document:', documentError)
-      if (requestId === activeDocumentContextFetch) set({ currentDocument: null, loading: false })
+      if (requestId === activeDocumentContextFetch) {
+        set({
+          currentDocument: null,
+          loading: false,
+          documentLoadFailure: classifyDocumentLoadFailure(documentError),
+        })
+      }
     }
   },
 

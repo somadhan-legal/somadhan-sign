@@ -62,6 +62,7 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [remindingDocumentId, setRemindingDocumentId] = useState<string | null>(null)
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [expandedSigners, setExpandedSigners] = useState<DocumentSigner[]>([])
@@ -76,6 +77,7 @@ export default function DashboardPage() {
   const signerRequestRef = useRef(0)
   const uploadValidationRequestRef = useRef(0)
   const reminderRequestRef = useRef(false)
+  const downloadRequestRef = useRef(false)
 
   const localizePdfValidationError = (message: string) => {
     const keys: Record<string, string> = {
@@ -231,6 +233,111 @@ export default function DashboardPage() {
     } finally {
       reminderRequestRef.current = false
       setRemindingDocumentId(null)
+    }
+  }
+
+  const handleDownload = async (documentId: string) => {
+    if (downloadRequestRef.current) return
+    const currentDoc = documents.find((document) => document.id === documentId)
+    if (!currentDoc) return
+
+    downloadRequestRef.current = true
+    setDownloadingDocumentId(documentId)
+    setMenuOpen(null)
+    showNotice(t('dashboard.preparingDownload'), 'info')
+
+    try {
+      if (currentDoc.status !== 'completed') {
+        const sourcePdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
+        await downloadPdfUrl(sourcePdfUrl, safePdfFilename(currentDoc.title))
+        showNotice(t('dashboard.downloadStarted'), 'success')
+        return
+      }
+
+      if (currentDoc.final_pdf_url) {
+        const finalPdfUrl = await createOwnerDocumentUrl(currentDoc.final_pdf_url)
+        await downloadPdfUrl(finalPdfUrl, safePdfFilename(currentDoc.title, ' - Signed'))
+        showNotice(t('dashboard.downloadStarted'), 'success')
+        return
+      }
+
+      const originalPdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
+      const [{ data: placementsArr, error: placementsError }, { data: fieldsArr, error: fieldsError }] = await Promise.all([
+        supabase
+          .from('signature_placements')
+          .select('*')
+          .eq('document_id', documentId),
+        supabase
+          .from('signature_fields')
+          .select('*')
+          .eq('document_id', documentId),
+      ])
+
+      if (placementsError) throw placementsError
+      if (fieldsError) throw fieldsError
+      if (!placementsArr || placementsArr.length === 0) {
+        throw new Error('The completed signature data is unavailable')
+      }
+      if (!fieldsArr || fieldsArr.length === 0) {
+        throw new Error('The completed field data is unavailable')
+      }
+
+      const fieldsMap = new Map(fieldsArr.map((field) => [field.id, field]))
+      const placedFieldIds = new Set(placementsArr.map((placement) => placement.field_id))
+      if (fieldsArr.some((field) => !placedFieldIds.has(field.id))) {
+        throw new Error('The completed document is missing one or more signed fields')
+      }
+      const signedFields: SignedField[] = placementsArr
+        .filter((placement) => fieldsMap.has(placement.field_id))
+        .map((placement) => {
+          const field = fieldsMap.get(placement.field_id)!
+          return {
+            field_type: field.field_type,
+            page_number: field.page_number,
+            x_percent: field.x,
+            y_percent: field.y,
+            width_percent: field.width,
+            height_percent: field.height,
+            signature_id: placement.signature_id,
+          }
+        })
+
+      const { generateSignedPdf } = await import('@/lib/signedPdf')
+      const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
+      const signedUrl = URL.createObjectURL(signedBlob)
+      let finalBlob: Blob
+      try {
+        const { data: auditData, error: auditError } = await supabase
+          .from('audit_trail')
+          .select('*')
+          .eq('document_id', documentId)
+          .order('created_at', { ascending: true })
+        if (auditError) throw auditError
+
+        const { generateAuditPdf } = await import('@/lib/auditPdf')
+        finalBlob = await generateAuditPdf(signedUrl, auditData || [], currentDoc.title)
+      } finally {
+        URL.revokeObjectURL(signedUrl)
+      }
+
+      const url = URL.createObjectURL(finalBlob)
+      try {
+        await downloadPdfUrl(url, safePdfFilename(currentDoc.title, ' - Signed'))
+        showNotice(t('dashboard.downloadStarted'), 'success')
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      showNotice(
+        currentDoc.status === 'completed'
+          ? t('dashboard.completedPdfFailed')
+          : t('dashboard.originalDownloadFailed'),
+        'error',
+      )
+    } finally {
+      downloadRequestRef.current = false
+      setDownloadingDocumentId(null)
     }
   }
 
@@ -480,102 +587,13 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             role="menuitem"
-                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] w-full text-left cursor-pointer"
-                            onClick={async () => {
-                              setMenuOpen(null)
-                              const currentDoc = documents.find(d => d.id === doc.id)
-                              if (!currentDoc) return
-
-                              try {
-                                if (currentDoc.status !== 'completed') {
-                                  const sourcePdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
-                                  await downloadPdfUrl(sourcePdfUrl, safePdfFilename(currentDoc.title))
-                                  return
-                                }
-
-                                if (currentDoc.final_pdf_url) {
-                                  const finalPdfUrl = await createOwnerDocumentUrl(currentDoc.final_pdf_url)
-                                  await downloadPdfUrl(finalPdfUrl, safePdfFilename(currentDoc.title, ' - Signed'))
-                                  return
-                                }
-
-                                const originalPdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
-                                // Fetch placements
-                                const { data: placementsArr, error: pErr } = await supabase
-                                  .from('signature_placements')
-                                  .select('*')
-                                  .eq('document_id', doc.id)
-
-                                if (pErr) throw pErr
-
-                                if (!placementsArr || placementsArr.length === 0) throw new Error('The completed signature data is unavailable')
-
-                                // Fetch every required field so a partial legacy document is never
-                                // downloaded with a misleading signed filename.
-                                const { data: fieldsArr, error: fErr } = await supabase
-                                  .from('signature_fields')
-                                  .select('*')
-                                  .eq('document_id', doc.id)
-
-                                if (fErr) throw fErr
-
-                                if (!fieldsArr || fieldsArr.length === 0) throw new Error('The completed field data is unavailable')
-
-                                const fieldsMap = new Map(fieldsArr.map(f => [f.id, f]))
-                                const placedFieldIds = new Set(placementsArr.map((placement) => placement.field_id))
-                                if (fieldsArr.some((field) => !placedFieldIds.has(field.id))) {
-                                  throw new Error('The completed document is missing one or more signed fields')
-                                }
-                                const signedFields: SignedField[] = placementsArr
-                                  .filter(p => fieldsMap.has(p.field_id))
-                                  .map(p => {
-                                    const field = fieldsMap.get(p.field_id)!
-                                    return {
-                                      field_type: field.field_type,
-                                      page_number: field.page_number,
-                                      x_percent: field.x,
-                                      y_percent: field.y,
-                                      width_percent: field.width,
-                                      height_percent: field.height,
-                                      signature_id: p.signature_id,
-                                    }
-                                  })
-
-                                // Generate signed PDF
-                                const { generateSignedPdf } = await import('@/lib/signedPdf')
-                                const signedBlob = await generateSignedPdf(originalPdfUrl, signedFields)
-                                const signedUrl = URL.createObjectURL(signedBlob)
-                                let finalBlob: Blob
-                                try {
-                                  // Fetch audit trail for this document only.
-                                  const { data: auditData, error: auditError } = await supabase
-                                    .from('audit_trail')
-                                    .select('*')
-                                    .eq('document_id', doc.id)
-                                    .order('created_at', { ascending: true })
-                                  if (auditError) throw auditError
-
-                                  const filteredAudit = (auditData || []).filter((e: { document_id: string }) => e.document_id === doc.id)
-                                  const { generateAuditPdf } = await import('@/lib/auditPdf')
-                                  finalBlob = await generateAuditPdf(signedUrl, filteredAudit, currentDoc.title)
-                                } finally {
-                                  URL.revokeObjectURL(signedUrl)
-                                }
-
-                                const url = URL.createObjectURL(finalBlob)
-                                try {
-                                  await downloadPdfUrl(url, safePdfFilename(currentDoc.title, ' - Signed'))
-                                } finally {
-                                  URL.revokeObjectURL(url)
-                                }
-                              } catch (error) {
-                                console.error('Error generating signed PDF:', error)
-                                showNotice(t('dashboard.completedPdfFailed'), 'error')
-                              }
-                            }}
+                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--muted))] disabled:cursor-not-allowed disabled:opacity-50 w-full text-left cursor-pointer"
+                            onClick={() => void handleDownload(doc.id)}
+                            disabled={downloadingDocumentId !== null}
+                            aria-busy={downloadingDocumentId === doc.id}
                           >
-                            <Download className="w-4 h-4" />
-                            {t('dashboard.download')}
+                            <Download className={`w-4 h-4 ${downloadingDocumentId === doc.id ? 'animate-pulse' : ''}`} />
+                            {downloadingDocumentId === doc.id ? t('dashboard.preparing') : t('dashboard.download')}
                           </button>
                           <button
                             type="button"

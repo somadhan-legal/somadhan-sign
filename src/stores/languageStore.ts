@@ -294,8 +294,15 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.downloadSignedPdf': { en: 'Download signed PDF', bn: 'স্বাক্ষরিত PDF ডাউনলোড করুন' },
   'dashboard.downloadOriginalPdf': { en: 'Download original PDF', bn: 'মূল PDF ডাউনলোড করুন' },
   'dashboard.documentUnavailable': { en: 'The document could not be found or is no longer available.', bn: 'ডকুমেন্টটি পাওয়া যায়নি বা আর উপলভ্য নেই।' },
+  'documentLoad.failedTitle': { en: 'Document could not be loaded', bn: 'ডকুমেন্ট লোড করা যায়নি' },
+  'documentLoad.failedDescription': {
+    en: 'Check your connection and try again. Your document has not been changed.',
+    bn: 'আপনার সংযোগ পরীক্ষা করে আবার চেষ্টা করুন। আপনার ডকুমেন্টে কোনো পরিবর্তন করা হয়নি।',
+  },
   'dashboard.signedDownloadFailed': { en: 'The signed PDF could not be prepared. Please try again.', bn: 'স্বাক্ষরিত PDF প্রস্তুত করা যায়নি। আবার চেষ্টা করুন।' },
   'dashboard.originalDownloadFailed': { en: 'The original PDF could not be downloaded. Please try again.', bn: 'মূল PDF ডাউনলোড করা যায়নি। আবার চেষ্টা করুন।' },
+  'dashboard.preparingDownload': { en: 'Preparing your download...', bn: 'আপনার ডাউনলোড প্রস্তুত করা হচ্ছে...' },
+  'dashboard.downloadStarted': { en: 'Your download has started.', bn: 'আপনার ডাউনলোড শুরু হয়েছে।' },
   'dashboard.uploadFirst': {
     en: 'Upload your first PDF to get started',
     bn: 'শুরু করতে আপনার প্রথম PDF আপলোড করুন',
