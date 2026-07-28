@@ -99,7 +99,7 @@ function PageWithOverlay({
   return (
     <div
       ref={ref}
-      className="relative cursor-crosshair"
+      className={`relative ${onPageClick ? 'cursor-crosshair' : 'cursor-default'}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onPointerMove={handlePointerMove}

@@ -967,7 +967,7 @@ export default function DocumentEditorPage() {
               throw new Error('The document could not be refreshed.')
             }
           }}
-          onPageClick={handlePageClick}
+          onPageClick={isLocked ? undefined : handlePageClick}
           onPagePointerMove={(pageNumber, x, y, pageWidth, pageHeight, pointerType) => {
             if (!isLocked && signers.length > 0 && pointerType !== 'touch') {
               setPlacementPreview({
