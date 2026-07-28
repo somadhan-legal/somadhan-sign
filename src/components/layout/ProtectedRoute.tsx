@@ -1,10 +1,11 @@
-import { Navigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useLanguageStore } from '@/stores/languageStore'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, initialized } = useAuthStore()
   const { t } = useLanguageStore()
+  const location = useLocation()
 
   if (!initialized || loading) {
     return (
@@ -16,7 +17,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    const returnTo = `${location.pathname}${location.search}${location.hash}`
+    return <Navigate to={`/login?next=${encodeURIComponent(returnTo)}`} replace />
   }
 
   return <>{children}</>

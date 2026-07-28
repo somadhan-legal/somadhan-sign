@@ -8,6 +8,12 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { getAuthErrorMessage } from '@/lib/authError'
+import {
+  clearAuthReturnTo,
+  getSafeAuthReturnTo,
+  readAuthReturnTo,
+  rememberAuthReturnTo,
+} from '@/lib/authRedirect'
 
 type AuthMode = 'login' | 'signup' | 'verify-otp' | 'forgot-password'
 
@@ -28,6 +34,8 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0)
   const [otpAttempts, setOtpAttempts] = useState<number[]>([])
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
+  const [storedReturnTo] = useState(() => readAuthReturnTo())
+  const returnTo = getSafeAuthReturnTo(searchParams.get('next') || storedReturnTo)
 
   const {
     user,
@@ -41,8 +49,10 @@ export default function LoginPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user && !showVerifiedPopup) navigate('/dashboard', { replace: true })
-  }, [user, navigate, showVerifiedPopup])
+    if (!user || showVerifiedPopup || mode === 'verify-otp') return
+    clearAuthReturnTo()
+    navigate(returnTo, { replace: true })
+  }, [mode, user, navigate, returnTo, showVerifiedPopup])
 
   // Timer countdown for OTP resend
   useEffect(() => {
@@ -65,7 +75,6 @@ export default function LoginPage() {
       switch (mode) {
         case 'login':
           await signInWithEmail(email, password)
-          navigate('/dashboard')
           break
         case 'signup':
           if (blockedUntil && Date.now() < blockedUntil) {
@@ -100,8 +109,10 @@ export default function LoginPage() {
     setError('')
     setSubmitting(true)
     try {
+      rememberAuthReturnTo(returnTo)
       await signInWithGoogle()
     } catch (err: unknown) {
+      clearAuthReturnTo()
       setError(getAuthErrorMessage(err, t('login.googleStartFailed'), lang))
       setSubmitting(false)
     }
@@ -496,7 +507,8 @@ export default function LoginPage() {
         isOpen={showVerifiedPopup}
         onClose={() => {
           setShowVerifiedPopup(false)
-          navigate('/dashboard')
+          clearAuthReturnTo()
+          navigate(returnTo)
         }}
         className="text-center"
         size="sm"
@@ -512,7 +524,8 @@ export default function LoginPage() {
               className="w-full h-11"
               onClick={() => {
                 setShowVerifiedPopup(false)
-                navigate('/dashboard')
+                clearAuthReturnTo()
+                navigate(returnTo)
               }}
             >
               {t('login.letsGo')}

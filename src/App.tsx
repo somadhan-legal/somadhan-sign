@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import NotFoundPage from '@/pages/NotFoundPage'
 import { useLanguageStore } from '@/stores/languageStore'
 import { getRouteTitle } from '@/lib/routeMetadata'
+import { clearAuthReturnTo, readAuthReturnTo } from '@/lib/authRedirect'
 
 const LandingPage = lazy(() => import('@/pages/LandingPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
@@ -65,6 +66,11 @@ function AuthInitializer() {
 function HomeRedirect() {
   const { user, initialized, loading } = useAuthStore()
   const [shouldWaitForSession] = useState(() => hasStoredAuthSession() || hasAuthCallbackParameters())
+  const [authReturnTo] = useState(() => readAuthReturnTo())
+
+  useEffect(() => {
+    if (user && authReturnTo) clearAuthReturnTo()
+  }, [authReturnTo, user])
   
   // Avoid flashing the public page for a returning authenticated user. A visitor
   // with no stored session can see the landing page while auth initializes.
@@ -73,7 +79,7 @@ function HomeRedirect() {
   }
   
   // Redirect to dashboard if user is authenticated
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) return <Navigate to={authReturnTo || '/dashboard'} replace />
   
   // Show landing page for non-authenticated users
   return <Suspense fallback={<PageLoader />}><LandingPage /></Suspense>
