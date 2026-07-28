@@ -1,5 +1,12 @@
 import { useEffect, lazy, Suspense, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router'
+import {
+  Navigate,
+  Outlet,
+  RouterProvider,
+  createBrowserRouter,
+  useLocation,
+  useParams,
+} from 'react-router'
 import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
@@ -112,48 +119,59 @@ function RouteMetadata() {
   return null
 }
 
-export default function App() {
+function AppShell() {
   return (
-    <BrowserRouter>
+    <>
       <AuthInitializer />
       <RouteMetadata />
-      <Routes>
-        {/* Public signing route. No account authentication is required. */}
-        <Route path="/sign/:token" element={<PublicSigningRoute />} />
-        {/* Public view-only route for CC recipients. No account authentication is required. */}
-        <Route path="/view/:documentId" element={<PublicViewerRoute />} />
-        <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
-        <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
-        <Route path="/" element={<HomeRedirect />} />
+      <Outlet />
+    </>
+  )
+}
 
-        <Route element={<Layout />}>
-          <Route
-            path="/dashboard"
-            element={
+const router = createBrowserRouter([
+  {
+    element: <AppShell />,
+    children: [
+      { path: '/sign/:token', element: <PublicSigningRoute /> },
+      { path: '/view/:documentId', element: <PublicViewerRoute /> },
+      { path: '/login', element: <Suspense fallback={<PageLoader />}><LoginPage /></Suspense> },
+      { path: '/reset-password', element: <Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense> },
+      { path: '/', element: <HomeRedirect /> },
+      {
+        element: <Layout />,
+        children: [
+          {
+            path: '/dashboard',
+            element: (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/document/:id/edit"
-            element={
+            ),
+          },
+          {
+            path: '/document/:id/edit',
+            element: (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}><DocumentEditorPage /></Suspense>
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/document/:id"
-            element={
+            ),
+          },
+          {
+            path: '/document/:id',
+            element: (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}><DocumentPreviewPage /></Suspense>
               </ProtectedRoute>
-            }
-          />
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
-  )
+            ),
+          },
+        ],
+      },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+])
+
+export default function App() {
+  return <RouterProvider router={router} />
 }

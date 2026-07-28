@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router'
+import { useBlocker, useParams, useNavigate } from 'react-router'
 import Draggable from 'react-draggable'
 import {
   Save,
@@ -184,6 +184,11 @@ export default function DocumentEditorPage() {
     }, 2500)
   }, [])
 
+  const hasUnsavedFieldChanges = initializedDocumentRef.current === id
+    && currentDocument?.status === 'draft'
+    && (savingDraft || draftSaveState !== 'saved')
+  const navigationBlocker = useBlocker(hasUnsavedFieldChanges)
+
   const persistCurrentFields = useCallback(async (showConfirmation = false) => {
     if (!id || currentDocument?.status !== 'draft') return
     const snapshot = useDocumentStore.getState().signatureFields
@@ -250,6 +255,16 @@ export default function DocumentEditorPage() {
     window.addEventListener('beforeunload', warnAboutUnsavedChanges)
     return () => window.removeEventListener('beforeunload', warnAboutUnsavedChanges)
   }, [])
+
+  const closeUnsavedChangesDialog = () => {
+    if (navigationBlocker.state === 'blocked') navigationBlocker.reset()
+  }
+
+  const saveAndContinueNavigation = async () => {
+    if (navigationBlocker.state !== 'blocked') return
+    await persistCurrentFields()
+    navigationBlocker.proceed()
+  }
 
   const isInteracting = useRef(false)
   const getFieldTypeLabel = (fieldType: FieldType) => t(`editor.${fieldType}`)
@@ -1400,6 +1415,17 @@ export default function DocumentEditorPage() {
       )}
 
       {/* Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={navigationBlocker.state === 'blocked'}
+        onClose={closeUnsavedChangesDialog}
+        onConfirm={saveAndContinueNavigation}
+        title={t('editor.unsavedChanges')}
+        message={t('editor.unsavedChangesMessage')}
+        variant="warning"
+        confirmText={t('editor.saveAndLeave')}
+        cancelText={t('editor.stayHere')}
+      />
+
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}

@@ -389,6 +389,13 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.saving': { en: 'Saving...', bn: 'সংরক্ষণ হচ্ছে...' },
   'editor.saved': { en: 'All changes saved', bn: 'সব পরিবর্তন সংরক্ষিত' },
   'editor.autosaveFailed': { en: 'Changes are not saved. Check your connection and try again.', bn: 'পরিবর্তন সংরক্ষিত হয়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
+  'editor.unsavedChanges': { en: 'Save your changes?', bn: 'আপনার পরিবর্তন সংরক্ষণ করবেন?' },
+  'editor.unsavedChangesMessage': {
+    en: 'Your latest field changes have not finished saving. Save them before leaving this page.',
+    bn: 'আপনার সর্বশেষ ক্ষেত্রের পরিবর্তনগুলো এখনও সংরক্ষণ শেষ হয়নি। এই পৃষ্ঠা ছাড়ার আগে সেগুলো সংরক্ষণ করুন।',
+  },
+  'editor.saveAndLeave': { en: 'Save and leave', bn: 'সংরক্ষণ করে বের হন' },
+  'editor.stayHere': { en: 'Stay here', bn: 'এখানেই থাকুন' },
   'editor.sendForSigning': { en: 'Send for Signing', bn: 'স্বাক্ষরের জন্য পাঠান' },
   'editor.locked': { en: 'Document sent - editing locked', bn: 'ডকুমেন্ট পাঠানো হয়েছে - সম্পাদনা লক' },
   'editor.helpTitle': { en: 'Quick Guide', bn: 'দ্রুত নির্দেশিকা' },
