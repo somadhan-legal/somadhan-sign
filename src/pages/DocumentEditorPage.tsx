@@ -104,6 +104,7 @@ export default function DocumentEditorPage() {
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [readyFieldDraftDocumentId, setReadyFieldDraftDocumentId] = useState<string | null>(null)
   const [savingSigner, setSavingSigner] = useState(false)
   const [sending, setSending] = useState(false)
   const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
@@ -184,7 +185,7 @@ export default function DocumentEditorPage() {
     }, 2500)
   }, [])
 
-  const hasUnsavedFieldChanges = initializedDocumentRef.current === id
+  const hasUnsavedFieldChanges = readyFieldDraftDocumentId === id
     && currentDocument?.status === 'draft'
     && (savingDraft || draftSaveState !== 'saved')
   const navigationBlocker = useBlocker(hasUnsavedFieldChanges)
@@ -235,6 +236,7 @@ export default function DocumentEditorPage() {
       initializedDocumentRef.current = id
       lastSavedFingerprintRef.current = fingerprint
       setDraftSaveState('saved')
+      setReadyFieldDraftDocumentId(id)
       return
     }
     if (currentDocument.status !== 'draft' || fingerprint === lastSavedFingerprintRef.current) return

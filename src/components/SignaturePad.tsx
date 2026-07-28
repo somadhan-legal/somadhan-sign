@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import SignaturePadLib from 'signature_pad'
+import type { PointGroup } from 'signature_pad'
 import { Pen, Type, Upload, RotateCcw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -20,6 +21,7 @@ type TabType = 'draw' | 'type' | 'upload'
 export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel, saveLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const padRef = useRef<SignaturePadLib | null>(null)
+  const drawingDataRef = useRef<PointGroup[]>([])
   const uploadRequestRef = useRef(0)
   const [activeTab, setActiveTab] = useState<TabType>('draw')
   const [typedName, setTypedName] = useState('')
@@ -71,12 +73,26 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
         maxWidth: 3,
       })
       padRef.current = pad
-      const handleStrokeEnd = () => setHasDrawing(!pad.isEmpty())
+      if (drawingDataRef.current.length > 0) {
+        const penColor = isDark ? '#ffffff' : '#1e293b'
+        const restoredDrawing = drawingDataRef.current.map((stroke) => ({
+          ...stroke,
+          penColor,
+        }))
+        pad.fromData(restoredDrawing)
+        drawingDataRef.current = restoredDrawing
+        setHasDrawing(true)
+      }
+      const handleStrokeEnd = () => {
+        drawingDataRef.current = pad.toData()
+        setHasDrawing(!pad.isEmpty())
+      }
       pad.addEventListener('endStroke', handleStrokeEnd)
       const resizeObserver = new ResizeObserver(() => resizeCanvas())
       resizeObserver.observe(canvas)
 
       return () => {
+        drawingDataRef.current = pad.toData()
         resizeObserver.disconnect()
         pad.off()
         if (padRef.current === pad) padRef.current = null
@@ -90,6 +106,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
 
   const handleClear = () => {
     padRef.current?.clear()
+    drawingDataRef.current = []
     setHasDrawing(false)
   }
 
