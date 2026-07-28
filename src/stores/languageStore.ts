@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { readLocalPreference, writeLocalPreference } from '@/lib/browserStorage'
 
 type Language = 'en' | 'bn'
 
@@ -696,20 +697,20 @@ const translations: Record<string, Record<Language, string>> = {
 }
 
 export const useLanguageStore = create<LanguageState>((set, get) => {
-  const saved = (typeof window !== 'undefined' ? localStorage.getItem('somadhan-lang') : null) as Language | null
+  const saved = readLocalPreference('somadhan-lang') as Language | null
   const initialLanguage = saved === 'bn' ? 'bn' : 'en'
   if (typeof document !== 'undefined') document.documentElement.lang = initialLanguage
 
   return {
     lang: initialLanguage,
     setLang: (lang) => {
-      localStorage.setItem('somadhan-lang', lang)
+      writeLocalPreference('somadhan-lang', lang)
       document.documentElement.lang = lang
       set({ lang })
     },
     toggle: () => {
       const next = get().lang === 'en' ? 'bn' : 'en'
-      localStorage.setItem('somadhan-lang', next)
+      writeLocalPreference('somadhan-lang', next)
       document.documentElement.lang = next
       set({ lang: next })
     },

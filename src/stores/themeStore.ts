@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { readLocalPreference, writeLocalPreference } from '@/lib/browserStorage'
 
 interface ThemeState {
   isDark: boolean
@@ -7,7 +8,7 @@ interface ThemeState {
 }
 
 export const useThemeStore = create<ThemeState>((set) => {
-  const stored = localStorage.getItem('theme')
+  const stored = readLocalPreference('theme')
   const isDark = stored === 'dark' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   // Apply on load
@@ -19,14 +20,14 @@ export const useThemeStore = create<ThemeState>((set) => {
     toggle: () =>
       set((state) => {
         const next = !state.isDark
-        localStorage.setItem('theme', next ? 'dark' : 'light')
+        writeLocalPreference('theme', next ? 'dark' : 'light')
         document.documentElement.classList.toggle('dark', next)
         document.documentElement.style.colorScheme = next ? 'dark' : 'light'
         return { isDark: next }
       }),
     setDark: (dark: boolean) =>
       set(() => {
-        localStorage.setItem('theme', dark ? 'dark' : 'light')
+        writeLocalPreference('theme', dark ? 'dark' : 'light')
         document.documentElement.classList.toggle('dark', dark)
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
         return { isDark: dark }
