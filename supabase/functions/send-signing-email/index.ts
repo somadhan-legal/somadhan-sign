@@ -517,7 +517,42 @@ serve(async (req) => {
         ${footer}
       </div>`
 
-    const emailHtml = isCcNotification ? ccNotificationHtml : isCompletion ? completionHtml : invitationHtml
+    const reminderHtml = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        ${headerLogo(`
+          <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
+            Friendly reminder from <strong>${safeSenderName}</strong>
+          </p>
+        `)}
+        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+          <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 24px;">
+            Your signature is still needed to keep this document moving.
+          </p>
+          <div style="text-align: center; margin-bottom: 28px;">
+            <a href="${safeSigningLink}"
+               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
+              REVIEW AND SIGN
+            </a>
+          </div>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
+          <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${safeDocumentTitle}</p>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
+            This secure signature link is unique to you. Please do not forward or share it.
+          </p>
+        </div>
+        ${footer}
+      </div>`
+
+    const emailHtml = isCcNotification
+      ? ccNotificationHtml
+      : isCompletion
+        ? completionHtml
+        : isReminder
+          ? reminderHtml
+          : invitationHtml
 
     // Completion recipients come only from the authoritative document record.
     const toRecipients = isCompletion
@@ -543,6 +578,8 @@ serve(async (req) => {
         ? `📄 "${subjectTitle}" | Shared with you for viewing`
         : isCompletion
           ? `✓ "${subjectTitle}" | All parties have signed`
+          : isReminder
+            ? `Reminder: ${subjectSender} is waiting for your signature on "${subjectTitle}"`
           : `${subjectSender} has requested your signature on "${subjectTitle}"`,
       html: emailHtml,
     }
