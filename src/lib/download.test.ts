@@ -5,15 +5,17 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('safePdfFilename', () => {
   it('removes unsafe filename characters', () => {
-    expect(safePdfFilename('Client: Contract/2026')).toBe('Client_ Contract_2026.pdf')
+    expect(safePdfFilename('Client: Contract/2026')).toBe(
+      'Client_ Contract_2026_Somadhan_Sign.pdf',
+    )
   })
 
   it('removes control characters', () => {
-    expect(safePdfFilename('Terms\nFinal')).toBe('TermsFinal.pdf')
+    expect(safePdfFilename('Terms\nFinal')).toBe('TermsFinal_Somadhan_Sign.pdf')
   })
 
   it('uses a safe fallback for an empty title', () => {
-    expect(safePdfFilename('   ')).toBe('Document.pdf')
+    expect(safePdfFilename('   ')).toBe('Document_Somadhan_Sign.pdf')
   })
 
   it('uses the original base name for the branded signed PDF', () => {

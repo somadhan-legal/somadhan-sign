@@ -7,10 +7,10 @@ const safePdfBase = (title: string): string => {
     .trim() || 'Document'
 }
 
-export const safePdfFilename = (title: string): string => `${safePdfBase(title)}.pdf`
-
-export const safeSignedPdfFilename = (title: string): string =>
+export const safePdfFilename = (title: string): string =>
   `${safePdfBase(title)}_Somadhan_Sign.pdf`
+
+export const safeSignedPdfFilename = safePdfFilename
 
 export async function downloadPdfUrl(url: string, filename: string): Promise<void> {
   const response = await fetch(url)
