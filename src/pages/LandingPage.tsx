@@ -70,7 +70,7 @@ export default function LandingPage() {
       <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
       <a
         href="#main-content"
-        className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
+        className="fixed left-4 top-4 z-[100] inline-flex min-h-11 -translate-y-24 items-center rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
       >
         {t('common.skipToContent')}
       </a>
