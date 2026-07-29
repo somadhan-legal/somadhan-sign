@@ -613,6 +613,7 @@ const translations: Record<string, Record<Language, string>> = {
   'signee.tabUpload': { en: 'Upload', bn: 'আপলোড' },
   'signee.tabDraw': { en: 'Draw', bn: 'আঁকুন' },
   'signee.tabType': { en: 'Type', bn: 'টাইপ' },
+  'signee.typedSignatureLabel': { en: 'Name for typed signature', bn: 'টাইপ করা স্বাক্ষরের নাম' },
   'signee.saveSignature': { en: 'Save Signature', bn: 'স্বাক্ষর সংরক্ষণ' },
   'signee.applyToAllSignatures': { en: 'Apply to All Signatures', bn: 'সকল স্বাক্ষরে প্রয়োগ করুন' },
   'signee.applyToAllInitials': { en: 'Apply to All Initials', bn: 'সকল ইনিশিয়াল প্রয়োগ করুন' },

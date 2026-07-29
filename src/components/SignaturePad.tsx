@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { normalizeSignatureImage, validateSignatureImage } from '@/lib/fileValidation'
+import { getFittedSignatureFontSize } from '@/lib/typedSignature'
 
 interface SignaturePadProps {
   onSave: (dataUrl: string, type: 'drawn' | 'uploaded' | 'typed') => void
@@ -135,19 +136,29 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       }
       return outCanvas.toDataURL('image/png')
     } else if (activeTab === 'type') {
-      if (!typedName.trim()) return null
+      const signatureText = typedName.trim()
+      if (!signatureText) return null
       const canvas = document.createElement('canvas')
       canvas.width = 600
       canvas.height = 200
       const ctx = canvas.getContext('2d')
       if (ctx) {
+        const fontFamily = '"Georgia", "Noto Sans Bengali", serif'
+        const fontSize = getFittedSignatureFontSize(
+          signatureText,
+          (size) => {
+            ctx.font = `italic ${size}px ${fontFamily}`
+            return ctx.measureText(signatureText).width
+          },
+          540,
+        )
         ctx.fillStyle = 'transparent'
         ctx.fillRect(0, 0, 600, 200)
-        ctx.font = 'italic 64px "Georgia", serif'
+        ctx.font = `italic ${fontSize}px ${fontFamily}`
         ctx.fillStyle = '#1e293b'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(typedName, 300, 100)
+        ctx.fillText(signatureText, 300, 100, 540)
       }
       return canvas.toDataURL('image/png')
     } else if (activeTab === 'upload' && uploadedImage) {
@@ -265,6 +276,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       {activeTab === 'type' && (
         <div>
           <Input
+            label={t('signee.typedSignatureLabel')}
             placeholder={t('signee.typeFullName')}
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
