@@ -1122,23 +1122,6 @@ begin
 end;
 $$;
 
-create or replace function public.rls_auto_enable()
-returns void
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  table_name text;
-begin
-  for table_name in
-    select tablename from pg_catalog.pg_tables where schemaname = 'public'
-  loop
-    execute format('alter table public.%I enable row level security', table_name);
-  end loop;
-end;
-$$;
-
 revoke execute on function public.cleanup_old_documents() from public, anon, authenticated;
 revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
 grant execute on function public.cleanup_old_documents() to service_role;

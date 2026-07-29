@@ -192,8 +192,8 @@ The application uses **Zustand** for global state management with the following 
    ```env
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key-here
-   # Set to true in the same coordinated rollout that makes document storage private.
-   VITE_SECURE_DOCUMENT_ACCESS_ENABLED=false
+   # Secure token-scoped access is the default. Set to false only for an emergency rollback.
+   VITE_SECURE_DOCUMENT_ACCESS_ENABLED=true
    ```
 
 4. **Set up Supabase**
@@ -215,7 +215,7 @@ The application uses **Zustand** for global state management with the following 
    c. Set up Storage:
    - The migrations create and configure the `documents` bucket.
    - The current security migration makes this bucket private. Do not change it back to public.
-   - On an existing live deployment, deploy `get-document-access` first, then apply the secure migration and release the frontend with `VITE_SECURE_DOCUMENT_ACCESS_ENABLED=true` in one coordinated maintenance window. A private bucket cannot support the legacy public-URL client path.
+   - Secure token-scoped access is enabled by default. Before switching an existing deployment to private storage, deploy `get-document-access` and apply the secure migration in one coordinated maintenance window. A private bucket cannot support the legacy public-URL client path.
    - For local or self-hosted Edge Functions whose `SUPABASE_URL` uses an internal hostname, set `APP_SUPABASE_PUBLIC_URL` to the browser-reachable API origin. For the default local CLI stack, use `http://127.0.0.1:54321`. This keeps signed storage paths private while returning URLs the browser can actually open.
    
    d. Configure Authentication:
