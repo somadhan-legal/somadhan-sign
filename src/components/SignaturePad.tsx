@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useId, useState } from 'react'
 import SignaturePadLib from 'signature_pad'
 import type { PointGroup } from 'signature_pad'
 import { Pen, Type, Upload, RotateCcw } from 'lucide-react'
@@ -21,6 +21,11 @@ type TabType = 'draw' | 'type' | 'upload'
 
 export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, applyAllLabel, saveLabel }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const tabRefs = useRef<Record<TabType, HTMLButtonElement | null>>({
+    upload: null,
+    draw: null,
+    type: null,
+  })
   const padRef = useRef<SignaturePadLib | null>(null)
   const drawingDataRef = useRef<PointGroup[]>([])
   const uploadRequestRef = useRef(0)
@@ -30,6 +35,7 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
   const [uploadError, setUploadError] = useState('')
   const [processingUpload, setProcessingUpload] = useState(false)
   const [hasDrawing, setHasDrawing] = useState(false)
+  const tabGroupId = useId()
   const { t } = useLanguageStore()
   const { isDark } = useThemeStore()
 
@@ -224,6 +230,23 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
     : activeTab === 'type'
       ? Boolean(typedName.trim())
       : Boolean(uploadedImage) && !processingUpload
+  const selectTab = (tab: TabType, moveFocus = false) => {
+    setActiveTab(tab)
+    if (moveFocus) requestAnimationFrame(() => tabRefs.current[tab]?.focus())
+  }
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, tab: TabType) => {
+    const currentIndex = tabs.findIndex(({ id }) => id === tab)
+    let nextIndex: number | null = null
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+    if (event.key === 'Home') nextIndex = 0
+    if (event.key === 'End') nextIndex = tabs.length - 1
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    selectTab(tabs[nextIndex].id, true)
+  }
 
   return (
     <div className="space-y-4">
@@ -232,13 +255,14 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
           <button
             type="button"
             key={tab.id}
+            ref={(node) => { tabRefs.current[tab.id] = node }}
+            id={`${tabGroupId}-${tab.id}-tab`}
             role="tab"
             aria-selected={activeTab === tab.id}
-            onClick={() => {
-              if (tab.id === activeTab) return
-              setActiveTab(tab.id)
-              if (tab.id === 'draw') setHasDrawing(false)
-            }}
+            aria-controls={`${tabGroupId}-${tab.id}-panel`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
+            onClick={() => selectTab(tab.id)}
+            onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
             className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-[hsl(var(--card))] shadow-sm text-[hsl(var(--foreground))]'
@@ -252,7 +276,12 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       </div>
 
       {activeTab === 'draw' && (
-        <div className="relative">
+        <div
+          id={`${tabGroupId}-draw-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabGroupId}-draw-tab`}
+          className="relative"
+        >
           <canvas
             ref={canvasRef}
             aria-label={t('signee.drawSignature')}
@@ -274,7 +303,11 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       )}
 
       {activeTab === 'type' && (
-        <div>
+        <div
+          id={`${tabGroupId}-type-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabGroupId}-type-tab`}
+        >
           <Input
             label={t('signee.typedSignatureLabel')}
             placeholder={t('signee.typeFullName')}
@@ -293,7 +326,11 @@ export default function SignaturePad({ onSave, onApplyToAll, showApplyAll, apply
       )}
 
       {activeTab === 'upload' && (
-        <div>
+        <div
+          id={`${tabGroupId}-upload-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabGroupId}-upload-tab`}
+        >
           <div className="overflow-hidden rounded-lg border-2 border-dashed border-[hsl(var(--border))] text-center transition-colors hover:border-[hsl(var(--primary))]">
             <input
               type="file"
