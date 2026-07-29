@@ -169,9 +169,11 @@ export default function ViewDocumentPage() {
               <Eye className="w-3 h-3 mr-1" />
               {lang === 'bn' ? 'শুধু দেখুন' : 'View Only'}
             </Badge>
-            <Badge variant={document.status === 'completed' ? 'success' : 'warning'}>
+            <Badge variant={document.status === 'completed' ? 'success' : document.status === 'cancelled' ? 'destructive' : 'warning'}>
               {document.status === 'completed'
                 ? (lang === 'bn' ? 'সম্পন্ন' : 'Completed')
+                : document.status === 'cancelled'
+                  ? t('dashboard.cancelled')
                 : (lang === 'bn' ? 'স্বাক্ষরের জন্য অপেক্ষমাণ' : 'Pending')}
             </Badge>
           </div>

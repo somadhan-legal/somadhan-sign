@@ -227,7 +227,7 @@ create policy "Owner can add audit entries"
       select 1 from public.documents d
       where d.id = document_id and d.created_by = (select auth.uid())
     )
-    and action in ('Document Created', 'Document Sent for Signing', 'Reminder Sent')
+    and action in ('Document Created', 'Document Sent for Signing', 'Reminder Sent', 'Document Cancelled')
   );
 
 create table if not exists public.document_viewers (
@@ -1007,6 +1007,47 @@ begin
 end;
 $$;
 
+create or replace function public.cancel_document(p_document_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  document_status text;
+  owner_email text;
+begin
+  select d.status into document_status
+  from public.documents d
+  where d.id = p_document_id
+    and d.created_by = (select auth.uid())
+  for update;
+
+  if document_status is null then raise exception 'Document access denied'; end if;
+  if document_status = 'cancelled' then return; end if;
+  if document_status <> 'pending' then
+    raise exception 'Only a pending signing request can be cancelled';
+  end if;
+
+  update public.documents
+  set status = 'cancelled', updated_at = now()
+  where id = p_document_id;
+
+  owner_email := coalesce(
+    nullif(current_setting('request.jwt.claim.email', true), ''),
+    (select auth.uid())::text
+  );
+  insert into public.audit_trail (
+    document_id, action, user_email, metadata
+  ) values (
+    p_document_id,
+    'Document Cancelled',
+    owner_email,
+    'Signing request cancelled by document owner'
+  );
+end;
+$$;
+
 create or replace function public.get_viewer_package(p_token text)
 returns json
 language plpgsql
@@ -1061,6 +1102,7 @@ revoke execute on function public.check_all_signers_signed_by_token(text) from p
 revoke execute on function public.mark_document_completed_by_token(text) from public;
 revoke execute on function public.get_document_for_completion_by_token(text) from public;
 revoke execute on function public.create_document_viewer(uuid, text) from public;
+revoke execute on function public.cancel_document(uuid) from public;
 revoke execute on function public.get_viewer_package(text) from public;
 
 -- Older migrations created privileged maintenance RPCs with the default PUBLIC
@@ -1112,4 +1154,5 @@ grant execute on function public.check_all_signers_signed_by_token(text) to anon
 grant execute on function public.mark_document_completed_by_token(text) to anon, authenticated;
 grant execute on function public.get_document_for_completion_by_token(text) to anon, authenticated;
 grant execute on function public.create_document_viewer(uuid, text) to authenticated;
+grant execute on function public.cancel_document(uuid) to authenticated;
 grant execute on function public.get_viewer_package(text) to anon, authenticated;

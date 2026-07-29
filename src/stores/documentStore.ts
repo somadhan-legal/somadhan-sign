@@ -60,6 +60,7 @@ interface DocumentState {
   createDocument: (doc: DocumentInsert, file: File) => Promise<Document | null>
   deleteDocument: (id: string) => Promise<boolean>
   updateDocumentStatus: (id: string, status: Document['status']) => Promise<void>
+  cancelDocument: (id: string) => Promise<void>
 
   addSignatureField: (field: SignatureFieldLocal) => void
   updateSignatureField: (id: string, updates: Partial<SignatureFieldLocal>) => void
@@ -306,6 +307,60 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       currentDocument:
         state.currentDocument?.id === id
           ? { ...state.currentDocument, status }
+          : state.currentDocument,
+    }))
+  },
+
+  cancelDocument: async (id: string) => {
+    const { error: rpcError } = await supabase.rpc('cancel_document', {
+      p_document_id: id,
+    })
+    if (rpcError && !isMissingRpc(rpcError)) {
+      console.error('Error cancelling document:', rpcError)
+      throw rpcError
+    }
+
+    if (isMissingRpc(rpcError)) {
+      const { data: cancelledDocument, error: updateError } = await supabase
+        .from('documents')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle()
+      if (updateError) {
+        console.error('Error cancelling document:', updateError)
+        throw updateError
+      }
+      if (!cancelledDocument) {
+        const { data: currentDocument, error: currentError } = await supabase
+          .from('documents')
+          .select('status')
+          .eq('id', id)
+          .maybeSingle()
+        if (currentError || currentDocument?.status !== 'cancelled') {
+          throw currentError || new Error('Only a pending signing request can be cancelled')
+        }
+      } else {
+        const { data: { user } } = await supabase.auth.getUser()
+        const { error: auditError } = await supabase.from('audit_trail').insert({
+          document_id: id,
+          action: 'Document Cancelled',
+          user_email: user?.email || user?.id || 'unknown',
+          user_name: user?.user_metadata?.full_name || null,
+          metadata: 'Signing request cancelled by document owner',
+        })
+        if (auditError) console.error('Error recording document cancellation:', auditError)
+      }
+    }
+
+    set((state) => ({
+      documents: state.documents.map((document) =>
+        document.id === id ? { ...document, status: 'cancelled' } : document
+      ),
+      currentDocument:
+        state.currentDocument?.id === id
+          ? { ...state.currentDocument, status: 'cancelled' }
           : state.currentDocument,
     }))
   },

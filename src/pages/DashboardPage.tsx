@@ -48,6 +48,7 @@ export default function DashboardPage() {
     fetchDocuments,
     createDocument,
     deleteDocument,
+    cancelDocument,
     sendReminder,
     addAuditEntry,
     loading,
@@ -72,6 +73,7 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
   const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
+  const [cancelConfirm, setCancelConfirm] = useState<{ docId: string; title: string } | null>(null)
   const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
   const signerRequestRef = useRef(0)
@@ -605,6 +607,20 @@ export default function DashboardPage() {
                               {t('dashboard.sendReminder')}
                             </button>
                           )}
+                          {doc.status === 'pending' && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex min-h-11 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10"
+                              onClick={() => {
+                                setMenuOpen(null)
+                                setCancelConfirm({ docId: doc.id, title: doc.title })
+                              }}
+                            >
+                              <XCircle className="w-4 h-4" />
+                              {t('dashboard.cancelSigningRequest')}
+                            </button>
+                          )}
                           <Link
                             to={`/document/${doc.id}`}
                             role="menuitem"
@@ -826,6 +842,22 @@ export default function DashboardPage() {
       </Modal>
 
       {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!cancelConfirm}
+        onClose={() => setCancelConfirm(null)}
+        onConfirm={async () => {
+          if (!cancelConfirm) return
+          await cancelDocument(cancelConfirm.docId)
+          showNotice(t('dashboard.signingRequestCancelled'), 'success')
+        }}
+        title={t('dashboard.cancelSigningRequest')}
+        message={t('dashboard.cancelSigningConfirm')
+          .replace('{title}', cancelConfirm?.title || '')}
+        variant="danger"
+        confirmText={t('dashboard.cancelRequest')}
+        cancelText={t('editor.stayHere')}
+      />
+
       <ConfirmDialog
         isOpen={!!deleteConfirm}
         onClose={() => setDeleteConfirm(null)}

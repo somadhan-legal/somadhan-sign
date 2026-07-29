@@ -377,6 +377,10 @@ export interface Database {
         Args: { p_document_id: string; p_viewer_email: string }
         Returns: string
       }
+      cancel_document: {
+        Args: { p_document_id: string }
+        Returns: undefined
+      }
       get_viewer_package: {
         Args: { p_token: string }
         Returns: ViewerPackageResult | null

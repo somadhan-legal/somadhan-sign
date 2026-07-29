@@ -8,6 +8,7 @@ import {
   Bell,
   MailCheck,
   ShieldCheck,
+  XCircle,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import Modal from '@/components/ui/Modal'
@@ -38,6 +39,7 @@ const actionConfig: Record<string, { icon: React.ReactNode; color: string }> = {
   'Reminder Sent': { icon: <Bell className="w-4 h-4" />, color: 'text-[hsl(var(--warning))] bg-[hsl(var(--warning))]/10' },
   'Electronic Signature Consent Given': { icon: <ShieldCheck className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
   'Completion Emails Sent': { icon: <MailCheck className="w-4 h-4" />, color: 'text-[hsl(var(--success))] bg-[hsl(var(--success))]/10' },
+  'Document Cancelled': { icon: <XCircle className="w-4 h-4" />, color: 'text-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10' },
 }
 
 const actionTranslationKeys: Record<string, string> = {
@@ -57,6 +59,7 @@ const actionTranslationKeys: Record<string, string> = {
   'Reminder Sent': 'audit.reminderSent',
   'Electronic Signature Consent Given': 'audit.consentGiven',
   'Completion Emails Sent': 'audit.completionEmailsSent',
+  'Document Cancelled': 'audit.documentCancelled',
 }
 
 function formatDateTime(dateStr: string, locale: string) {

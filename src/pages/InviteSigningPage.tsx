@@ -29,7 +29,7 @@ import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, safePdfFilename } from '@/lib/download'
-import { Home, Moon, Sun, HelpCircle } from 'lucide-react'
+import { Home, Moon, Sun, HelpCircle, XCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import { isSigningToken } from '@/lib/publicAccessReference'
@@ -91,6 +91,7 @@ export default function InviteSigningPage() {
   const [signerData, setSignerData] = useState<SignerData | null>(null)
   const [pageLoading, setPageLoading] = useState(tokenIsValid)
   const [error, setError] = useState<string | null>(null)
+  const [requestCancelled, setRequestCancelled] = useState(false)
 
   const [showSignatureModal, setShowSignatureModal] = useState(false)
   const [showInitialsModal, setShowInitialsModal] = useState(false)
@@ -123,11 +124,38 @@ export default function InviteSigningPage() {
 
   useEffect(() => {
     if (!isSigningToken(token)) return
+    let active = true
     const load = async () => {
       setPageLoading(true)
+      setSignerData(null)
+      setError(null)
+      setRequestCancelled(false)
+      setSignatureData(null)
+      setInitialsData(null)
+      setCurrentFieldIndex(0)
+      setTappedFieldId(null)
+      setActionError('')
+      setDatePickerFieldId(null)
+      setTextInputFieldId(null)
+      setTextInputValue('')
+      setShowAuditTrail(false)
+      setFinished(false)
+      setDocumentCompleted(false)
+      setHasConsented(false)
+      setCompletionDeliveryFailed(false)
+      setShowPreview(false)
+      setAuditPdfUrl(null)
+      setCountdown(null)
+      hasLoggedView.current = false
       const data = await fetchSignerByToken(token)
+      if (!active) return
       if (!data) {
         setError(t('signee.docNotFoundDesc'))
+        setPageLoading(false)
+        return
+      }
+      if (data.documents.status === 'cancelled') {
+        setRequestCancelled(true)
         setPageLoading(false)
         return
       }
@@ -165,6 +193,7 @@ export default function InviteSigningPage() {
           allSigned = Boolean(allSignedData)
           completionCheckFailed = Boolean(completionCheckError)
         }
+        if (!active) return
         const recoveryAction = getSignedSignerRecoveryAction(
           data.documents.status,
           allSigned,
@@ -183,11 +212,15 @@ export default function InviteSigningPage() {
 
       if (data.status === 'pending') {
         await updateSignerStatus(data.id, 'viewed', token)
+        if (!active) return
       }
 
       setPageLoading(false)
     }
-    load()
+    void load()
+    return () => {
+      active = false
+    }
   }, [token, fetchSignerByToken, updateSignerStatus, t])
 
   useEffect(() => {
@@ -664,6 +697,28 @@ export default function InviteSigningPage() {
   }
 
   if (!tokenIsValid || error || !signerData) {
+    if (requestCancelled) {
+      return (
+        <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))] p-6">
+          <a href="/">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 mb-6 cursor-pointer" />
+          </a>
+          <div className="max-w-md text-center" role="status">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--destructive))]/10">
+              <XCircle className="h-8 w-8 text-[hsl(var(--destructive))]" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">{t('signee.requestCancelled')}</h2>
+            <p className="text-[hsl(var(--muted-foreground))]">
+              {t('signee.requestCancelledDesc')}
+            </p>
+            <Link to="/" className={buttonStyles({ size: 'lg', className: 'mt-6' })}>
+              <Home className="mr-2 h-4 w-4" />
+              {t('notFound.returnHome')}
+            </Link>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[hsl(var(--background))]">
         <a href="/">

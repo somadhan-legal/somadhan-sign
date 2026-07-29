@@ -264,3 +264,49 @@ select pg_temp.assert(
   ),
   'an oversized signature image must not be stored'
 );
+
+do $$
+begin
+  set local role authenticated;
+  perform set_config(
+    'request.jwt.claim.sub',
+    '99999999-9999-4999-8999-999999999999',
+    true
+  );
+  begin
+    perform public.cancel_document('44444444-4444-4444-8444-444444444444');
+    raise exception 'Security regression: another user cancelled the owner document';
+  exception
+    when raise_exception then
+      if sqlerrm = 'Security regression: another user cancelled the owner document' then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
+set role authenticated;
+set request.jwt.claim.sub = '11111111-1111-4111-8111-111111111111';
+set request.jwt.claim.role = 'authenticated';
+set request.jwt.claim.email = 'owner@example.com';
+select public.cancel_document('44444444-4444-4444-8444-444444444444');
+reset role;
+
+select pg_temp.assert(
+  (
+    select status = 'cancelled'
+    from public.documents
+    where id = '44444444-4444-4444-8444-444444444444'
+  ),
+  'an owner must be able to cancel a pending signing request'
+);
+select pg_temp.assert(
+  exists (
+    select 1
+    from public.audit_trail
+    where document_id = '44444444-4444-4444-8444-444444444444'
+      and action = 'Document Cancelled'
+      and user_email = 'owner@example.com'
+  ),
+  'cancelling a signing request must create an audit entry'
+);

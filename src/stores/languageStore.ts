@@ -319,6 +319,13 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.edit': { en: 'Edit', bn: 'সম্পাদনা' },
   'dashboard.view': { en: 'View', bn: 'দেখুন' },
   'dashboard.sendReminder': { en: 'Send Reminder', bn: 'রিমাইন্ডার পাঠান' },
+  'dashboard.cancelSigningRequest': { en: 'Cancel signing request', bn: 'স্বাক্ষরের অনুরোধ বাতিল করুন' },
+  'dashboard.cancelRequest': { en: 'Cancel request', bn: 'অনুরোধ বাতিল করুন' },
+  'dashboard.cancelSigningConfirm': {
+    en: 'Cancel signing for "{title}"? Signers will no longer be able to complete their fields. The document and its activity history will remain available.',
+    bn: '"{title}"-এর স্বাক্ষর প্রক্রিয়া বাতিল করবেন? স্বাক্ষরকারীরা আর তাদের ক্ষেত্রগুলো পূরণ করতে পারবেন না। ডকুমেন্ট এবং এর কার্যকলাপের ইতিহাস সংরক্ষিত থাকবে।',
+  },
+  'dashboard.signingRequestCancelled': { en: 'The signing request has been cancelled.', bn: 'স্বাক্ষরের অনুরোধ বাতিল করা হয়েছে।' },
   'dashboard.total': { en: 'Total', bn: 'মোট' },
   'dashboard.drafts': { en: 'Drafts', bn: 'খসড়া' },
   'dashboard.all': { en: 'All', bn: 'সব' },
@@ -531,6 +538,11 @@ const translations: Record<string, Record<Language, string>> = {
     en: 'The document is complete, but the final PDF or completion emails still need to be delivered.',
     bn: 'ডকুমেন্ট সম্পূর্ণ হয়েছে, তবে চূড়ান্ত PDF বা সম্পন্ন হওয়ার ইমেইল এখনও পাঠানো বাকি।',
   },
+  'signee.requestCancelled': { en: 'Signing request cancelled', bn: 'স্বাক্ষরের অনুরোধ বাতিল করা হয়েছে' },
+  'signee.requestCancelledDesc': {
+    en: 'The sender cancelled this signing request. No changes can be submitted from this link.',
+    bn: 'প্রেরক এই স্বাক্ষরের অনুরোধটি বাতিল করেছেন। এই লিংক থেকে আর কোনো পরিবর্তন জমা দেওয়া যাবে না।',
+  },
   'signee.retryDelivery': { en: 'Retry final delivery', bn: 'চূড়ান্ত ডেলিভারি আবার চেষ্টা করুন' },
   'signee.retryingDelivery': { en: 'Retrying delivery...', bn: 'ডেলিভারি আবার চেষ্টা করা হচ্ছে...' },
   'signee.downloadSigned': { en: 'Download Signed Document', bn: 'স্বাক্ষরিত ডকুমেন্ট ডাউনলোড করুন' },
@@ -694,6 +706,7 @@ const translations: Record<string, Record<Language, string>> = {
   'audit.reminderSent': { en: 'Reminder sent', bn: 'রিমাইন্ডার পাঠানো হয়েছে' },
   'audit.consentGiven': { en: 'Electronic signature consent given', bn: 'ইলেকট্রনিক স্বাক্ষরের সম্মতি দেওয়া হয়েছে' },
   'audit.completionEmailsSent': { en: 'Completion emails sent', bn: 'সম্পন্ন হওয়ার ইমেইল পাঠানো হয়েছে' },
+  'audit.documentCancelled': { en: 'Document cancelled', bn: 'ডকুমেন্ট বাতিল করা হয়েছে' },
 }
 
 export const useLanguageStore = create<LanguageState>((set, get) => {
