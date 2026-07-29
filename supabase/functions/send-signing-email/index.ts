@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "supabase"
 import { generateAuthoritativeFinalPdf } from "../_shared/finalPdf.ts"
 import { getFinalPdfStoragePath } from "../_shared/completionStorage.ts"
+import { getSignedPdfFilename } from "../_shared/downloadFilename.ts"
 import {
   createDocumentVerificationToken,
   getCompletionEvidenceSha256,
@@ -640,10 +641,9 @@ serve(async (req) => {
 
     // Add PDF attachment for completion emails
     if (isCompletion && verifiedPdfBase64) {
-      const safeTitle = subjectTitle.replace(/[^a-zA-Z0-9_\- ]/g, '_') || 'document'
       emailPayload.attachments = [
         {
-          filename: `${safeTitle}_signed.pdf`,
+          filename: getSignedPdfFilename(subjectTitle),
           content: verifiedPdfBase64,
         },
       ]

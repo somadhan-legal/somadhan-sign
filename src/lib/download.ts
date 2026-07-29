@@ -1,8 +1,16 @@
-export function safePdfFilename(title: string, suffix = ''): string {
+const safePdfBase = (title: string): string => {
   const printableTitle = Array.from(title).filter((character) => character.charCodeAt(0) >= 32).join('')
-  const safeTitle = printableTitle.replace(/[|<>:"/\\?*]/g, '_').trim() || 'Document'
-  return `${safeTitle}${suffix}.pdf`
+  const withoutExtension = printableTitle.trim().replace(/\.pdf$/i, '')
+  return withoutExtension
+    .replace(/[|<>:"/\\?*]/g, '_')
+    .replace(/[.\s]+$/g, '')
+    .trim() || 'Document'
 }
+
+export const safePdfFilename = (title: string): string => `${safePdfBase(title)}.pdf`
+
+export const safeSignedPdfFilename = (title: string): string =>
+  `${safePdfBase(title)}_Somadhan_Sign.pdf`
 
 export async function downloadPdfUrl(url: string, filename: string): Promise<void> {
   const response = await fetch(url)

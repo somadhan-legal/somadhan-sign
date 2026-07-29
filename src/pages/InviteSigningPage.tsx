@@ -28,7 +28,7 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate, formatSigningText } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
-import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
+import { downloadBlob, downloadPdfUrl, safeSignedPdfFilename } from '@/lib/download'
 import { Home, Moon, Sun, HelpCircle, XCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
@@ -39,6 +39,7 @@ import { mapPlacementsToSignedFields } from '@/lib/signedFields'
 import { getLocalSigningDate } from '@/lib/signingDate'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import FieldTextPreview from '@/components/FieldTextPreview'
+import { getSigningFieldState } from '@/lib/signingFieldState'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -856,11 +857,11 @@ export default function InviteSigningPage() {
     setPdfError('')
     try {
       if (auditPdfUrl) {
-        await downloadPdfUrl(auditPdfUrl, safePdfFilename(signerData.documents.title, ' - Signed'))
+        await downloadPdfUrl(auditPdfUrl, safeSignedPdfFilename(signerData.documents.title))
         return
       }
       const blob = await buildSignedAuditPdf()
-      downloadBlob(blob, safePdfFilename(signerData.documents.title, ' - Signed'))
+      downloadBlob(blob, safeSignedPdfFilename(signerData.documents.title))
     } catch (err) {
       console.error('Error generating signed PDF:', err)
       setPdfError(t('signee.signedPdfGenerateFailed'))
@@ -1308,6 +1309,10 @@ export default function InviteSigningPage() {
                 const isCheckbox = field.field_type === 'checkbox'
                 const isText = field.field_type === 'text'
                 const isSignatureType = field.field_type === 'signature' || isInitials
+                const fieldState = getSigningFieldState(isMine, isSigned, isCurrentNav)
+                const fieldFrameClass = fieldState === 'completed'
+                  ? 'rounded ring-2 ring-[hsl(var(--success))]/55 bg-[hsl(var(--success))]/5'
+                  : ''
 
                 const sigData = isInitials ? initialsData : signatureData
                 const activateUnsignedField = () => {
@@ -1337,7 +1342,7 @@ export default function InviteSigningPage() {
                   <div
                     key={field.id}
                     data-field-id={field.id}
-                    className={`absolute transition-all ${isTapped ? 'overflow-visible' : ''}`}
+                    className={`absolute transition-all ${fieldFrameClass} ${isTapped ? 'overflow-visible' : ''}`}
                     style={{
                       left: `${field.x}%`,
                       top: `${field.y}%`,
@@ -1368,7 +1373,7 @@ export default function InviteSigningPage() {
                       /* Tapped signature or initials: Apply to this / Apply to All popover. */
                       <div className="relative w-full h-full">
                         {/* Field highlight with signature preview */}
-                        <div className="w-full h-full rounded border-2 border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 overflow-hidden flex items-center justify-center">
+                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded border-2 border-[hsl(var(--accent-coral))] bg-[hsl(var(--accent-coral))]/12">
                           <img src={sigData} alt={t('signee.signaturePreview')} className="max-w-full max-h-full object-contain opacity-40" />
                         </div>
                         {/* Popover buttons below the field */}
@@ -1400,7 +1405,7 @@ export default function InviteSigningPage() {
 
                     ) : textInputFieldId === field.id && isText && isMine ? (
                       /* === TEXT INPUT ACTIVE === */
-                      <div className="w-full h-full flex items-center">
+                      <div className="flex h-full w-full items-center rounded border-2 border-[hsl(var(--accent-coral))] bg-white/95">
                         <input
                           ref={activeTextInputRef}
                           type="text"
@@ -1415,61 +1420,53 @@ export default function InviteSigningPage() {
                           }}
                           onBlur={() => { if (textInputValue.trim()) handleTextFieldSubmit(field.id); else setTextInputFieldId(null) }}
                           placeholder={t('signee.typeHere')}
-                          className="w-full h-full text-[11px] font-medium text-black bg-white border-b border-[hsl(var(--primary))] outline-none px-1"
+                          className="h-full w-full bg-transparent px-1 text-[11px] font-medium text-black outline-none"
                         />
                       </div>
 
                     ) : (
                       /* === UNSIGNED / DEFAULT === */
-                      <div
-                        className={`w-full h-full rounded flex items-center justify-center text-xs font-medium transition-all ${
-                          isCheckbox
-                            ? isMine
-                              ? 'border border-[hsl(var(--border))] bg-[hsl(var(--card))] cursor-pointer hover:border-[hsl(var(--primary))]'
-                              : 'border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 opacity-50'
-                            : isDate || isText
-                            ? isMine
-                              ? 'border-b border-dashed border-[hsl(var(--border))] cursor-pointer hover:border-[hsl(var(--primary))]'
-                              : 'border-b border-dashed border-gray-300 dark:border-gray-600 opacity-50'
-                            : isCurrentNav && isMine
-                            ? 'border-2 border-dashed border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/20 ring-4 ring-[hsl(var(--primary))]/30 animate-field-pulse cursor-pointer'
-                            : isMine
-                            ? 'border-2 border-dashed border-[hsl(var(--accent-coral))] bg-[hsl(var(--accent-coral))]/10 hover:bg-[hsl(var(--accent-coral))]/20 cursor-pointer'
-                            : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100/60 dark:bg-gray-800/30 opacity-40'
-                        }`}
-                        style={undefined}
-                        onClick={activateUnsignedField}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
+                      isMine ? (
+                        <button
+                          type="button"
+                          className={`flex items-center justify-center rounded border-2 border-dashed border-[hsl(var(--accent-coral))] bg-[hsl(var(--accent-coral))]/12 text-xs font-semibold text-[hsl(var(--foreground))] shadow-sm transition-all hover:bg-[hsl(var(--accent-coral))]/22 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[hsl(var(--accent-coral))]/35 ${
+                            isCheckbox
+                              ? 'absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2'
+                              : 'h-full w-full'
+                          } ${
+                            fieldState === 'current'
+                              ? 'ring-4 ring-[hsl(var(--accent-coral))]/35 animate-field-pulse'
+                              : ''
+                          }`}
+                          onClick={(event) => {
+                            event.stopPropagation()
                             activateUnsignedField()
-                          }
-                        }}
-                        role={isMine && !isSigned ? 'button' : undefined}
-                        tabIndex={isMine && !isSigned ? 0 : undefined}
-                        aria-label={isMine && !isSigned ? `${t(`editor.${field.field_type}`)}. ${t('signee.activateField')}` : undefined}
-                      >
-                        {isMine ? (
-                          isCheckbox ? (
-                            <div className="w-3.5 h-3.5 border border-gray-500 rounded-sm" />
+                          }}
+                          disabled={submitting}
+                          aria-label={`${t(`editor.${field.field_type}`)}. ${t('signee.activateField')}`}
+                        >
+                          {isCheckbox ? (
+                            <span className="h-5 w-5 rounded border-2 border-[hsl(var(--accent-coral))]" aria-hidden="true" />
                           ) : isDate ? (
-                            <span className="text-[10px] text-black">{isCurrentNav ? t('signee.tapToAddDate') : t('editor.date')}</span>
+                            <span className="px-1 text-[10px]">{isCurrentNav ? t('signee.tapToAddDate') : t('editor.date')}</span>
                           ) : isText ? (
-                            <span className="text-[10px] text-black">{isCurrentNav ? t('signee.tapToEnterText') : t('editor.text')}</span>
+                            <span className="px-1 text-[10px]">{isCurrentNav ? t('signee.tapToEnterText') : t('editor.text')}</span>
                           ) : (
                             <>
-                              <span className="text-black">{fieldTypeIcons[field.field_type]}</span>
-                              <span className="text-[10px] ml-1 text-black">
+                              <span aria-hidden="true">{fieldTypeIcons[field.field_type]}</span>
+                              <span className="ml-1 text-[10px]">
                                 {isCurrentNav ? t('signee.tapToSign') : isInitials ? t('editor.initials') : t('signee.yourSignature')}
                               </span>
                             </>
-                          )
-                        ) : (
+                          )}
+                        </button>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-100/60 text-xs font-medium opacity-40 dark:border-gray-600 dark:bg-gray-800/30">
                           <span className="text-[10px] text-gray-400 dark:text-gray-500">
                             {field.assigned_to_email.split('@')[0]}
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      )
                     )}
                   </div>
                 )

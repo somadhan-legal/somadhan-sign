@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { downloadPdfUrl, safePdfFilename } from './download'
+import { downloadPdfUrl, safePdfFilename, safeSignedPdfFilename } from './download'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('safePdfFilename', () => {
   it('removes unsafe filename characters', () => {
-    expect(safePdfFilename('Client: Contract/2026', ' - Signed')).toBe('Client_ Contract_2026 - Signed.pdf')
+    expect(safePdfFilename('Client: Contract/2026')).toBe('Client_ Contract_2026.pdf')
   })
 
   it('removes control characters', () => {
@@ -14,6 +14,13 @@ describe('safePdfFilename', () => {
 
   it('uses a safe fallback for an empty title', () => {
     expect(safePdfFilename('   ')).toBe('Document.pdf')
+  })
+
+  it('uses the original base name for the branded signed PDF', () => {
+    expect(safeSignedPdfFilename('Client: Contract/2026.PDF')).toBe(
+      'Client_ Contract_2026_Somadhan_Sign.pdf',
+    )
+    expect(safeSignedPdfFilename('   ')).toBe('Document_Somadhan_Sign.pdf')
   })
 
   it('rejects a successful response that is not actually a PDF', async () => {

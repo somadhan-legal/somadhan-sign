@@ -77,12 +77,55 @@ Deno.test("authoritative final PDF embeds a verification QR certificate", async 
   if (finalPdf.getPageCount() !== 2) {
     throw new Error("The verification certificate was not appended")
   }
+  const certificateSize = finalPdf.getPage(1).getSize()
+  if (certificateSize.width !== 612 || certificateSize.height !== 792) {
+    throw new Error("The certificate did not preserve the original page dimensions")
+  }
   const certificateResources = finalPdf.getPage(1).node.Resources()
   if (!certificateResources?.lookup(PDFName.of("XObject"))) {
     throw new Error("The verification QR image was not embedded")
   }
   if (!finalPdf.getPage(1).node.lookup(PDFName.of("Annots"), PDFArray)) {
     throw new Error("The verification QR block is not clickable")
+  }
+})
+
+Deno.test("audit continuation pages preserve a landscape original page size", async () => {
+  const original = await PDFDocument.create()
+  original.addPage([720, 405])
+  const auditTrail = Array.from({ length: 24 }, (_, index) => ({
+    action: `Signing event ${index + 1}`,
+    user_email: `signer${index + 1}@example.com`,
+    user_name: `Signer ${index + 1}`,
+    created_at: `2026-07-29T10:${String(index).padStart(2, "0")}:00.000Z`,
+    metadata: JSON.stringify({ version: "1.0", language: "en" }),
+  }))
+  const finalBytes = await generateAuthoritativeFinalPdf(
+    await original.save(),
+    {
+      title: "Landscape Agreement",
+      fields: [{
+        id: "text-field",
+        field_type: "text",
+        page_number: 1,
+        x: 10,
+        y: 10,
+        width: 25,
+        height: 8,
+      }],
+      placements: [{ field_id: "text-field", signature_id: "Approved" }],
+      audit_trail: auditTrail,
+    },
+  )
+  const finalPdf = await PDFDocument.load(finalBytes)
+  if (finalPdf.getPageCount() < 3) {
+    throw new Error("The audit trail did not create a continuation page")
+  }
+  for (const page of finalPdf.getPages().slice(1)) {
+    const size = page.getSize()
+    if (size.width !== 720 || size.height !== 405) {
+      throw new Error("An audit page did not preserve the original page dimensions")
+    }
   }
 })
 

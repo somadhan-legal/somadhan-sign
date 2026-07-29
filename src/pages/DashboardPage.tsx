@@ -14,8 +14,8 @@ import {
   Download,
   History,
   ChevronDown,
-  ChevronUp,
   Bell,
+  Users,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -32,12 +32,13 @@ import { formatDate } from '@/lib/utils'
 import type { Document, DocumentSigner } from '@/types/database'
 import { validatePdfFile } from '@/lib/fileValidation'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
-import { downloadPdfUrl, safePdfFilename } from '@/lib/download'
+import { downloadPdfUrl, safePdfFilename, safeSignedPdfFilename } from '@/lib/download'
 import {
   getSuggestedDocumentTitle,
   MAX_DOCUMENT_TITLE_LENGTH,
   normalizeDocumentTitle,
 } from '@/lib/documentTitle'
+import { getDashboardDocumentRoute } from './dashboardDocumentRoute'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -295,7 +296,7 @@ export default function DashboardPage() {
 
       if (currentDoc.final_pdf_url) {
         const finalPdfUrl = await createOwnerDocumentUrl(currentDoc.final_pdf_url)
-        await downloadPdfUrl(finalPdfUrl, safePdfFilename(currentDoc.title, ' - Signed'))
+        await downloadPdfUrl(finalPdfUrl, safeSignedPdfFilename(currentDoc.title))
         showNotice(t('dashboard.downloadStarted'), 'success')
         return
       }
@@ -361,7 +362,7 @@ export default function DashboardPage() {
 
       const url = URL.createObjectURL(finalBlob)
       try {
-        await downloadPdfUrl(url, safePdfFilename(currentDoc.title, ' - Signed'))
+        await downloadPdfUrl(url, safeSignedPdfFilename(currentDoc.title))
         showNotice(t('dashboard.downloadStarted'), 'success')
       } finally {
         URL.revokeObjectURL(url)
@@ -525,20 +526,24 @@ export default function DashboardPage() {
             return (
               <div
                 key={doc.id}
-                className="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-4 hover:shadow-md transition-shadow"
+                className="group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition-[border-color,box-shadow,transform] hover:border-[hsl(var(--primary))]/35 hover:shadow-md focus-within:border-[hsl(var(--primary))]/45"
               >
-                <div className="flex items-start justify-between gap-3 sm:items-center">
+                <Link
+                  to={getDashboardDocumentRoute(doc)}
+                  aria-label={t('dashboard.openDocument').replace('{title}', doc.title)}
+                  className="absolute inset-0 z-0 rounded-xl no-underline outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]"
+                >
+                  <span className="sr-only">{t('dashboard.openDocument').replace('{title}', doc.title)}</span>
+                </Link>
+                <div className="pointer-events-none relative z-[1] flex items-start justify-between gap-3 sm:items-center">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/10 transition-colors group-hover:bg-[hsl(var(--primary))]/15">
                       <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
                     </div>
                     <div className="min-w-0">
-                      <Link
-                        to={doc.status === 'draft' ? `/document/${doc.id}/edit` : `/document/${doc.id}`}
-                        className="font-medium hover:text-[hsl(var(--primary))] transition-colors truncate block no-underline text-[hsl(var(--foreground))]"
-                      >
+                      <h2 className="truncate font-medium text-[hsl(var(--foreground))] transition-colors group-hover:text-[hsl(var(--primary))]">
                         {doc.title}
-                      </Link>
+                      </h2>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">
                         {t('dashboard.createdOn').replace(
                           '{date}',
@@ -547,7 +552,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                  <div className="pointer-events-none relative z-10 flex shrink-0 items-center gap-1 sm:gap-2">
                     {doc.status !== 'draft' && (
                       <button
                         type="button"
@@ -555,9 +560,16 @@ export default function DashboardPage() {
                         aria-expanded={expandedDoc === doc.id}
                         aria-controls={`signers-${doc.id}`}
                         onClick={() => void toggleSignerDetails(doc.id)}
-                        className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[hsl(var(--muted))] cursor-pointer"
+                        className="pointer-events-auto inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent px-2 text-xs font-semibold text-[hsl(var(--muted-foreground))] transition-colors hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] md:px-3"
                       >
-                        {expandedDoc === doc.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <Users className="h-4 w-4" aria-hidden="true" />
+                        <span className="hidden md:inline">{t('dashboard.signers')}</span>
+                        {expandedDoc === doc.id && !expandedSignersLoading && !expandedSignersError && (
+                          <span className="hidden min-w-5 rounded-full bg-[hsl(var(--muted))] px-1.5 py-0.5 text-center text-[10px] font-bold text-[hsl(var(--foreground))] md:inline">
+                            {expandedSigners.length}
+                          </span>
+                        )}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expandedDoc === doc.id ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </button>
                     )}
                     <Badge variant={config.variant}>
@@ -566,7 +578,7 @@ export default function DashboardPage() {
                         {config.label}
                       </span>
                     </Badge>
-                    <div className="relative" data-menu-container>
+                    <div className="pointer-events-auto relative" data-menu-container>
                       <button
                         type="button"
                         id={`document-actions-${doc.id}`}
@@ -685,7 +697,7 @@ export default function DashboardPage() {
                 </div>
                 {/* Expandable signer list */}
                 {expandedDoc === doc.id && (
-                  <div id={`signers-${doc.id}`} className="mt-3 pt-3 border-t border-[hsl(var(--border))]">
+                  <div id={`signers-${doc.id}`} className="pointer-events-auto relative z-10 mt-3 border-t border-[hsl(var(--border))] pt-3">
                     {expandedSignersLoading ? (
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">{t('dashboard.loadingSigners')}</p>
                     ) : expandedSignersError ? (

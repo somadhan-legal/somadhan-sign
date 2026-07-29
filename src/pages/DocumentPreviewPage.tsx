@@ -24,7 +24,7 @@ import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 import { formatSigningDate, formatSigningText } from '@/lib/utils'
-import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
+import { downloadBlob, downloadPdfUrl, safePdfFilename, safeSignedPdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
@@ -117,7 +117,7 @@ export default function DocumentPreviewPage() {
 
       if (docData.final_pdf_url) {
         const finalPdfUrl = await createOwnerDocumentUrl(docData.final_pdf_url)
-        await downloadPdfUrl(finalPdfUrl, safePdfFilename(docTitle, ' - Signed'))
+        await downloadPdfUrl(finalPdfUrl, safeSignedPdfFilename(docTitle))
         return
       }
 
@@ -174,7 +174,7 @@ export default function DocumentPreviewPage() {
       const { generateAuditPdf } = await import('@/lib/auditPdf')
       try {
         const blob = await generateAuditPdf(signedPdfUrl, filteredAudit, docTitle)
-        downloadBlob(blob, safePdfFilename(docTitle, ' - Signed'))
+        downloadBlob(blob, safeSignedPdfFilename(docTitle))
       } finally {
         URL.revokeObjectURL(signedPdfUrl)
       }

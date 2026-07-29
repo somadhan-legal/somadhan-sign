@@ -8,10 +8,12 @@ import {
   PDFName,
   PDFString,
   type PDFFont,
+  type PDFImage,
   type PDFPage,
   rgb,
   StandardFonts,
 } from "pdf-lib"
+import { decodeSomadhanSignLogoPng } from "./somadhanLogo.ts"
 
 type FieldType = "signature" | "initials" | "date" | "text" | "checkbox"
 
@@ -224,20 +226,6 @@ const cleanLine = (value: unknown) => String(value ?? "")
   .replace(/[\r\n\t]+/g, " ")
   .replace(/\s+/g, " ")
   .trim()
-
-const maskNetworkAddress = (value: unknown) => {
-  const address = cleanLine(value)
-  if (!address) return null
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(address)
-  if (ipv4 && ipv4.slice(1).every((part) => Number(part) <= 255)) {
-    return `${ipv4[1]}.${ipv4[2]}.${ipv4[3]}.xxx`
-  }
-  if (address.includes(":")) {
-    const segments = address.split(":").filter(Boolean)
-    return segments.length > 0 ? `${segments.slice(0, 3).join(":")}::` : null
-  }
-  return null
-}
 
 const fitLatinText = (value: string, font: PDFFont, maxWidth: number, preferredSize: number) => {
   let size = Math.max(6, preferredSize)
@@ -453,35 +441,20 @@ const formatAuditMetadata = (metadata: string | null | undefined) => {
   }
 }
 
-const drawBrand = (page: PDFPage, fonts: PdfFonts, y: number) => {
-  const brandColor = rgb(0.02, 0.31, 0.33)
-  page.drawText("Somadhan", {
-    x: 50,
-    y,
-    size: 20,
-    font: fonts.bold,
-    color: brandColor,
-  })
-  const brandWidth = fonts.bold.widthOfTextAtSize("Somadhan", 20)
-  page.drawText("Sign", {
-    x: 50 + brandWidth + 2,
-    y,
-    size: 20,
-    font: fonts.bold,
-    color: rgb(0.98, 0.35, 0.26),
-  })
-  page.drawText("Powered by Somadhan", {
-    x: 50,
-    y: y - 15,
-    size: 8.5,
-    font: fonts.regular,
-    color: rgb(0.5, 0.5, 0.5),
-  })
-  page.drawLine({
-    start: { x: 50, y: y - 28 },
-    end: { x: 545.28, y: y - 28 },
-    thickness: 1.5,
-    color: brandColor,
+const drawBrand = (
+  page: PDFPage,
+  logo: PDFImage,
+  pageWidth: number,
+  pageHeight: number,
+  margin: number,
+) => {
+  const logoWidth = Math.min(132, pageWidth * 0.28)
+  const logoHeight = logoWidth * (logo.height / logo.width)
+  page.drawImage(logo, {
+    x: margin,
+    y: pageHeight - margin - logoHeight,
+    width: logoWidth,
+    height: logoHeight,
   })
 }
 
@@ -494,38 +467,97 @@ const appendAuditCertificate = async (
   verification?: NonNullable<CompletionPdfData["verification"]>,
 ) => {
   if (entries.length === 0 && !verification) return
-  const pageWidth = 595.28
-  const pageHeight = 841.89
-  const margin = 50
+  const originalPage = pdfDoc.getPage(0)
+  const originalCrop = originalPage.getCropBox()
+  const originalRotation = normalizeRotation(originalPage.getRotation().angle)
+  const pageWidth = originalRotation === 90 || originalRotation === 270
+    ? originalCrop.height
+    : originalCrop.width
+  const pageHeight = originalRotation === 90 || originalRotation === 270
+    ? originalCrop.width
+    : originalCrop.height
+  const margin = Math.max(24, Math.min(50, pageWidth * 0.08))
+  const contentWidth = pageWidth - margin * 2
   const smallLine = 13
+  if (verification) {
+    const verificationUrl = new URL(verification.url)
+    if (
+      verificationUrl.protocol !== "https:" ||
+      verificationUrl.hostname !== "sign.somadhan.com" ||
+      verificationUrl.pathname !== "/verify" ||
+      verificationUrl.search ||
+      !/^#v1\.[A-Za-z0-9_-]{43}$/.test(verificationUrl.hash) ||
+      !/^SS-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/.test(verification.reference) ||
+      !/^[0-9a-f]{64}$/.test(verification.evidence_sha256) ||
+      !Number.isFinite(Date.parse(verification.completed_at))
+    ) {
+      throw new Error("The document verification record is invalid")
+    }
+  }
+  const logo = await pdfDoc.embedPng(decodeSomadhanSignLogoPng())
+  const qrImage = verification
+    ? await pdfDoc.embedPng(await renderVerificationQr(verification.url))
+    : null
   let page = pdfDoc.addPage([pageWidth, pageHeight])
   let y = pageHeight - margin
 
-  drawBrand(page, fonts, y - 20)
-  y -= 92
-  page.drawText("CERTIFICATE OF COMPLETION", {
+  drawBrand(page, logo, pageWidth, pageHeight, margin)
+  if (verification && qrImage) {
+    const qrSize = Math.min(66, pageWidth * 0.14)
+    page.drawImage(qrImage, {
+      x: pageWidth - margin - qrSize,
+      y: pageHeight - margin - qrSize,
+      width: qrSize,
+      height: qrSize,
+    })
+    const linkAnnotation = pdfDoc.context.register(pdfDoc.context.obj({
+      Type: "Annot",
+      Subtype: "Link",
+      Rect: [
+        pageWidth - margin - qrSize,
+        pageHeight - margin - qrSize,
+        pageWidth - margin,
+        pageHeight - margin,
+      ],
+      Border: [0, 0, 0],
+      A: { Type: "Action", S: "URI", URI: PDFString.of(verification.url) },
+    }))
+    const annotations = page.node.lookup(PDFName.of("Annots"), PDFArray)
+      ?? pdfDoc.context.obj([])
+    annotations.push(linkAnnotation)
+    page.node.set(PDFName.of("Annots"), annotations)
+    page.drawText(`Scan to verify - ${verification.reference}`, {
+      x: Math.max(margin, pageWidth - margin - 155),
+      y: pageHeight - margin - qrSize - 11,
+      size: 7.5,
+      font: fonts.regular,
+      color: rgb(0.35, 0.39, 0.39),
+    })
+  }
+  y -= 88
+  page.drawText("Certificate of completion", {
     x: margin,
     y,
-    size: 18,
+    size: 17,
     font: fonts.bold,
     color: rgb(0.1, 0.1, 0.1),
   })
-  y -= 28
-  page.drawText("Electronic Signature Audit Trail", {
+  y -= 22
+  page.drawText("Electronic signing audit trail", {
     x: margin,
     y,
-    size: 11,
+    size: 9.5,
     font: fonts.regular,
     color: rgb(0.4, 0.4, 0.4),
   })
-  y -= 24
+  y -= 18
   page.drawLine({
     start: { x: margin, y },
     end: { x: pageWidth - margin, y },
     thickness: 1,
     color: rgb(0.8, 0.8, 0.8),
   })
-  y -= 20
+  y -= 16
   page.drawText("Document:", {
     x: margin,
     y,
@@ -537,10 +569,10 @@ const appendAuditCertificate = async (
     x: margin + 70,
     y,
     preferredSize: 10,
-    maxWidth: pageWidth - margin * 2 - 70,
+    maxWidth: contentWidth - 70,
     color: rgb(0.2, 0.2, 0.2),
   })
-  y -= 16
+  y -= 15
   const formatUtc = (date: Date) => date.toLocaleString("en-US", {
     year: "numeric",
     month: "long",
@@ -566,146 +598,14 @@ const appendAuditCertificate = async (
     font: fonts.regular,
     color: rgb(0.2, 0.2, 0.2),
   })
-  y -= 16
-  page.drawText("Certificate issued:", {
-    x: margin,
-    y,
-    size: 10,
-    font: fonts.bold,
-    color: rgb(0.2, 0.2, 0.2),
-  })
-  page.drawText(`${formatUtc(generatedAt)} UTC`, {
-    x: margin + 92,
-    y,
-    size: 10,
-    font: fonts.regular,
-    color: rgb(0.2, 0.2, 0.2),
-  })
-  y -= 24
+  y -= 18
   page.drawLine({
     start: { x: margin, y },
     end: { x: pageWidth - margin, y },
     thickness: 0.5,
     color: rgb(0.85, 0.85, 0.85),
   })
-  y -= 16
-  const notice = [
-    "This document was processed using Somadhan Sign. The events below are the activity",
-    "records captured by the service, including any electronic-signature consent event.",
-    "This certificate is an activity summary and does not independently determine the legal",
-    "validity or enforceability of the document in any particular jurisdiction.",
-  ]
-  for (const line of notice) {
-    page.drawText(line, {
-      x: margin,
-      y,
-      size: 8.5,
-      font: fonts.regular,
-      color: rgb(0.45, 0.45, 0.45),
-    })
-    y -= smallLine
-  }
-  y -= 8
-
-  if (verification) {
-    const verificationUrl = new URL(verification.url)
-    if (
-      verificationUrl.protocol !== "https:" ||
-      verificationUrl.hostname !== "sign.somadhan.com" ||
-      verificationUrl.pathname !== "/verify" ||
-      verificationUrl.search ||
-      !/^#v1\.[A-Za-z0-9_-]{43}$/.test(verificationUrl.hash) ||
-      !/^SS-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/.test(verification.reference) ||
-      !/^[0-9a-f]{64}$/.test(verification.evidence_sha256) ||
-      !Number.isFinite(Date.parse(verification.completed_at))
-    ) {
-      throw new Error("The document verification record is invalid")
-    }
-
-    const blockHeight = 112
-    const qrSize = 84
-    page.drawRectangle({
-      x: margin,
-      y: y - blockHeight,
-      width: pageWidth - margin * 2,
-      height: blockHeight,
-      color: rgb(0.965, 0.975, 0.975),
-      borderColor: rgb(0.82, 0.87, 0.87),
-      borderWidth: 0.8,
-    })
-    const qrImage = await pdfDoc.embedPng(await renderVerificationQr(verification.url))
-    page.drawImage(qrImage, {
-      x: margin + 14,
-      y: y - blockHeight + 14,
-      width: qrSize,
-      height: qrSize,
-    })
-    const linkAnnotation = pdfDoc.context.register(pdfDoc.context.obj({
-      Type: "Annot",
-      Subtype: "Link",
-      Rect: [
-        margin,
-        y - blockHeight,
-        pageWidth - margin,
-        y,
-      ],
-      Border: [0, 0, 0],
-      A: {
-        Type: "Action",
-        S: "URI",
-        URI: PDFString.of(verification.url),
-      },
-    }))
-    const annotations = page.node.lookup(PDFName.of("Annots"), PDFArray)
-      ?? pdfDoc.context.obj([])
-    annotations.push(linkAnnotation)
-    page.node.set(PDFName.of("Annots"), annotations)
-
-    const textX = margin + 116
-    page.drawText("VERIFY THIS COMPLETION RECORD", {
-      x: textX,
-      y: y - 25,
-      size: 9,
-      font: fonts.bold,
-      color: rgb(0.02, 0.31, 0.33),
-    })
-    page.drawText("Scan the QR code to open the Somadhan Sign verification record.", {
-      x: textX,
-      y: y - 42,
-      size: 8.2,
-      font: fonts.regular,
-      color: rgb(0.28, 0.32, 0.32),
-    })
-    page.drawText(`Reference: ${verification.reference}`, {
-      x: textX,
-      y: y - 61,
-      size: 8.2,
-      font: fonts.bold,
-      color: rgb(0.18, 0.22, 0.22),
-    })
-    page.drawText("Evidence fingerprint (SHA-256):", {
-      x: textX,
-      y: y - 78,
-      size: 7.4,
-      font: fonts.regular,
-      color: rgb(0.45, 0.48, 0.48),
-    })
-    page.drawText(verification.evidence_sha256.slice(0, 32), {
-      x: textX,
-      y: y - 91,
-      size: 6.6,
-      font: fonts.regular,
-      color: rgb(0.32, 0.35, 0.35),
-    })
-    page.drawText(verification.evidence_sha256.slice(32), {
-      x: textX,
-      y: y - 102,
-      size: 6.6,
-      font: fonts.regular,
-      color: rgb(0.32, 0.35, 0.35),
-    })
-    y -= blockHeight + 18
-  }
+  y -= 14
 
   const drawColumnHeader = () => {
     page.drawLine({
@@ -715,7 +615,11 @@ const appendAuditCertificate = async (
       color: rgb(0.8, 0.8, 0.8),
     })
     y -= 20
-    for (const [label, x] of [["ACTION", margin], ["USER", 220], ["DATE & TIME", 400]] as const) {
+    for (const [label, x] of [
+      ["EVENT", margin],
+      ["PARTICIPANT", margin + contentWidth * 0.36],
+      ["DATE AND TIME (UTC)", margin + contentWidth * 0.74],
+    ] as const) {
       page.drawText(label, {
         x,
         y,
@@ -730,14 +634,13 @@ const appendAuditCertificate = async (
 
   for (const entry of entries) {
     const metadata = formatAuditMetadata(entry.metadata)
-    const networkAddress = maskNetworkAddress(entry.ip_address)
-    const rowHeight = metadata || networkAddress ? smallLine * 3 + 12 : smallLine * 2 + 12
+    const rowHeight = metadata ? smallLine * 3 + 12 : smallLine * 2 + 12
     if (y < margin + rowHeight) {
       page = pdfDoc.addPage([pageWidth, pageHeight])
       y = pageHeight - margin
-      drawBrand(page, fonts, y - 20)
-      y -= 92
-      page.drawText("AUDIT TRAIL (continued)", {
+      drawBrand(page, logo, pageWidth, pageHeight, margin)
+      y -= 75
+      page.drawText("Audit trail continued", {
         x: margin,
         y,
         size: 14,
@@ -768,54 +671,45 @@ const appendAuditCertificate = async (
       x: margin,
       y,
       preferredSize: 9,
-      maxWidth: 155,
+      maxWidth: contentWidth * 0.32,
       color: rgb(0.15, 0.15, 0.15),
       bold: true,
     })
     await drawFittedText(pdfDoc, page, entry.user_name || entry.user_email.split("@")[0], fonts, {
-      x: 220,
+      x: margin + contentWidth * 0.36,
       y,
       preferredSize: 9,
-      maxWidth: 165,
+      maxWidth: contentWidth * 0.34,
       color: rgb(0.15, 0.15, 0.15),
       bold: true,
     })
     await drawFittedText(pdfDoc, page, entry.user_email, fonts, {
-      x: 220,
+      x: margin + contentWidth * 0.36,
       y: y - smallLine,
       preferredSize: 8,
-      maxWidth: 165,
+      maxWidth: contentWidth * 0.34,
       color: rgb(0.5, 0.5, 0.5),
     })
     page.drawText(dateText, {
-      x: 400,
+      x: margin + contentWidth * 0.74,
       y,
       size: 9,
       font: fonts.regular,
       color: rgb(0.15, 0.15, 0.15),
     })
     page.drawText(`${timeText} UTC`, {
-      x: 400,
+      x: margin + contentWidth * 0.74,
       y: y - smallLine,
       size: 8,
       font: fonts.regular,
       color: rgb(0.5, 0.5, 0.5),
     })
-    if (networkAddress) {
-      await drawFittedText(pdfDoc, page, `Network: ${networkAddress}`, fonts, {
-        x: 400,
-        y: y - smallLine * 2,
-        preferredSize: 8,
-        maxWidth: 145,
-        color: rgb(0.5, 0.5, 0.5),
-      })
-    }
     if (metadata) {
       await drawFittedText(pdfDoc, page, metadata, fonts, {
         x: margin + 10,
         y: y - smallLine * 2,
         preferredSize: 8,
-        maxWidth: 330,
+        maxWidth: contentWidth * 0.68,
         color: rgb(0.5, 0.5, 0.5),
       })
     }
@@ -837,18 +731,11 @@ const appendAuditCertificate = async (
       color: rgb(0.8, 0.8, 0.8),
     })
     y -= 16
-    page.drawText("This audit trail was automatically generated by Somadhan Sign as a summary of", {
+    await drawFittedText(pdfDoc, page, "This record summarizes events captured by Somadhan Sign and does not independently determine legal validity or identity.", fonts, {
       x: margin,
       y,
-      size: 8,
-      font: fonts.regular,
-      color: rgb(0.45, 0.45, 0.45),
-    })
-    page.drawText("the electronic signature activity recorded by the service for this document.", {
-      x: margin,
-      y: y - smallLine,
-      size: 8,
-      font: fonts.regular,
+      preferredSize: 8,
+      maxWidth: contentWidth,
       color: rgb(0.45, 0.45, 0.45),
     })
   }
