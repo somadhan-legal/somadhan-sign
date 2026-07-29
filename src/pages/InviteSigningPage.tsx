@@ -28,7 +28,7 @@ import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
 import { formatSigningDate } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
-import { downloadBlob, safePdfFilename } from '@/lib/download'
+import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { Home, Moon, Sun, HelpCircle, XCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
@@ -804,6 +804,10 @@ export default function InviteSigningPage() {
     setGeneratingPdf(true)
     setPdfError('')
     try {
+      if (auditPdfUrl) {
+        await downloadPdfUrl(auditPdfUrl, safePdfFilename(signerData.documents.title, ' - Signed'))
+        return
+      }
       const blob = await buildSignedAuditPdf()
       downloadBlob(blob, safePdfFilename(signerData.documents.title, ' - Signed'))
     } catch (err) {
