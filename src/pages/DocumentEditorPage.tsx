@@ -504,10 +504,11 @@ export default function DocumentEditorPage() {
     try {
       await persistCurrentFields(true)
     } catch (err: unknown) {
+      console.error('[DocumentEditor] Error saving fields:', err)
       setConfirmDialog({
         isOpen: true,
         title: t('editor.couldNotSaveFields'),
-        message: err instanceof Error ? err.message : t('editor.changesSaveFailed'),
+        message: t('editor.changesSaveFailed'),
         onConfirm: () => {},
         variant: 'warning',
       })
@@ -583,10 +584,11 @@ export default function DocumentEditorPage() {
       await persistCurrentFields()
       setShowSendConfirm(true)
     } catch (err: unknown) {
+      console.error('[DocumentEditor] Error saving fields before send:', err)
       setConfirmDialog({
         isOpen: true,
         title: t('editor.couldNotSaveFields'),
-        message: err instanceof Error ? err.message : t('editor.changesSaveFailed'),
+        message: t('editor.changesSaveFailed'),
         onConfirm: () => {},
         variant: 'warning',
       })
@@ -652,9 +654,8 @@ export default function DocumentEditorPage() {
     } catch (err: unknown) {
       const message = err instanceof Error && err.message === 'NO_INVITATIONS_SENT'
         ? t('editor.noInvitationsSent')
-        : err instanceof Error
-          ? err.message
-          : t('editor.documentSendFailed')
+        : t('editor.documentSendFailed')
+      console.error('[DocumentEditor] Error sending document:', err)
       setConfirmDialog({
         isOpen: true,
         title: t('editor.couldNotSendDocument'),
@@ -832,10 +833,11 @@ export default function DocumentEditorPage() {
                               setSelectedField(null)
                               setSelectedSignerIdx((current) => Math.max(0, Math.min(current, signers.length - 2)))
                             } catch (removeError) {
+                              console.error('[DocumentEditor] Error removing signer:', removeError)
                               setConfirmDialog({
                                 isOpen: true,
                                 title: t('editor.error'),
-                                message: removeError instanceof Error ? removeError.message : t('editor.removeSignerFailed'),
+                                message: t('editor.removeSignerFailed'),
                                 onConfirm: () => {},
                                 variant: 'danger',
                               })
