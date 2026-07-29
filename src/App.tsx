@@ -22,6 +22,7 @@ const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'))
 const DocumentPreviewPage = lazy(() => import('@/pages/DocumentPreviewPage'))
 const InviteSigningPage = lazy(() => import('@/pages/InviteSigningPage'))
 const ViewDocumentPage = lazy(() => import('@/pages/ViewDocumentPage'))
+const VerifyDocumentPage = lazy(() => import('@/pages/VerifyDocumentPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'))
 
 function PageLoader() {
@@ -136,6 +137,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/sign/:token', element: <PublicSigningRoute /> },
       { path: '/view/:documentId', element: <PublicViewerRoute /> },
+      { path: '/verify', element: <Suspense fallback={<PageLoader />}><VerifyDocumentPage /></Suspense> },
       { path: '/login', element: <Suspense fallback={<PageLoader />}><LoginPage /></Suspense> },
       { path: '/reset-password', element: <Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense> },
       { path: '/', element: <HomeRedirect /> },

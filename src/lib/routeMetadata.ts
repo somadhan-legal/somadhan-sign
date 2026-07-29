@@ -9,6 +9,7 @@ const routeLabels = {
   dashboard: { en: 'My documents', bn: 'আমার ডকুমেন্টস' },
   sign: { en: 'Sign a document', bn: 'ডকুমেন্ট স্বাক্ষর করুন' },
   view: { en: 'View document', bn: 'ডকুমেন্ট দেখুন' },
+  verify: { en: 'Verify completed document', bn: 'সম্পন্ন ডকুমেন্ট যাচাই করুন' },
   edit: { en: 'Prepare document', bn: 'ডকুমেন্ট প্রস্তুত করুন' },
   details: { en: 'Document details', bn: 'ডকুমেন্টের বিস্তারিত' },
   notFound: { en: 'Page not found', bn: 'পৃষ্ঠা পাওয়া যায়নি' },
@@ -21,6 +22,7 @@ export function getRouteTitle(pathname: string, language: RouteLanguage = 'en'):
   if (pathname === '/dashboard') return `${routeLabels.dashboard[language]} | ${PRODUCT_NAME}`
   if (/^\/sign\/[^/]+$/.test(pathname)) return `${routeLabels.sign[language]} | ${PRODUCT_NAME}`
   if (/^\/view\/[^/]+$/.test(pathname)) return `${routeLabels.view[language]} | ${PRODUCT_NAME}`
+  if (pathname === '/verify') return `${routeLabels.verify[language]} | ${PRODUCT_NAME}`
   if (/^\/document\/[^/]+\/edit$/.test(pathname)) return `${routeLabels.edit[language]} | ${PRODUCT_NAME}`
   if (/^\/document\/[^/]+$/.test(pathname)) return `${routeLabels.details[language]} | ${PRODUCT_NAME}`
   return `${routeLabels.notFound[language]} | ${PRODUCT_NAME}`

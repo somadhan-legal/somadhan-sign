@@ -122,6 +122,24 @@ select pg_temp.assert(
   'anonymous clients must not read the audit trail directly'
 );
 select pg_temp.assert(
+  not has_table_privilege('anon', 'public.document_verifications', 'select')
+  and not has_table_privilege('authenticated', 'public.document_verifications', 'select'),
+  'public clients must not read document verification records directly'
+);
+select pg_temp.assert(
+  not has_function_privilege(
+    'anon',
+    'public.commit_final_document_verification(uuid,text,text,text,text,text,bigint,timestamptz)',
+    'execute'
+  )
+  and not has_function_privilege(
+    'authenticated',
+    'public.commit_final_document_verification(uuid,text,text,text,text,text,bigint,timestamptz)',
+    'execute'
+  ),
+  'public clients must not finalize document verification records'
+);
+select pg_temp.assert(
   not has_function_privilege(
     'anon',
     'public.get_document_for_completion(uuid)',
@@ -185,6 +203,50 @@ values (
   '11111111-1111-4111-8111-111111111111/signed/22222222-2222-4222-8222-222222222222.pdf'
 );
 reset role;
+
+set role service_role;
+select pg_temp.assert(
+  (
+    public.commit_final_document_verification(
+      '22222222-2222-4222-8222-222222222222',
+      '11111111-1111-4111-8111-111111111111/signed/verified.pdf',
+      repeat('a', 64),
+      'SS-AAAA-AAAA-AAAA',
+      repeat('b', 64),
+      repeat('c', 64),
+      2048,
+      '2026-07-29T10:00:00Z'
+    )->>'won'
+  )::boolean,
+  'the trusted finalizer must be able to commit a completed PDF once'
+);
+select pg_temp.assert(
+  not (
+    public.commit_final_document_verification(
+      '22222222-2222-4222-8222-222222222222',
+      '11111111-1111-4111-8111-111111111111/signed/replacement.pdf',
+      repeat('d', 64),
+      'SS-DDDD-DDDD-DDDD',
+      repeat('e', 64),
+      repeat('f', 64),
+      4096,
+      '2026-07-29T10:01:00Z'
+    )->>'won'
+  )::boolean,
+  'the final PDF and verification binding must not be overwritten'
+);
+reset role;
+
+select pg_temp.assert(
+  (
+    select count(*) = 1
+      and min(final_storage_path) =
+        '11111111-1111-4111-8111-111111111111/signed/verified.pdf'
+    from public.document_verifications
+    where document_id = '22222222-2222-4222-8222-222222222222'
+  ),
+  'a completed document must have exactly one immutable verification binding'
+);
 
 do $$
 begin

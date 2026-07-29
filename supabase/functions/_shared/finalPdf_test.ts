@@ -46,6 +46,42 @@ Deno.test("authoritative final PDF uses stored field data", async () => {
   }
 })
 
+Deno.test("authoritative final PDF embeds a verification QR certificate", async () => {
+  const original = await PDFDocument.create()
+  original.addPage([612, 792])
+  const finalBytes = await generateAuthoritativeFinalPdf(
+    await original.save(),
+    {
+      title: "Verified Agreement",
+      fields: [{
+        id: "text-field",
+        field_type: "text",
+        page_number: 1,
+        x: 10,
+        y: 10,
+        width: 25,
+        height: 8,
+      }],
+      placements: [{ field_id: "text-field", signature_id: "Approved" }],
+      audit_trail: [],
+      verification: {
+        url: `https://sign.somadhan.com/verify#v1.${"A".repeat(43)}`,
+        reference: "SS-1234-ABCD-5678",
+        evidence_sha256: "a".repeat(64),
+      },
+    },
+    new Date("2026-07-29T10:00:00.000Z"),
+  )
+  const finalPdf = await PDFDocument.load(finalBytes)
+  if (finalPdf.getPageCount() !== 2) {
+    throw new Error("The verification certificate was not appended")
+  }
+  const certificateResources = finalPdf.getPage(1).node.Resources()
+  if (!certificateResources?.lookup(PDFName.of("XObject"))) {
+    throw new Error("The verification QR image was not embedded")
+  }
+})
+
 Deno.test("authoritative final PDF rejects missing field values", async () => {
   const original = await PDFDocument.create()
   original.addPage([612, 792])

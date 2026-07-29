@@ -1,6 +1,7 @@
 {
   "imports": {
     "pdf-lib": "https://esm.sh/pdf-lib@1.17.1?bundle",
+    "qrcode": "npm:qrcode@1.5.4",
     "resvg": "https://esm.sh/@resvg/resvg-wasm@2.6.2?bundle",
     "supabase": "npm:@supabase/supabase-js@2.98.0"
   }

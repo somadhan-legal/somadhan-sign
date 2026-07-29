@@ -272,6 +272,46 @@ export interface Database {
         }
         Relationships: []
       }
+      document_verifications: {
+        Row: {
+          id: string
+          document_id: string | null
+          token_digest: string
+          reference_code: string
+          evidence_sha256: string
+          artifact_sha256: string
+          artifact_size: number
+          final_storage_path: string
+          hash_scheme: 'raw-pdf-bytes-v1'
+          status: 'active' | 'revoked'
+          completed_at: string
+          issued_at: string
+          revoked_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id?: string | null
+          token_digest: string
+          reference_code: string
+          evidence_sha256: string
+          artifact_sha256: string
+          artifact_size: number
+          final_storage_path: string
+          hash_scheme?: 'raw-pdf-bytes-v1'
+          status?: 'active' | 'revoked'
+          completed_at: string
+          issued_at?: string
+          revoked_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          document_id?: string | null
+          status?: 'active' | 'revoked'
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       document_viewers: {
         Row: {
           id: string
@@ -324,6 +364,19 @@ export interface Database {
       mark_document_completed: {
         Args: { p_document_id: string }
         Returns: undefined
+      }
+      commit_final_document_verification: {
+        Args: {
+          p_document_id: string
+          p_storage_path: string
+          p_token_digest: string
+          p_reference_code: string
+          p_evidence_sha256: string
+          p_artifact_sha256: string
+          p_artifact_size: number
+          p_completed_at: string
+        }
+        Returns: { won: boolean; final_pdf_url: string | null }
       }
       save_final_pdf_url: {
         Args: { p_document_id: string; p_final_pdf_url: string }

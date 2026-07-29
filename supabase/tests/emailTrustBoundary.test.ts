@@ -33,14 +33,18 @@ describe('signing email trust boundary', () => {
 
   it('stores a completed PDF before requiring email provider configuration', () => {
     const finalPdfUpload = emailFunction.indexOf(
-      ".from('documents')\n          .update({ final_pdf_url: uploadedReference",
+      ".upload(uploadedReference, pdfBytes, { contentType: 'application/pdf', upsert: false })",
+    )
+    const atomicFinalization = emailFunction.indexOf(
+      ".rpc(\n          'commit_final_document_verification'",
     )
     const providerConfigCheck = emailFunction.indexOf(
       "if (!RESEND_API_KEY) {\n      throw new Error('RESEND_API_KEY not configured')",
     )
 
     expect(finalPdfUpload).toBeGreaterThan(-1)
-    expect(providerConfigCheck).toBeGreaterThan(finalPdfUpload)
+    expect(atomicFinalization).toBeGreaterThan(finalPdfUpload)
+    expect(providerConfigCheck).toBeGreaterThan(atomicFinalization)
   })
 
   it('builds the durable PDF from authoritative server data', () => {

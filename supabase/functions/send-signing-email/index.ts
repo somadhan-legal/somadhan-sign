@@ -2,6 +2,13 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "supabase"
 import { generateAuthoritativeFinalPdf } from "../_shared/finalPdf.ts"
 import { getFinalPdfStoragePath } from "../_shared/completionStorage.ts"
+import {
+  createDocumentVerificationToken,
+  getCompletionEvidenceSha256,
+  getDocumentVerificationReference,
+  getDocumentVerificationTokenDigest,
+  sha256Hex,
+} from "../_shared/documentVerification.ts"
 import { withPublicSupabaseOrigin } from "../_shared/publicSupabaseUrl.ts"
 
 const corsHeaders = {
@@ -242,10 +249,46 @@ serve(async (req) => {
         if (originalPdfError || !originalPdf) {
           throw originalPdfError || new Error('The original document could not be loaded')
         }
-        const pdfBytes = await generateAuthoritativeFinalPdf(
-          new Uint8Array(await originalPdf.arrayBuffer()),
-          completionData,
+        const originalPdfBytes = new Uint8Array(await originalPdf.arrayBuffer())
+        const completionEvent = (Array.isArray(completionData.audit_trail)
+          ? completionData.audit_trail
+          : [])
+          .filter((entry: { action?: string; created_at?: string }) =>
+            entry?.action === 'Document Completed' && Number.isFinite(Date.parse(entry.created_at || '')))
+          .sort((left: { created_at: string }, right: { created_at: string }) =>
+            Date.parse(right.created_at) - Date.parse(left.created_at))[0]
+        const completedAt = completionEvent?.created_at || new Date().toISOString()
+        const verificationToken = createDocumentVerificationToken()
+        const verificationTokenDigest = await getDocumentVerificationTokenDigest(verificationToken)
+        const verificationReference = getDocumentVerificationReference(verificationTokenDigest)
+        const evidenceSha256 = await getCompletionEvidenceSha256(
+          completionDocumentId,
+          originalPdfBytes,
+          completionData as Record<string, unknown>,
+          completedAt,
         )
+        const publicSiteUrl = new URL(
+          Deno.env.get('PUBLIC_SITE_URL') || 'https://sign.somadhan.com',
+        )
+        if (
+          publicSiteUrl.protocol !== 'https:' ||
+          publicSiteUrl.hostname !== 'sign.somadhan.com'
+        ) {
+          throw new Error('PUBLIC_SITE_URL must use https://sign.somadhan.com')
+        }
+        const pdfBytes = await generateAuthoritativeFinalPdf(
+          originalPdfBytes,
+          {
+            ...completionData,
+            verification: {
+              url: `https://sign.somadhan.com/verify#${verificationToken}`,
+              reference: verificationReference,
+              evidence_sha256: evidenceSha256,
+            },
+          },
+          new Date(completedAt),
+        )
+        const artifactSha256 = await sha256Hex(pdfBytes)
         const uploadedReference = getFinalPdfStoragePath(
           completionData.created_by,
           completionDocumentId,
@@ -255,28 +298,30 @@ serve(async (req) => {
           .from('documents')
           .upload(uploadedReference, pdfBytes, { contentType: 'application/pdf', upsert: false })
         if (uploadError) throw uploadError
-        const { data: savedDocument, error: saveError } = await completionServiceClient
-          .from('documents')
-          .update({ final_pdf_url: uploadedReference, updated_at: new Date().toISOString() })
-          .eq('id', completionDocumentId)
-          .is('final_pdf_url', null)
-          .select('final_pdf_url')
-          .maybeSingle()
-        if (saveError) {
+        const { data: commitResult, error: commitError } = await completionServiceClient.rpc(
+          'commit_final_document_verification',
+          {
+            p_document_id: completionDocumentId,
+            p_storage_path: uploadedReference,
+            p_token_digest: verificationTokenDigest,
+            p_reference_code: verificationReference,
+            p_evidence_sha256: evidenceSha256,
+            p_artifact_sha256: artifactSha256,
+            p_artifact_size: pdfBytes.length,
+            p_completed_at: completedAt,
+          },
+        )
+        if (commitError) {
           await completionServiceClient.storage.from('documents').remove([uploadedReference])
-          throw saveError
+          throw commitError
         }
-        if (savedDocument?.final_pdf_url) {
-          finalPdfReference = savedDocument.final_pdf_url
+        if (commitResult?.won === true && commitResult?.final_pdf_url) {
+          finalPdfReference = String(commitResult.final_pdf_url)
         } else {
-          const { data: winningDocument, error: winningDocumentError } = await completionServiceClient
-            .from('documents')
-            .select('final_pdf_url')
-            .eq('id', completionDocumentId)
-            .single()
           await completionServiceClient.storage.from('documents').remove([uploadedReference])
-          if (winningDocumentError) throw winningDocumentError
-          finalPdfReference = winningDocument?.final_pdf_url || null
+          finalPdfReference = commitResult?.final_pdf_url
+            ? String(commitResult.final_pdf_url)
+            : null
         }
       }
 

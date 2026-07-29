@@ -53,10 +53,10 @@ jobs:
         run: npm run build
 
       - name: Check Edge Functions
-        run: deno check --config supabase/functions/deno.json supabase/functions/get-document-access/index.ts supabase/functions/send-signing-email/index.ts
+        run: deno check --config supabase/functions/deno.json supabase/functions/get-document-access/index.ts supabase/functions/send-signing-email/index.ts supabase/functions/verify-document/index.ts
 
       - name: Test final PDF generation
-        run: deno test --config supabase/functions/deno.json supabase/functions/_shared/finalPdf_test.ts
+        run: deno test --config supabase/functions/deno.json supabase/functions/_shared/finalPdf_test.ts supabase/functions/_shared/documentVerification_test.ts
 
       - name: Apply database migrations
         env:

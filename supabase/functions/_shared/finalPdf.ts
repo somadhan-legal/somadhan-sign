@@ -1,4 +1,6 @@
 import { initWasm, Resvg } from "resvg"
+// @deno-types="npm:@types/qrcode@1.5.6"
+import QRCode from "qrcode"
 import {
   degrees,
   PDFDocument,
@@ -39,6 +41,11 @@ export interface CompletionPdfData {
   fields?: CompletionField[] | null
   placements?: CompletionPlacement[] | null
   audit_trail?: AuditEntry[] | null
+  verification?: {
+    url: string
+    reference: string
+    evidence_sha256: string
+  } | null
 }
 
 interface PlacementRect {
@@ -137,6 +144,22 @@ const prepareResvg = () => {
     await initWasm(wasm)
   })()
   return resvgReadyPromise
+}
+
+const renderVerificationQr = async (url: string) => {
+  const dataUrl = await QRCode.toDataURL(url, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 512,
+    color: {
+      dark: "#075056",
+      light: "#FFFFFF",
+    },
+  })
+  const encoded = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)?.[1]
+  if (!encoded) throw new Error("The verification QR code could not be rendered")
+  const binary = atob(encoded)
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
 }
 
 const hasBengali = (value: unknown) => /[\u0951-\u0952\u0964-\u0965\u0980-\u09FE]/u.test(String(value ?? ""))
@@ -450,8 +473,9 @@ const appendAuditCertificate = async (
   entries: AuditEntry[],
   documentTitle: string,
   generatedAt: Date,
+  verification?: NonNullable<CompletionPdfData["verification"]>,
 ) => {
-  if (entries.length === 0) return
+  if (entries.length === 0 && !verification) return
   const pageWidth = 595.28
   const pageHeight = 841.89
   const margin = 50
@@ -548,6 +572,85 @@ const appendAuditCertificate = async (
     y -= smallLine
   }
   y -= 8
+
+  if (verification) {
+    const verificationUrl = new URL(verification.url)
+    if (
+      verificationUrl.protocol !== "https:" ||
+      verificationUrl.hostname !== "sign.somadhan.com" ||
+      verificationUrl.pathname !== "/verify" ||
+      verificationUrl.search ||
+      !/^#v1\.[A-Za-z0-9_-]{43}$/.test(verificationUrl.hash) ||
+      !/^SS-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/.test(verification.reference) ||
+      !/^[0-9a-f]{64}$/.test(verification.evidence_sha256)
+    ) {
+      throw new Error("The document verification record is invalid")
+    }
+
+    const blockHeight = 112
+    const qrSize = 84
+    page.drawRectangle({
+      x: margin,
+      y: y - blockHeight,
+      width: pageWidth - margin * 2,
+      height: blockHeight,
+      color: rgb(0.965, 0.975, 0.975),
+      borderColor: rgb(0.82, 0.87, 0.87),
+      borderWidth: 0.8,
+    })
+    const qrImage = await pdfDoc.embedPng(await renderVerificationQr(verification.url))
+    page.drawImage(qrImage, {
+      x: margin + 14,
+      y: y - blockHeight + 14,
+      width: qrSize,
+      height: qrSize,
+    })
+
+    const textX = margin + 116
+    page.drawText("VERIFY THIS COMPLETION RECORD", {
+      x: textX,
+      y: y - 25,
+      size: 9,
+      font: fonts.bold,
+      color: rgb(0.02, 0.31, 0.33),
+    })
+    page.drawText("Scan the QR code to open the Somadhan Sign verification record.", {
+      x: textX,
+      y: y - 42,
+      size: 8.2,
+      font: fonts.regular,
+      color: rgb(0.28, 0.32, 0.32),
+    })
+    page.drawText(`Reference: ${verification.reference}`, {
+      x: textX,
+      y: y - 61,
+      size: 8.2,
+      font: fonts.bold,
+      color: rgb(0.18, 0.22, 0.22),
+    })
+    page.drawText("Evidence fingerprint (SHA-256):", {
+      x: textX,
+      y: y - 78,
+      size: 7.4,
+      font: fonts.regular,
+      color: rgb(0.45, 0.48, 0.48),
+    })
+    page.drawText(verification.evidence_sha256.slice(0, 32), {
+      x: textX,
+      y: y - 91,
+      size: 6.6,
+      font: fonts.regular,
+      color: rgb(0.32, 0.35, 0.35),
+    })
+    page.drawText(verification.evidence_sha256.slice(32), {
+      x: textX,
+      y: y - 102,
+      size: 6.6,
+      font: fonts.regular,
+      color: rgb(0.32, 0.35, 0.35),
+    })
+    y -= blockHeight + 18
+  }
 
   const drawColumnHeader = () => {
     page.drawLine({
@@ -800,6 +903,7 @@ export async function generateAuthoritativeFinalPdf(
     Array.isArray(data.audit_trail) ? data.audit_trail : [],
     cleanLine(data.title) || "Document",
     generatedAt,
+    data.verification || undefined,
   )
   const finalBytes = await pdfDoc.save()
   if (finalBytes.length > MAX_FINAL_PDF_BYTES) {
