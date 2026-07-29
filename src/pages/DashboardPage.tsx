@@ -456,6 +456,7 @@ export default function DashboardPage() {
             { status: 'draft', labelKey: 'dashboard.draft' },
             { status: 'pending', labelKey: 'dashboard.pending' },
             { status: 'completed', labelKey: 'dashboard.completed' },
+            { status: 'cancelled', labelKey: 'dashboard.cancelled' },
           ].map((item) => (
             <button
               type="button"

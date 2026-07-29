@@ -488,6 +488,10 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.emailsFailed': { en: 'emails could not be delivered.', bn: 'টি ইমেইল পৌঁছায়নি।' },
   'editor.couldNotSendDocument': { en: 'Could not send document', bn: 'ডকুমেন্ট পাঠানো যায়নি' },
   'editor.documentSendFailed': { en: 'The document could not be sent. Please try again.', bn: 'ডকুমেন্ট পাঠানো যায়নি। আবার চেষ্টা করুন।' },
+  'editor.noInvitationsSent': {
+    en: 'No invitation emails were delivered. The document remains pending, so you can retry from the dashboard.',
+    bn: 'কোনো আমন্ত্রণ ইমেইল পৌঁছায়নি। ডকুমেন্টটি অপেক্ষমাণ আছে, তাই ড্যাশবোর্ড থেকে আবার চেষ্টা করতে পারবেন।',
+  },
   'editor.removeSignerFailed': { en: 'The signer could not be removed. Please try again.', bn: 'স্বাক্ষরকারীকে সরানো যায়নি। আবার চেষ্টা করুন।' },
   'editor.noSigners': { en: 'No signers', bn: 'কোনো স্বাক্ষরকারী নেই' },
   'editor.unassigned': { en: 'Unassigned', bn: 'নির্ধারিত নয়' },

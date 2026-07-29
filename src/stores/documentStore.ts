@@ -909,7 +909,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }
 
     if (sent === 0) {
-      throw new Error('No invitation emails could be sent. The document remains pending so you can retry from the dashboard.')
+      throw new Error('NO_INVITATIONS_SENT')
     }
 
     return { sent, failed, ccSent, ccFailed }

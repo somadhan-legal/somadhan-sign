@@ -617,7 +617,12 @@ export default function DocumentEditorPage() {
       const result = await sendForSigning(id, senderName, sendMessage, ccEmailsList)
 
       if (user.email) {
-        const metadata = JSON.stringify({ ccEmails: ccEmailsList, signerCount: signers.length })
+        const metadata = JSON.stringify({
+          ccEmails: ccEmailsList,
+          signerCount: signers.length,
+          sent: result.sent + result.ccSent,
+          failed: result.failed + result.ccFailed,
+        })
         await addAuditEntry(id, 'Document Sent for Signing', user.email, user.user_metadata?.full_name, metadata)
       }
 
@@ -645,10 +650,15 @@ export default function DocumentEditorPage() {
         })
       }, 1000)
     } catch (err: unknown) {
+      const message = err instanceof Error && err.message === 'NO_INVITATIONS_SENT'
+        ? t('editor.noInvitationsSent')
+        : err instanceof Error
+          ? err.message
+          : t('editor.documentSendFailed')
       setConfirmDialog({
         isOpen: true,
         title: t('editor.couldNotSendDocument'),
-        message: err instanceof Error ? err.message : t('editor.documentSendFailed'),
+        message,
         onConfirm: () => {},
         variant: 'warning',
       })
