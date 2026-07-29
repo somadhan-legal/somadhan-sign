@@ -1,7 +1,17 @@
 -- Background worker state is only accessed with the service role. Keeping table
 -- grants for API roles needlessly exposes the objects in the GraphQL schema.
-revoke all on table public.research_jobs from anon, authenticated;
-revoke all on table public.worker_heartbeats from anon, authenticated;
+-- Some clean-room environments do not include the separately managed worker
+-- tables, so guard each hardening statement.
+do $$
+begin
+  if to_regclass('public.research_jobs') is not null then
+    revoke all on table public.research_jobs from anon, authenticated;
+  end if;
+  if to_regclass('public.worker_heartbeats') is not null then
+    revoke all on table public.worker_heartbeats from anon, authenticated;
+  end if;
+end
+$$;
 
 -- These broad policies predate the owner-scoped authenticated policies below
 -- them. Removing the duplicates preserves the same owner access while avoiding
