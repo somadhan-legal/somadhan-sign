@@ -213,12 +213,12 @@ export default function DocumentPreviewPage() {
           type="button"
           aria-label={t('viewer.hideDetails')}
           onClick={() => setLeftPanelCollapsed(true)}
-          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/35 xl:hidden"
         />
       )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
+      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none">
         <div className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="p-4 border-b border-[hsl(var(--border))]">

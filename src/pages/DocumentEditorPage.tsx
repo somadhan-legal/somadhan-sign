@@ -29,7 +29,7 @@ import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
 import { adjustFieldWithKeyboard, getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
-import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
 
 const SIGNER_COLORS = [
@@ -412,7 +412,7 @@ export default function DocumentEditorPage() {
         isNew: true,
       })
       // Keep the PDF visible on tablets and phones. A placed field can still be tapped to edit it.
-      setSelectedField(window.innerWidth >= 1024 ? fieldId : null)
+      setSelectedField(usesOverlayWorkspacePanels() ? null : fieldId)
     },
     [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx, currentDocument?.status, t]
   )
@@ -718,12 +718,12 @@ export default function DocumentEditorPage() {
           type="button"
           aria-label={t('editor.collapsePanel')}
           onClick={() => setLeftPanelCollapsed(true)}
-          className="fixed inset-0 z-30 bg-black/35 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/35 xl:hidden"
         />
       )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden lg:static lg:z-auto lg:w-56 lg:shadow-none">
+      <div className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden xl:static xl:z-auto xl:w-56 xl:shadow-none">
         {/* Scrollable sidebar content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
@@ -802,7 +802,7 @@ export default function DocumentEditorPage() {
                       </span>
                     </button>
                     {!isLocked && (
-                      <div className="relative flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100">
+                      <div className="relative flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity xl:opacity-0 xl:group-hover:opacity-100 xl:focus-within:opacity-100">
                         <button
                           type="button"
                           aria-label={t('editor.editNamedSigner').replace('{name}', signer.signer_name || signer.signer_email)}
@@ -881,7 +881,7 @@ export default function DocumentEditorPage() {
                   aria-pressed={selectedFieldType === opt.type}
                   onClick={() => {
                     setSelectedFieldType(opt.type)
-                    if (window.innerWidth < 1024) setLeftPanelCollapsed(true)
+                    if (usesOverlayWorkspacePanels()) setLeftPanelCollapsed(true)
                   }}
                   className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     selectedFieldType === opt.type
@@ -1180,7 +1180,7 @@ export default function DocumentEditorPage() {
       </div>
 
       {/* Right Sidebar */}
-      <div className={`${selectedField ? 'flex' : 'hidden lg:flex'} absolute inset-y-0 right-0 z-40 w-72 border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl overflow-y-auto flex-col lg:static lg:z-auto lg:w-60 lg:shadow-none`}>
+      <div className={`${selectedField ? 'flex' : 'hidden xl:flex'} absolute inset-y-0 right-0 z-40 w-72 border-l border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl overflow-y-auto flex-col xl:static xl:z-auto xl:w-60 xl:shadow-none`}>
         {selectedField && (() => {
           const field = signatureFields.find((f) => f.id === selectedField)
           if (!field) return null

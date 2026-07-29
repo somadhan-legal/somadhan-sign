@@ -31,7 +31,7 @@ import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { Home, Moon, Sun, HelpCircle, XCircle } from 'lucide-react'
 import type { DocumentCompletionResult } from '@/types/database'
-import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import { isSigningToken } from '@/lib/publicAccessReference'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getSignedSignerRecoveryAction } from '@/lib/signingCompletion'
@@ -290,7 +290,7 @@ export default function InviteSigningPage() {
       if (fieldEl) fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
 
-    if (window.matchMedia('(max-width: 1023px)').matches && !leftPanelCollapsed) {
+    if (usesOverlayWorkspacePanels() && !leftPanelCollapsed) {
       setLeftPanelCollapsed(true)
       if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
       fieldRevealTimerRef.current = window.setTimeout(() => {
@@ -942,12 +942,12 @@ export default function InviteSigningPage() {
           type="button"
           aria-label={t('signee.collapsePanel')}
           onClick={() => setLeftPanelCollapsed(true)}
-          className="fixed inset-0 z-40 bg-black/35 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/35 xl:hidden"
         />
       )}
       {/* Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col lg:static lg:z-auto lg:w-80 lg:shadow-none">
+      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none">
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
