@@ -26,11 +26,22 @@ describe('getRecoveryLinkError', () => {
     expect(getRecoveryLinkError('#error=access_denied&error_description=Email+link+is+invalid')).toBe('expired')
   })
 
+  it('recognizes PKCE recovery errors returned in the query string', () => {
+    expect(getRecoveryLinkError(
+      '?error=access_denied&error_code=otp_expired&error_description=Email+link+has+expired',
+      '',
+    )).toBe('expired')
+  })
+
+  it('checks the hash when the query has no recovery error', () => {
+    expect(getRecoveryLinkError('?source=email', '#error=server_error')).toBe('invalid')
+  })
+
   it('maps arbitrary URL error text to a controlled invalid state', () => {
     expect(getRecoveryLinkError('#error=server_error&error_description=Call+this+phone+number')).toBe('invalid')
   })
 
   it('allows a recovery URL with no error', () => {
-    expect(getRecoveryLinkError('#access_token=secret&type=recovery')).toBeNull()
+    expect(getRecoveryLinkError('', '#access_token=secret&type=recovery')).toBeNull()
   })
 })

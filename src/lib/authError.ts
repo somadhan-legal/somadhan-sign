@@ -36,13 +36,24 @@ export function getAuthErrorMessage(
 
 export type RecoveryLinkError = 'expired' | 'invalid' | null
 
-export function getRecoveryLinkError(hash: string): RecoveryLinkError {
-  const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
-  const error = params.get('error')
+export function getRecoveryLinkError(search: string, hash = ''): RecoveryLinkError {
+  const queryParams = new URLSearchParams(search.replace(/^[?#]/, ''))
+  const hashParams = new URLSearchParams(hash.replace(/^[?#]/, ''))
+  const error = queryParams.get('error') || hashParams.get('error')
   if (!error) return null
 
-  const description = params.get('error_description')?.toLowerCase() || ''
-  if (error === 'access_denied' || description.includes('expired') || description.includes('invalid')) {
+  const errorCode = (queryParams.get('error_code') || hashParams.get('error_code') || '').toLowerCase()
+  const description = (
+    queryParams.get('error_description')
+    || hashParams.get('error_description')
+    || ''
+  ).toLowerCase()
+  if (
+    error === 'access_denied'
+    || errorCode === 'otp_expired'
+    || description.includes('expired')
+    || description.includes('invalid')
+  ) {
     return 'expired'
   }
   return 'invalid'

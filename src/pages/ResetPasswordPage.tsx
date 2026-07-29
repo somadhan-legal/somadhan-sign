@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
   const { isDark } = useThemeStore()
   const { t, lang } = useLanguageStore()
 
-  const recoveryLinkError = getRecoveryLinkError(window.location.hash)
+  const recoveryLinkError = getRecoveryLinkError(window.location.search, window.location.hash)
   const recoveryError = recoveryLinkError === 'expired'
     ? t('reset.linkExpired')
     : recoveryLinkError === 'invalid'
