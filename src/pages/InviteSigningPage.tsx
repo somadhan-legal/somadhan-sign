@@ -36,6 +36,7 @@ import { isSigningToken } from '@/lib/publicAccessReference'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getSignedSignerRecoveryAction } from '@/lib/signingCompletion'
 import { mapPlacementsToSignedFields } from '@/lib/signedFields'
+import { getLocalSigningDate } from '@/lib/signingDate'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import FieldTextPreview from '@/components/FieldTextPreview'
 
@@ -102,7 +103,6 @@ export default function InviteSigningPage() {
   const [tappedFieldId, setTappedFieldId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [actionError, setActionError] = useState('')
-  const [datePickerFieldId, setDatePickerFieldId] = useState<string | null>(null)
   const [textInputFieldId, setTextInputFieldId] = useState<string | null>(null)
   const [textInputValue, setTextInputValue] = useState('')
   const [showAuditTrail, setShowAuditTrail] = useState(false)
@@ -123,7 +123,6 @@ export default function InviteSigningPage() {
   const pdfGenerationRef = useRef(false)
   const finishTimerRef = useRef<number | null>(null)
   const fieldRevealTimerRef = useRef<number | null>(null)
-  const activeDateInputRef = useRef<HTMLInputElement>(null)
   const activeTextInputRef = useRef<HTMLInputElement>(null)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed, leftPanelRef] = useResponsivePanel()
@@ -142,7 +141,6 @@ export default function InviteSigningPage() {
       setCurrentFieldIndex(0)
       setTappedFieldId(null)
       setActionError('')
-      setDatePickerFieldId(null)
       setTextInputFieldId(null)
       setTextInputValue('')
       setShowAuditTrail(false)
@@ -245,11 +243,6 @@ export default function InviteSigningPage() {
     if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current)
     if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
   }, [])
-
-  useLayoutEffect(() => {
-    if (!datePickerFieldId) return
-    activeDateInputRef.current?.focus()
-  }, [datePickerFieldId])
 
   useLayoutEffect(() => {
     if (!textInputFieldId) return
@@ -459,7 +452,6 @@ export default function InviteSigningPage() {
     if (!documentId || !signerData || !dateValue || fieldSubmissionRef.current || !requireConsent()) return
     if (!beginFieldSubmission()) return
     setActionError('')
-    setDatePickerFieldId(null)
     try {
       const saved = await addPlacement({
         document_id: documentId,
@@ -1324,7 +1316,7 @@ export default function InviteSigningPage() {
                   if (isCheckbox) {
                     handleCheckboxField(field.id)
                   } else if (isDate) {
-                    setDatePickerFieldId(field.id)
+                    void handleDateField(field.id, getLocalSigningDate())
                   } else if (isText) {
                     setTextInputFieldId(field.id)
                     setTextInputValue('')
@@ -1351,7 +1343,7 @@ export default function InviteSigningPage() {
                       top: `${field.y}%`,
                       width: `${field.width}%`,
                       height: `${field.height}%`,
-                      zIndex: isTapped || datePickerFieldId === field.id || textInputFieldId === field.id
+                      zIndex: isTapped || textInputFieldId === field.id
                         ? 50
                         : isCurrentNav
                           ? 20
@@ -1404,26 +1396,6 @@ export default function InviteSigningPage() {
                             </button>
                           )}
                         </div>
-                      </div>
-
-                    ) : datePickerFieldId === field.id && isDate && isMine ? (
-                      /* === DATE PICKER ACTIVE === */
-                      <div className="relative h-full w-full">
-                        <div className="flex h-full w-full items-center justify-center rounded border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 text-[10px] font-semibold text-[hsl(var(--primary))]">
-                          {t('signee.signingDate')}
-                        </div>
-                        <input
-                          ref={activeDateInputRef}
-                          type="date"
-                          aria-label={t('signee.signingDate')}
-                          className="absolute left-1/2 top-full z-[100] mt-1 min-h-11 w-max -translate-x-1/2 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--card))] px-3 py-2 text-sm shadow-lg outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              handleDateField(field.id, e.target.value)
-                            }
-                          }}
-                          onBlur={() => setDatePickerFieldId(null)}
-                        />
                       </div>
 
                     ) : textInputFieldId === field.id && isText && isMine ? (

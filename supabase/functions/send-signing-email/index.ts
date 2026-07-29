@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "supabase"
 import { generateAuthoritativeFinalPdf } from "../_shared/finalPdf.ts"
 import { getFinalPdfStoragePath } from "../_shared/completionStorage.ts"
+import { withPublicSupabaseOrigin } from "../_shared/publicSupabaseUrl.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -128,6 +129,7 @@ serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const publicSupabaseUrl = Deno.env.get('APP_SUPABASE_PUBLIC_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     if (!supabaseUrl || !supabaseAnonKey) throw new Error('Supabase environment is not configured')
 
@@ -293,7 +295,7 @@ serve(async (req) => {
       ])
       if (signedDownloadError || !signedDownload?.signedUrl) throw signedDownloadError || new Error('The final document link could not be created')
       if (finalPdfError || !finalPdf) throw finalPdfError || new Error('The final document attachment could not be loaded')
-      resolvedDownloadUrl = signedDownload.signedUrl
+      resolvedDownloadUrl = withPublicSupabaseOrigin(signedDownload.signedUrl, publicSupabaseUrl)
       if (finalPdf.size <= 21_000_000) {
         const finalBytes = new Uint8Array(await finalPdf.arrayBuffer())
         if (new TextDecoder().decode(finalBytes.slice(0, 5)) !== '%PDF-') throw new Error('The stored final document is invalid')

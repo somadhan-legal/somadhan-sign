@@ -1,4 +1,5 @@
 import { createClient } from 'supabase'
+import { withPublicSupabaseOrigin } from '../_shared/publicSupabaseUrl.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const publicSupabaseUrl = Deno.env.get('APP_SUPABASE_PUBLIC_URL')
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ error: 'Service configuration is incomplete' }, 500)
 
@@ -84,8 +86,10 @@ Deno.serve(async (req) => {
             ...signer,
             documents: {
               title: document.title,
-              original_pdf_url: signedUrl.signedUrl,
-              final_pdf_url: finalPdfUrl,
+              original_pdf_url: withPublicSupabaseOrigin(signedUrl.signedUrl, publicSupabaseUrl),
+              final_pdf_url: finalPdfUrl
+                ? withPublicSupabaseOrigin(finalPdfUrl, publicSupabaseUrl)
+                : null,
               status: document.status,
               final_pdf_available: Boolean(finalPdfUrl),
             },
@@ -136,7 +140,13 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       viewerPackage: {
-        document: { ...document, original_pdf_url: signedUrl.signedUrl, final_pdf_url: finalPdfUrl },
+        document: {
+          ...document,
+          original_pdf_url: withPublicSupabaseOrigin(signedUrl.signedUrl, publicSupabaseUrl),
+          final_pdf_url: finalPdfUrl
+            ? withPublicSupabaseOrigin(finalPdfUrl, publicSupabaseUrl)
+            : null,
+        },
         signers: signers || [],
       },
     })
