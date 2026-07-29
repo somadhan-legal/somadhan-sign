@@ -208,6 +208,7 @@ export default function DocumentEditorPage() {
       .map((field) => ({ ...field }))
     const fingerprint = getFieldDraftFingerprint(snapshot, id)
     if (fingerprint === lastSavedFingerprintRef.current) {
+      setDraftSaveState('saved')
       if (showConfirmation) showSavedConfirmation()
       return
     }
@@ -250,7 +251,11 @@ export default function DocumentEditorPage() {
       setReadyFieldDraftDocumentId(id)
       return
     }
-    if (currentDocument.status !== 'draft' || fingerprint === lastSavedFingerprintRef.current) return
+    if (currentDocument.status !== 'draft') return
+    if (fingerprint === lastSavedFingerprintRef.current) {
+      setDraftSaveState('saved')
+      return
+    }
 
     setDraftSaveState('idle')
     const timer = window.setTimeout(() => {
