@@ -12,8 +12,6 @@ export interface AuditEntry {
   ip_address?: string | null
 }
 
-const isBengaliCharacter = (character: string) => /[\u0980-\u09FF]/.test(character)
-
 const drawUserText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, options: {
   x: number
   y: number
@@ -23,8 +21,8 @@ const drawUserText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, o
   maxWidth: number
 }) => {
   const safeValue = String(value || '').replace(/[\r\n\t]+/g, ' ')
-  if (![...safeValue].some(isBengaliCharacter)) {
-    let text = safeValue.replace(/[^\x20-\x7E]/g, '')
+  if (!/[^\x20-\x7E]/.test(safeValue)) {
+    let text = safeValue
     while (text.length > 0 && options.latinFont.widthOfTextAtSize(text, options.size) > options.maxWidth) text = text.slice(0, -1)
     if (text) page.drawText(text, { x: options.x, y: options.y, size: options.size, font: options.latinFont, color: options.color })
     return
@@ -358,12 +356,13 @@ export async function generateAuditPdf(
       color: rgb(0.15, 0.15, 0.15),
       maxWidth: 165,
     })
-    page.drawText(sanitize(entry.user_email), {
+    await drawUserText(pdfDoc, page, sanitize(entry.user_email), {
       x: 220,
       y: yPos - smallLine,
       size: 8,
-      font: font,
+      latinFont: font,
       color: rgb(0.5, 0.5, 0.5),
+      maxWidth: 165,
     })
 
     // Date & time
