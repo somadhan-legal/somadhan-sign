@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
 
 // Keep the PDF workspace in its single-canvas layout on tablets, including
 // 1024px iPad landscape. At 1280px there is enough room for the editor's PDF
@@ -10,6 +10,26 @@ export const usesOverlayWorkspacePanels = () =>
 
 export const useResponsivePanel = () => {
   const [collapsed, setCollapsed] = useState(usesOverlayWorkspacePanels)
+  const panelTriggerRef = useRef<HTMLElement | null>(null)
+
+  const updateCollapsed = useCallback((nextState: SetStateAction<boolean>) => {
+    setCollapsed((previousState) => {
+      const nextCollapsed = typeof nextState === 'function'
+        ? nextState(previousState)
+        : nextState
+
+      if (previousState && !nextCollapsed) {
+        panelTriggerRef.current = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null
+      } else if (!previousState && nextCollapsed) {
+        const trigger = panelTriggerRef.current
+        requestAnimationFrame(() => trigger?.focus())
+      }
+
+      return nextCollapsed
+    })
+  }, [])
 
   useEffect(() => {
     const media = window.matchMedia(TABLET_QUERY)
@@ -26,11 +46,11 @@ export const useResponsivePanel = () => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
       if (!usesOverlayWorkspacePanels()) return
       if (document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')) return
-      setCollapsed(true)
+      updateCollapsed(true)
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [collapsed])
+  }, [collapsed, updateCollapsed])
 
-  return [collapsed, setCollapsed] as const
+  return [collapsed, updateCollapsed] as const
 }
