@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, CheckCircle2, FileText, Fingerprint, Mail, MousePointer2, Send, Users } from 'lucide-react'
+import { Check, CheckCircle2, FileText, Fingerprint, Mail, MousePointer2, Pause, Play, Send, Users } from 'lucide-react'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const stepIcons = [FileText, MousePointer2, Users, CheckCircle2]
@@ -9,7 +9,9 @@ export default function HowItWorks() {
   const { t } = useLanguageStore()
   const reduceMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
-  const [paused, setPaused] = useState(false)
+  const [userPaused, setUserPaused] = useState(false)
+  const [interactionPaused, setInteractionPaused] = useState(false)
+  const paused = userPaused || interactionPaused
 
   const steps = [
     { label: t('landing.demoUpload'), caption: t('landing.demoUploadCaption') },
@@ -45,21 +47,37 @@ export default function HowItWorks() {
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="mt-14 overflow-hidden rounded-[2rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[0_24px_80px_hsl(var(--foreground)/0.08)]"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          onFocusCapture={() => setPaused(true)}
-          onBlurCapture={() => setPaused(false)}
+          onMouseEnter={() => setInteractionPaused(true)}
+          onMouseLeave={() => setInteractionPaused(false)}
+          onFocusCapture={() => setInteractionPaused(true)}
+          onBlurCapture={() => setInteractionPaused(false)}
         >
           <div className="grid lg:grid-cols-[330px_1fr]">
             <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 lg:border-b-0 lg:border-r lg:p-6">
+              <div className="mb-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setUserPaused((value) => !value)}
+                  aria-label={t(userPaused ? 'landing.resumeDemo' : 'landing.pauseDemo')}
+                  aria-pressed={userPaused}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+                >
+                  {userPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                  {t(userPaused ? 'landing.resume' : 'landing.pause')}
+                </button>
+              </div>
               <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
                 {steps.map((step, index) => {
                   const Icon = stepIcons[index]
                   const active = activeStep === index
                   return (
                     <button
+                      type="button"
                       key={step.label}
-                      onClick={() => setActiveStep(index)}
+                      onClick={() => {
+                        setActiveStep(index)
+                        setUserPaused(true)
+                      }}
                       aria-label={`${step.label}: ${step.caption}`}
                       className={`min-w-[180px] rounded-2xl border p-4 text-left transition-colors lg:min-w-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white' : 'border-transparent hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'}`}
                       aria-pressed={active}
