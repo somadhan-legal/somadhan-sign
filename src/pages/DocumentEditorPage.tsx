@@ -617,7 +617,9 @@ export default function DocumentEditorPage() {
     if (!id || !user || sendRequestRef.current || savingDraft) return
     const senderName = user.user_metadata?.full_name || user.email || 'A user'
     const enteredCcEmails = ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
-    const invalidCcEmails = enteredCcEmails.filter((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    const invalidCcEmails = enteredCcEmails.filter(
+      (email) => email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    )
     if (invalidCcEmails.length > 0) {
       setSendFormError(`${t('editor.invalidCcPrefix')}: ${invalidCcEmails.join(', ')}`)
       return
@@ -1320,12 +1322,14 @@ export default function DocumentEditorPage() {
                   value={signerFirstName}
                   onChange={(e) => setSignerFirstName(e.target.value)}
                   required
+                  maxLength={100}
                 />
                 <Input
                   label={t('editor.lastName')}
                   placeholder={t('editor.lastNamePlaceholder')}
                   value={signerLastName}
                   onChange={(e) => setSignerLastName(e.target.value)}
+                  maxLength={100}
                 />
               </div>
               <Input
@@ -1335,6 +1339,7 @@ export default function DocumentEditorPage() {
                 value={signerEmail}
                 onChange={(e) => { setSignerEmail(e.target.value); setSignerFormError('') }}
                 required
+                maxLength={320}
                 pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
                 title={t('editor.invalidEmail')}
               />
