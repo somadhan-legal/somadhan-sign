@@ -10,8 +10,6 @@ export default function HowItWorks() {
   const reduceMotion = useReducedMotion()
   const [activeStep, setActiveStep] = useState(0)
   const [userPaused, setUserPaused] = useState(false)
-  const [interactionPaused, setInteractionPaused] = useState(false)
-  const paused = userPaused || interactionPaused
 
   const steps = [
     { label: t('landing.demoUpload'), caption: t('landing.demoUploadCaption') },
@@ -21,10 +19,10 @@ export default function HowItWorks() {
   ]
 
   useEffect(() => {
-    if (paused || reduceMotion) return
+    if (userPaused || reduceMotion) return
     const timer = window.setInterval(() => setActiveStep((step) => (step + 1) % steps.length), 3600)
     return () => window.clearInterval(timer)
-  }, [paused, reduceMotion, steps.length])
+  }, [userPaused, reduceMotion, steps.length])
 
   return (
     <section id="product" className="py-24 lg:py-32">
@@ -47,10 +45,6 @@ export default function HowItWorks() {
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="mt-14 overflow-hidden rounded-[2rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[0_24px_80px_hsl(var(--foreground)/0.08)]"
-          onMouseEnter={() => setInteractionPaused(true)}
-          onMouseLeave={() => setInteractionPaused(false)}
-          onFocusCapture={() => setInteractionPaused(true)}
-          onBlurCapture={() => setInteractionPaused(false)}
         >
           <div className="grid lg:grid-cols-[330px_1fr]">
             <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 lg:border-b-0 lg:border-r lg:p-6">
