@@ -49,6 +49,7 @@ export default function FieldTextPreview({ value }: FieldTextPreviewProps) {
       <span
         className="block max-w-full whitespace-nowrap font-normal leading-tight text-black"
         style={{ fontSize: `${fitted.size}px` }}
+        aria-label={fitted.text === normalizedValue ? undefined : normalizedValue}
         title={fitted.text === normalizedValue ? undefined : normalizedValue}
       >
         {fitted.text}

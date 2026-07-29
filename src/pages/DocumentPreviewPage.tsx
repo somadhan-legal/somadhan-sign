@@ -446,7 +446,7 @@ export default function DocumentPreviewPage() {
                   // Signature or initials image without a border.
                   return (
                     <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                      <img src={val} alt="Signed" className="max-w-full max-h-full object-contain" />
+                      <img src={val} alt={t('signee.signedValue')} className="max-w-full max-h-full object-contain" />
                     </div>
                   )
                 }
