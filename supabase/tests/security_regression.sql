@@ -157,6 +157,18 @@ select pg_temp.assert(
   (select count(*) = 3 from public.documents),
   'an authenticated owner must see their documents'
 );
+do $$
+declare
+  deleted_id uuid;
+begin
+  delete from public.documents
+  where id = '22222222-2222-4222-8222-222222222222'
+  returning id into deleted_id;
+  if deleted_id is not null then
+    raise exception 'Security regression: an active signing request was deleted';
+  end if;
+end;
+$$;
 select public.update_signer_status_by_token(repeat('a', 64), 'signed');
 select public.mark_document_completed_by_token(repeat('a', 64));
 select pg_temp.assert(

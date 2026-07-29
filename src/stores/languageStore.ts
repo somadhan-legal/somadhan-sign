@@ -332,8 +332,18 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.download': { en: 'Download', bn: 'ডাউনলোড' },
   'dashboard.auditTrail': { en: 'Audit Trail', bn: 'অডিট ট্রেইল' },
   'dashboard.deleteDocument': { en: 'Delete Document', bn: 'ডকুমেন্ট মুছুন' },
-  'dashboard.deleteConfirmMessage': { en: 'Delete', bn: 'মুছুন' },
-  'dashboard.cannotUndo': { en: 'This cannot be undone.', bn: 'এটি পূর্বাবস্থায় ফেরানো যাবে না।' },
+  'dashboard.deleteDraftConfirm': {
+    en: 'Delete the draft "{title}"? Its PDF and field setup will be permanently removed.',
+    bn: '"{title}" খসড়াটি মুছবেন? এর PDF এবং ক্ষেত্রের সেটআপ স্থায়ীভাবে মুছে যাবে।',
+  },
+  'dashboard.deleteCompletedConfirm': {
+    en: 'Delete the completed document "{title}"? Its signed PDF and complete activity history will be permanently removed.',
+    bn: '"{title}" সম্পন্ন ডকুমেন্টটি মুছবেন? এর স্বাক্ষরিত PDF এবং সম্পূর্ণ কার্যকলাপের ইতিহাস স্থায়ীভাবে মুছে যাবে।',
+  },
+  'dashboard.deleteCancelledConfirm': {
+    en: 'Delete the cancelled document "{title}"? Its PDF and activity history will be permanently removed.',
+    bn: '"{title}" বাতিল করা ডকুমেন্টটি মুছবেন? এর PDF এবং কার্যকলাপের ইতিহাস স্থায়ীভাবে মুছে যাবে।',
+  },
   'dashboard.enterTitle': { en: 'Enter a document title.', bn: 'ডকুমেন্টের শিরোনাম লিখুন।' },
   'dashboard.titleTooLong': { en: 'Use 160 characters or fewer for the document title.', bn: 'ডকুমেন্টের শিরোনাম ১৬০ অক্ষর বা তার কম রাখুন।' },
   'dashboard.loadingDocuments': { en: 'Loading documents...', bn: 'ডকুমেন্ট লোড হচ্ছে...' },

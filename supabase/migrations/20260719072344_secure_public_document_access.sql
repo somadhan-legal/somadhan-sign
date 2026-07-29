@@ -58,7 +58,10 @@ drop policy if exists "Users can delete own documents" on public.documents;
 create policy "Users can delete own documents"
   on public.documents for delete
   to authenticated
-  using ((select auth.uid()) = created_by);
+  using (
+    (select auth.uid()) = created_by
+    and status <> 'pending'
+  );
 
 drop policy if exists "Owner can view signers" on public.document_signers;
 create policy "Owner can view signers"

@@ -72,7 +72,11 @@ export default function DashboardPage() {
   const [auditDocId, setAuditDocId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
-  const [deleteConfirm, setDeleteConfirm] = useState<{ docId: string; title: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    docId: string
+    title: string
+    status: Document['status']
+  } | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState<{ docId: string; title: string } | null>(null)
   const [notice, setNotice] = useState<{ message: string; kind: 'success' | 'error' | 'info' } | null>(null)
   const noticeTimerRef = useRef<number | null>(null)
@@ -653,18 +657,20 @@ export default function DashboardPage() {
                             <History className="w-4 h-4" />
                             {t('dashboard.auditTrail')}
                           </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
-                            onClick={() => {
-                              setMenuOpen(null)
-                              setDeleteConfirm({ docId: doc.id, title: doc.title })
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            {t('dashboard.delete')}
-                          </button>
+                          {doc.status !== 'pending' && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex min-h-11 items-center gap-2 px-3 py-2 text-sm hover:bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] w-full text-left cursor-pointer"
+                              onClick={() => {
+                                setMenuOpen(null)
+                                setDeleteConfirm({ docId: doc.id, title: doc.title, status: doc.status })
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {t('dashboard.delete')}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -868,7 +874,15 @@ export default function DashboardPage() {
           }
         }}
         title={t('dashboard.deleteDocument')}
-        message={`${t('dashboard.deleteConfirmMessage')} "${deleteConfirm?.title}"? ${t('dashboard.cannotUndo')}`}
+        message={deleteConfirm
+          ? t(
+              deleteConfirm.status === 'completed'
+                ? 'dashboard.deleteCompletedConfirm'
+                : deleteConfirm.status === 'cancelled'
+                  ? 'dashboard.deleteCancelledConfirm'
+                  : 'dashboard.deleteDraftConfirm'
+            ).replace('{title}', deleteConfirm.title)
+          : ''}
         variant="danger"
         confirmText={t('dashboard.confirm')}
         cancelText={t('editor.cancel')}
