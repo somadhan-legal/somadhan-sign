@@ -320,16 +320,41 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-container pb-24 lg:pb-32">
-          <motion.div {...reveal} className="relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] px-6 py-16 text-center text-[hsl(var(--primary-foreground))] sm:px-12 lg:py-20">
-            <div className="landing-solid-lines absolute inset-0 opacity-15" aria-hidden="true" />
-            <div className="relative mx-auto max-w-3xl">
-              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">{t('landing.ctaEyebrow')}</p>
-              <h2 className="mt-5 text-4xl font-bold tracking-[-0.04em] sm:text-5xl lg:text-6xl">{t('landing.ctaNewTitle')}</h2>
-              <p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-white/75">{t('landing.ctaNewDesc')}</p>
-              <Link to="/login?mode=signup" className="mt-8 inline-flex h-13 items-center justify-center rounded-lg bg-white px-7 text-base font-bold text-[hsl(var(--primary))] transition-transform hover:-translate-y-0.5">
-                {t('landing.createFreeAccount')}<ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
+        <section className="landing-container pb-24 lg:pb-32" aria-labelledby="landing-final-cta-title">
+          <motion.div {...reveal} className="landing-closing-cta">
+            <span className="landing-closing-cta-orbit landing-closing-cta-orbit-one" aria-hidden="true" />
+            <span className="landing-closing-cta-orbit landing-closing-cta-orbit-two" aria-hidden="true" />
+            <div className="relative grid items-end gap-9 px-6 py-10 sm:px-10 sm:py-12 md:grid-cols-[minmax(0,1fr)_minmax(17rem,0.58fr)] md:gap-12 lg:px-14 lg:py-16">
+              <div className="max-w-3xl">
+                <p className="flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.2em] opacity-70">
+                  <span className="h-px w-9 bg-current" aria-hidden="true" />
+                  {t('landing.ctaEyebrow')}
+                </p>
+                <h2 id="landing-final-cta-title" className="mt-5 text-balance text-4xl font-bold tracking-[-0.035em] sm:text-5xl lg:text-6xl">
+                  {t('landing.ctaNewTitle')}
+                </h2>
+                <p className="mt-5 max-w-2xl text-base leading-7 opacity-75 sm:text-lg sm:leading-8">{t('landing.ctaNewDesc')}</p>
+              </div>
+
+              <div className="landing-closing-cta-action">
+                <ul className="space-y-3 text-sm font-semibold">
+                  {[t('landing.freeToStart'), t('landing.noCreditCard'), t('landing.noInstall')].map((item) => (
+                    <li key={item} className="flex items-center gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/login?mode=signup" className="group mt-7 inline-flex min-h-12 w-full items-center justify-between rounded-xl bg-[hsl(var(--foreground))] px-5 text-base font-bold text-[hsl(var(--background))] transition-transform hover:-translate-y-0.5">
+                  {t('landing.createFreeAccount')}
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+                <Link to="/login" className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl text-sm font-bold text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]">
+                  {t('landing.signIn')}
+                </Link>
+              </div>
             </div>
           </motion.div>
         </section>

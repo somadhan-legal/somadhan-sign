@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import {
   AlertTriangle,
   Check,
+  Copy,
   FileCheck2,
   FileSearch,
   LoaderCircle,
@@ -37,7 +38,11 @@ export default function VerifyDocumentPage() {
   const [record, setRecord] = useState<ActiveVerificationRecord | null>(null)
   const [referenceCode, setReferenceCode] = useState('')
   const [fileMatch, setFileMatch] = useState<FileMatch>('idle')
+  const [copiedValue, setCopiedValue] = useState<'reference' | 'fingerprint' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const verificationRequestRef = useRef(0)
+  const fileHashRequestRef = useRef(0)
+  const verificationAbortRef = useRef<AbortController | null>(null)
 
   const applyResult = useCallback((result: VerificationResult) => {
     setFileMatch('idle')
@@ -58,13 +63,23 @@ export default function VerifyDocumentPage() {
   }, [])
 
   const checkRecord = useCallback(async () => {
+    const requestId = ++verificationRequestRef.current
+    fileHashRequestRef.current += 1
+    verificationAbortRef.current?.abort()
+    const controller = new AbortController()
+    verificationAbortRef.current = controller
     setState('checking')
+    setRecord(null)
+    setFileMatch('idle')
     const token = readVerificationToken(window.location.hash)
     if (!token) {
+      if (requestId !== verificationRequestRef.current) return
       applyResult({ status: 'not_found' })
       return
     }
-    applyResult(await fetchDocumentVerification(token))
+    const result = await fetchDocumentVerification(token, controller.signal)
+    if (requestId !== verificationRequestRef.current) return
+    applyResult(result)
   }, [applyResult])
 
   useEffect(() => {
@@ -73,19 +88,44 @@ export default function VerifyDocumentPage() {
     return () => {
       window.clearTimeout(initialCheck)
       window.removeEventListener('hashchange', checkRecord)
+      verificationRequestRef.current += 1
+      fileHashRequestRef.current += 1
+      verificationAbortRef.current?.abort()
     }
   }, [checkRecord])
 
   const handleFile = async (file: File | undefined) => {
     if (!file || !record) return
+    const requestId = ++fileHashRequestRef.current
+    const expectedArtifactHash = record.artifactSha256
+    if (file.size !== record.artifactSize) {
+      setFileMatch('mismatch')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
     setFileMatch('hashing')
     try {
       const digest = await hashVerificationPdf(file)
-      setFileMatch(digest === record.artifactSha256 ? 'match' : 'mismatch')
+      if (requestId !== fileHashRequestRef.current) return
+      setFileMatch(digest === expectedArtifactHash ? 'match' : 'mismatch')
     } catch {
+      if (requestId !== fileHashRequestRef.current) return
       setFileMatch('invalid')
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const copyVerificationValue = async (
+    kind: 'reference' | 'fingerprint',
+    value: string,
+  ) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopiedValue(kind)
+      window.setTimeout(() => setCopiedValue((current) => current === kind ? null : current), 1800)
+    } catch {
+      setCopiedValue(null)
     }
   }
 
@@ -227,12 +267,47 @@ export default function VerifyDocumentPage() {
                 </div>
                 <div className="flex items-center justify-between gap-4 py-3.5">
                   <dt className="text-sm text-[hsl(var(--muted-foreground))]">{t('verify.reference')}</dt>
-                  <dd className="font-mono text-xs font-bold">{record.referenceCode}</dd>
+                  <dd className="flex items-center gap-1 font-mono text-xs font-bold">
+                    {record.referenceCode}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => void copyVerificationValue('reference', record.referenceCode)}
+                      aria-label={t('verify.copyReference')}
+                    >
+                      {copiedValue === 'reference'
+                        ? <Check className="h-4 w-4 text-[hsl(var(--success))]" />
+                        : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-4 py-3.5">
+                  <dt className="text-sm text-[hsl(var(--muted-foreground))]">{t('verify.recordedFileSize')}</dt>
+                  <dd className="text-sm font-semibold">{(record.artifactSize / 1024).toFixed(1)} KB</dd>
                 </div>
                 <div className="py-3.5">
-                  <dt className="text-sm text-[hsl(var(--muted-foreground))]">{t('verify.evidenceFingerprint')}</dt>
-                  <dd className="mt-2 break-all font-mono text-[11px] leading-5">
-                    {formatVerificationFingerprint(record.evidenceSha256)}
+                  <div className="flex items-center justify-between gap-3">
+                    <dt className="text-sm text-[hsl(var(--muted-foreground))]">{t('verify.evidenceFingerprint')}</dt>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => void copyVerificationValue('fingerprint', record.evidenceSha256)}
+                      aria-label={t('verify.copyFingerprint')}
+                    >
+                      {copiedValue === 'fingerprint'
+                        ? <Check className="h-4 w-4 text-[hsl(var(--success))]" />
+                        : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <dd className="mt-1 break-all font-mono text-[11px] leading-5">
+                      {formatVerificationFingerprint(record.evidenceSha256)}
+                    <span className="mt-2 block font-sans text-xs leading-5 text-[hsl(var(--muted-foreground))]">
+                      {t('verify.evidenceFingerprintNote')}
+                    </span>
                   </dd>
                 </div>
               </dl>
@@ -244,13 +319,16 @@ export default function VerifyDocumentPage() {
                   id="verification-pdf"
                   type="file"
                   accept="application/pdf,.pdf"
+                  disabled={fileMatch === 'hashing'}
                   onChange={(event) => void handleFile(event.target.files?.[0])}
                 />
                 <label
                   htmlFor="verification-pdf"
+                  aria-disabled={fileMatch === 'hashing'}
+                  aria-busy={fileMatch === 'hashing'}
                   className={buttonStyles({
                     size: 'lg',
-                    className: 'min-h-12 w-full cursor-pointer',
+                    className: `min-h-12 w-full ${fileMatch === 'hashing' ? 'cursor-wait opacity-70' : 'cursor-pointer'}`,
                   })}
                 >
                   {fileMatch === 'hashing'

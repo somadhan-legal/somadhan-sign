@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   FileText,
   Send,
@@ -9,12 +9,13 @@ import {
   MailCheck,
   ShieldCheck,
   XCircle,
+  ListChecks,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useLanguageStore } from '@/stores/languageStore'
-import { formatAuditMetadata } from '@/lib/auditMetadata'
+import { formatAuditMetadata, maskNetworkAddress } from '@/lib/auditMetadata'
 
 interface AuditTrailModalProps {
   isOpen: boolean
@@ -79,6 +80,17 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
   const [reloadAttempt, setReloadAttempt] = useState(0)
   const requestKey = isOpen ? `${documentId}:${signingToken || 'owner'}:${reloadAttempt}` : ''
   const loading = Boolean(requestKey) && loadedRequestKey !== requestKey
+  const orderedAuditTrail = useMemo(
+    () => [...auditTrail].sort((left, right) => {
+      const timeDifference = Date.parse(left.created_at) - Date.parse(right.created_at)
+      return timeDifference || left.id.localeCompare(right.id)
+    }),
+    [auditTrail],
+  )
+  const participantCount = useMemo(
+    () => new Set(orderedAuditTrail.map((entry) => entry.user_email.trim().toLowerCase())).size,
+    [orderedAuditTrail],
+  )
 
   useEffect(() => {
     if (!isOpen || !documentId) return
@@ -110,11 +122,38 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={t('audit.title')} size="xl">
       <div className="max-h-[70dvh] overflow-y-auto" aria-busy={loading}>
+        {!loading && !loadError && orderedAuditTrail.length > 0 && (
+          <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--muted))]/35 px-4 py-4 sm:px-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]">
+                <ListChecks className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold">{t('audit.recordedActivity')}</p>
+                <p className="mt-1 text-xs leading-5 text-[hsl(var(--muted-foreground))]">
+                  {t('audit.recordedActivityDesc')}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-[hsl(var(--muted-foreground))]">
+                  <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1">
+                    {orderedAuditTrail.length} {t(orderedAuditTrail.length === 1 ? 'audit.event' : 'audit.events')}
+                  </span>
+                  <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1">
+                    {participantCount} {t(participantCount === 1 ? 'audit.participant' : 'audit.participants')}
+                  </span>
+                  <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2.5 py-1">
+                    {t('audit.timesInUtc')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-2 border-b border-[hsl(var(--border))] text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
           <span>{t('audit.trail')}</span>
           <span>{t('audit.user')}</span>
-          <span>{t('audit.timeLocation')}</span>
+          <span>{t('audit.timeNetwork')}</span>
         </div>
 
         {loading ? (
@@ -135,21 +174,22 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
               {t('viewer.tryAgain')}
             </Button>
           </div>
-        ) : auditTrail.length === 0 ? (
+        ) : orderedAuditTrail.length === 0 ? (
           <div className="text-center py-12">
             <Clock className="w-10 h-10 mx-auto text-[hsl(var(--muted-foreground))]/30 mb-3" />
             <p className="text-sm text-[hsl(var(--muted-foreground))]">{t('audit.noActivity')}</p>
           </div>
         ) : (
-          <div className="divide-y divide-[hsl(var(--border))]">
-            {auditTrail.map((entry) => {
+          <ol className="divide-y divide-[hsl(var(--border))]">
+            {orderedAuditTrail.map((entry) => {
               const config = actionConfig[entry.action] || { icon: <Clock className="w-4 h-4" />, color: 'text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]' }
               const { date, time } = formatDateTime(entry.created_at, lang === 'bn' ? 'bn-BD' : 'en-US')
               const actionKey = actionTranslationKeys[entry.action]
               const metadata = formatAuditMetadata(entry.metadata, lang)
+              const networkAddress = maskNetworkAddress(entry.ip_address)
 
               return (
-                <div key={entry.id} className="grid grid-cols-1 gap-3 px-4 py-4 hover:bg-[hsl(var(--muted))]/50 transition-colors sm:grid-cols-[1fr_1fr_1fr] sm:gap-4 sm:py-3">
+                <li key={entry.id} className="grid grid-cols-1 gap-3 px-4 py-4 hover:bg-[hsl(var(--muted))]/50 transition-colors sm:grid-cols-[1fr_1fr_1fr] sm:gap-4 sm:py-3">
                   <div className="flex items-start gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${config.color}`}>
                       {config.icon}
@@ -174,14 +214,16 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
                   <div className="flex flex-col justify-center">
                     <span className="text-sm">{date}</span>
                     <span className="text-xs text-[hsl(var(--muted-foreground))]">{time}</span>
-                    {entry.ip_address && (
-                      <span className="text-xs text-[hsl(var(--muted-foreground))]">{entry.ip_address}</span>
+                    {networkAddress && (
+                      <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                        {t('audit.networkAddress')} {networkAddress}
+                      </span>
                     )}
                   </div>
-                </div>
+                </li>
               )
             })}
-          </div>
+          </ol>
         )}
       </div>
     </Modal>

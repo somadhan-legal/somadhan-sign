@@ -3,7 +3,10 @@ import { initWasm, Resvg } from "resvg"
 import QRCode from "qrcode"
 import {
   degrees,
+  PDFArray,
   PDFDocument,
+  PDFName,
+  PDFString,
   type PDFFont,
   type PDFPage,
   rgb,
@@ -45,6 +48,7 @@ export interface CompletionPdfData {
     url: string
     reference: string
     evidence_sha256: string
+    completed_at: string
   } | null
 }
 
@@ -149,7 +153,7 @@ const prepareResvg = () => {
 const renderVerificationQr = async (url: string) => {
   const dataUrl = await QRCode.toDataURL(url, {
     errorCorrectionLevel: "M",
-    margin: 1,
+    margin: 4,
     width: 512,
     color: {
       dark: "#075056",
@@ -220,6 +224,20 @@ const cleanLine = (value: unknown) => String(value ?? "")
   .replace(/[\r\n\t]+/g, " ")
   .replace(/\s+/g, " ")
   .trim()
+
+const maskNetworkAddress = (value: unknown) => {
+  const address = cleanLine(value)
+  if (!address) return null
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(address)
+  if (ipv4 && ipv4.slice(1).every((part) => Number(part) <= 255)) {
+    return `${ipv4[1]}.${ipv4[2]}.${ipv4[3]}.xxx`
+  }
+  if (address.includes(":")) {
+    const segments = address.split(":").filter(Boolean)
+    return segments.length > 0 ? `${segments.slice(0, 3).join(":")}::` : null
+  }
+  return null
+}
 
 const fitLatinText = (value: string, font: PDFFont, maxWidth: number, preferredSize: number) => {
   let size = Math.max(6, preferredSize)
@@ -523,14 +541,7 @@ const appendAuditCertificate = async (
     color: rgb(0.2, 0.2, 0.2),
   })
   y -= 16
-  page.drawText("Generated:", {
-    x: margin,
-    y,
-    size: 10,
-    font: fonts.bold,
-    color: rgb(0.2, 0.2, 0.2),
-  })
-  const generated = generatedAt.toLocaleString("en-US", {
+  const formatUtc = (date: Date) => date.toLocaleString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -540,8 +551,31 @@ const appendAuditCertificate = async (
     hour12: false,
     timeZone: "UTC",
   })
-  page.drawText(`${generated} UTC`, {
+  const completedAt = verification ? new Date(verification.completed_at) : generatedAt
+  page.drawText("Completed:", {
+    x: margin,
+    y,
+    size: 10,
+    font: fonts.bold,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+  page.drawText(`${formatUtc(completedAt)} UTC`, {
     x: margin + 70,
+    y,
+    size: 10,
+    font: fonts.regular,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+  y -= 16
+  page.drawText("Certificate issued:", {
+    x: margin,
+    y,
+    size: 10,
+    font: fonts.bold,
+    color: rgb(0.2, 0.2, 0.2),
+  })
+  page.drawText(`${formatUtc(generatedAt)} UTC`, {
+    x: margin + 92,
     y,
     size: 10,
     font: fonts.regular,
@@ -582,7 +616,8 @@ const appendAuditCertificate = async (
       verificationUrl.search ||
       !/^#v1\.[A-Za-z0-9_-]{43}$/.test(verificationUrl.hash) ||
       !/^SS-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$/.test(verification.reference) ||
-      !/^[0-9a-f]{64}$/.test(verification.evidence_sha256)
+      !/^[0-9a-f]{64}$/.test(verification.evidence_sha256) ||
+      !Number.isFinite(Date.parse(verification.completed_at))
     ) {
       throw new Error("The document verification record is invalid")
     }
@@ -605,6 +640,26 @@ const appendAuditCertificate = async (
       width: qrSize,
       height: qrSize,
     })
+    const linkAnnotation = pdfDoc.context.register(pdfDoc.context.obj({
+      Type: "Annot",
+      Subtype: "Link",
+      Rect: [
+        margin,
+        y - blockHeight,
+        pageWidth - margin,
+        y,
+      ],
+      Border: [0, 0, 0],
+      A: {
+        Type: "Action",
+        S: "URI",
+        URI: PDFString.of(verification.url),
+      },
+    }))
+    const annotations = page.node.lookup(PDFName.of("Annots"), PDFArray)
+      ?? pdfDoc.context.obj([])
+    annotations.push(linkAnnotation)
+    page.node.set(PDFName.of("Annots"), annotations)
 
     const textX = margin + 116
     page.drawText("VERIFY THIS COMPLETION RECORD", {
@@ -675,7 +730,8 @@ const appendAuditCertificate = async (
 
   for (const entry of entries) {
     const metadata = formatAuditMetadata(entry.metadata)
-    const rowHeight = metadata || entry.ip_address ? smallLine * 3 + 12 : smallLine * 2 + 12
+    const networkAddress = maskNetworkAddress(entry.ip_address)
+    const rowHeight = metadata || networkAddress ? smallLine * 3 + 12 : smallLine * 2 + 12
     if (y < margin + rowHeight) {
       page = pdfDoc.addPage([pageWidth, pageHeight])
       y = pageHeight - margin
@@ -745,8 +801,8 @@ const appendAuditCertificate = async (
       font: fonts.regular,
       color: rgb(0.5, 0.5, 0.5),
     })
-    if (entry.ip_address) {
-      await drawFittedText(pdfDoc, page, entry.ip_address, fonts, {
+    if (networkAddress) {
+      await drawFittedText(pdfDoc, page, `Network: ${networkAddress}`, fonts, {
         x: 400,
         y: y - smallLine * 2,
         preferredSize: 8,

@@ -7,6 +7,20 @@ const normalizeCount = (value: unknown) => {
 
 const cleanText = (value: string) => value.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim()
 
+export function maskNetworkAddress(value: string | null | undefined) {
+  const address = cleanText(String(value || ''))
+  if (!address) return null
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(address)
+  if (ipv4 && ipv4.slice(1).every((part) => Number(part) <= 255)) {
+    return `${ipv4[1]}.${ipv4[2]}.${ipv4[3]}.xxx`
+  }
+  if (address.includes(':')) {
+    const segments = address.split(':').filter(Boolean)
+    return segments.length > 0 ? `${segments.slice(0, 3).join(':')}::` : null
+  }
+  return null
+}
+
 const formatPage = (page: string, lang: AuditLanguage) =>
   lang === 'bn' ? `পৃষ্ঠা ${page}` : `Page ${page}`
 

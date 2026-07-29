@@ -42,13 +42,21 @@ const isActiveRecord = (value: unknown): value is ActiveVerificationRecord => {
     && Number.isFinite(Date.parse(String(record.issuedAt)))
 }
 
-export async function fetchDocumentVerification(token: string): Promise<VerificationResult> {
+export async function fetchDocumentVerification(
+  token: string,
+  externalSignal?: AbortSignal,
+): Promise<VerificationResult> {
   if (!TOKEN_PATTERN.test(token)) return { status: 'not_found' }
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
   if (!supabaseUrl || !supabaseAnonKey) return { status: 'unavailable' }
 
   let response: Response
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 12_000)
+  const abortFromExternalSignal = () => controller.abort()
+  if (externalSignal?.aborted) controller.abort()
+  externalSignal?.addEventListener('abort', abortFromExternalSignal, { once: true })
   try {
     response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/functions/v1/verify-document`, {
       method: 'POST',
@@ -59,9 +67,13 @@ export async function fetchDocumentVerification(token: string): Promise<Verifica
       body: JSON.stringify({ token }),
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
+      signal: controller.signal,
     })
   } catch {
     return { status: 'unavailable' }
+  } finally {
+    window.clearTimeout(timeout)
+    externalSignal?.removeEventListener('abort', abortFromExternalSignal)
   }
 
   let body: unknown

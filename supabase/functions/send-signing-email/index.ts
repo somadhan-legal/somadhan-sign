@@ -5,6 +5,7 @@ import { getFinalPdfStoragePath } from "../_shared/completionStorage.ts"
 import {
   createDocumentVerificationToken,
   getCompletionEvidenceSha256,
+  getCompletionAuditSnapshot,
   getDocumentVerificationReference,
   getDocumentVerificationTokenDigest,
   sha256Hex,
@@ -267,6 +268,10 @@ serve(async (req) => {
           completionData as Record<string, unknown>,
           completedAt,
         )
+        const completionAuditTrail = getCompletionAuditSnapshot(
+          completionData as Record<string, unknown>,
+          completedAt,
+        )
         const publicSiteUrl = new URL(
           Deno.env.get('PUBLIC_SITE_URL') || 'https://sign.somadhan.com',
         )
@@ -280,13 +285,15 @@ serve(async (req) => {
           originalPdfBytes,
           {
             ...completionData,
+            audit_trail: completionAuditTrail,
             verification: {
               url: `https://sign.somadhan.com/verify#${verificationToken}`,
               reference: verificationReference,
               evidence_sha256: evidenceSha256,
+              completed_at: completedAt,
             },
           },
-          new Date(completedAt),
+          new Date(),
         )
         const artifactSha256 = await sha256Hex(pdfBytes)
         const uploadedReference = getFinalPdfStoragePath(

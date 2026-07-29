@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 import type { CSSProperties } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Check, CheckCircle2, FileText, Fingerprint, Mail, MousePointer2, Pause, Play, Send, Users } from 'lucide-react'
 import { useLanguageStore } from '@/stores/languageStore'
+import { initialWalkthroughState, walkthroughReducer } from './howItWorksState'
 
 const stepIcons = [FileText, MousePointer2, Users, CheckCircle2]
 const STEP_DURATION_MS = 3600
@@ -10,8 +11,10 @@ const STEP_DURATION_MS = 3600
 export default function HowItWorks() {
   const { t } = useLanguageStore()
   const reduceMotion = useReducedMotion()
-  const [activeStep, setActiveStep] = useState(0)
-  const [userPaused, setUserPaused] = useState(false)
+  const [{ activeStep, userPaused, cycleRevision }, dispatch] = useReducer(
+    walkthroughReducer,
+    initialWalkthroughState,
+  )
 
   const steps = [
     { label: t('landing.demoUpload'), caption: t('landing.demoUploadCaption') },
@@ -22,9 +25,12 @@ export default function HowItWorks() {
 
   useEffect(() => {
     if (userPaused || reduceMotion) return
-    const timer = window.setInterval(() => setActiveStep((step) => (step + 1) % steps.length), STEP_DURATION_MS)
+    const timer = window.setInterval(
+      () => dispatch({ type: 'advance', stepCount: steps.length }),
+      STEP_DURATION_MS,
+    )
     return () => window.clearInterval(timer)
-  }, [userPaused, reduceMotion, steps.length])
+  }, [userPaused, reduceMotion, steps.length, cycleRevision])
 
   return (
     <section id="product" className="py-24 lg:py-32">
@@ -53,7 +59,7 @@ export default function HowItWorks() {
               <div className="mb-4 px-1">
                 <div className="landing-flow-track" aria-hidden="true">
                   <div
-                    key={activeStep}
+                    key={`${activeStep}-${cycleRevision}`}
                     className={`landing-flow-track-progress ${userPaused || reduceMotion ? 'is-paused' : ''}`}
                     style={{
                       '--step-start': reduceMotion ? (activeStep + 1) / steps.length : activeStep / steps.length,
@@ -66,7 +72,7 @@ export default function HowItWorks() {
               <div className="mb-3 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setUserPaused((value) => !value)}
+                  onClick={() => dispatch({ type: 'toggle-pause' })}
                   aria-label={t(userPaused ? 'landing.resumeDemo' : 'landing.pauseDemo')}
                   aria-pressed={userPaused}
                   className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
@@ -87,10 +93,7 @@ export default function HowItWorks() {
                     <button
                       type="button"
                       key={step.label}
-                      onClick={() => {
-                        setActiveStep(index)
-                        setUserPaused(true)
-                      }}
+                      onClick={() => dispatch({ type: 'select', step: index })}
                       aria-label={`${step.label}: ${step.caption}`}
                       aria-current={active ? 'step' : undefined}
                       className={`relative z-10 min-w-[180px] rounded-2xl border bg-[hsl(var(--background))] p-4 text-left transition-[color,background-color,border-color,transform] lg:min-w-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-[0_12px_32px_hsl(var(--primary)/0.18)] lg:translate-x-1' : 'border-transparent hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'}`}
@@ -128,9 +131,6 @@ export default function HowItWorks() {
                   {activeStep === 3 && <CompleteScene />}
                 </motion.div>
               </AnimatePresence>
-              <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2 lg:hidden">
-                {steps.map((_, index) => <span key={index} className={`h-1.5 rounded-full transition-all ${activeStep === index ? 'w-8 bg-[hsl(var(--primary))]' : 'w-1.5 bg-[hsl(var(--border))]'}`} />)}
-              </div>
             </div>
           </div>
         </motion.div>

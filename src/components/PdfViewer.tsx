@@ -207,30 +207,32 @@ export default function PdfViewer({
 
   return (
     <div ref={containerRef} className="flex flex-col items-center w-full min-w-0">
-      {/* Zoom Controls */}
-      <div className="sticky top-0 z-30 flex items-center gap-2 mb-4 bg-[hsl(var(--card))] rounded-lg border border-[hsl(var(--border))] px-3 py-2 shadow-sm">
-        <span className="text-sm font-medium text-[hsl(var(--muted-foreground))]">
-          {totalPages} {totalPages === 1 ? t('viewer.page') : t('viewer.pages')}
-        </span>
-        <div className="w-px h-6 bg-[hsl(var(--border))] mx-1" />
+      {/* Compact floating zoom control */}
+      <div className="sticky top-2 z-30 mb-2 flex items-center rounded-full border border-[hsl(var(--border))]/80 bg-[hsl(var(--card))]/85 p-0.5 shadow-lg shadow-black/5 backdrop-blur-xl">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.max(0.5, s - 0.1))}
           aria-label={t('viewer.zoomOut')}
-          className="h-11 w-11"
+          className="h-11 w-11 rounded-full"
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
-        <span className="text-xs font-medium min-w-[40px] text-center">
+        <button
+          type="button"
+          onClick={() => setInternalScale(1)}
+          className="min-h-11 min-w-12 rounded-full px-1 text-center text-xs font-semibold tabular-nums text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]"
+          aria-label={`${Math.round(scale * 100)}%. ${t('viewer.resetZoom')}`}
+          title={t('viewer.resetZoom')}
+        >
           {Math.round(scale * 100)}%
-        </span>
+        </button>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setInternalScale((s) => Math.min(2, s + 0.1))}
           aria-label={t('viewer.zoomIn')}
-          className="h-11 w-11"
+          className="h-11 w-11 rounded-full"
         >
           <ZoomIn className="w-4 h-4" />
         </Button>

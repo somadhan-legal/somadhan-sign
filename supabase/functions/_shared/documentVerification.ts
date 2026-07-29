@@ -75,7 +75,7 @@ const normalizeEvidenceValue = async (value: unknown, key = ""): Promise<unknown
   return value
 }
 
-const completionAuditCutoff = (data: Record<string, unknown>, completedAt: string) => {
+export const getCompletionAuditSnapshot = (data: Record<string, unknown>, completedAt: string) => {
   const audit = Array.isArray(data.audit_trail) ? data.audit_trail : []
   return audit.filter((entry) => {
     if (!entry || typeof entry !== "object") return false
@@ -100,7 +100,7 @@ export const getCompletionEvidenceSha256 = async (
     originalPdfSha256,
     completion: {
       ...completionData,
-      audit_trail: completionAuditCutoff(completionData, completedAt),
+      audit_trail: getCompletionAuditSnapshot(completionData, completedAt),
     },
   }
   const normalized = await normalizeEvidenceValue(source)

@@ -31,6 +31,34 @@ const jsonResponse = (
   headers: responseHeaders(origin),
 })
 
+const readJsonWithLimit = async (request: Request, maxBytes: number) => {
+  if (!request.body) throw new Error("Missing body")
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let totalBytes = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      totalBytes += value.byteLength
+      if (totalBytes > maxBytes) {
+        await reader.cancel()
+        throw new Error("Body too large")
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  const bytes = new Uint8Array(totalBytes)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>
+}
+
 Deno.serve(async (request) => {
   const origin = request.headers.get("origin")
   if (request.method === "OPTIONS") {
@@ -47,7 +75,7 @@ Deno.serve(async (request) => {
 
   let token: unknown
   try {
-    const body = await request.json()
+    const body = await readJsonWithLimit(request, 1024)
     token = body?.token
   } catch {
     return jsonResponse({ status: "not_found" }, 404, origin)

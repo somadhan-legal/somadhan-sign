@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAuditMetadata } from './auditMetadata'
+import { formatAuditMetadata, maskNetworkAddress } from './auditMetadata'
 
 describe('formatAuditMetadata', () => {
   it('formats consent metadata without exposing raw JSON', () => {
@@ -39,5 +39,13 @@ describe('formatAuditMetadata', () => {
       fieldType: 'signature',
       pageNumber: 4,
     }))).toBe('Page 4')
+  })
+})
+
+describe('maskNetworkAddress', () => {
+  it('masks stored network addresses before displaying them', () => {
+    expect(maskNetworkAddress('192.0.2.44')).toBe('192.0.2.xxx')
+    expect(maskNetworkAddress('2001:db8:abcd:12::1')).toBe('2001:db8:abcd::')
+    expect(maskNetworkAddress('not-an-address')).toBeNull()
   })
 })

@@ -1,4 +1,4 @@
-import { PDFDocument, PDFName } from "pdf-lib"
+import { PDFArray, PDFDocument, PDFName } from "pdf-lib"
 import { getFinalPdfStoragePath } from "./completionStorage.ts"
 import { generateAuthoritativeFinalPdf } from "./finalPdf.ts"
 
@@ -68,6 +68,7 @@ Deno.test("authoritative final PDF embeds a verification QR certificate", async 
         url: `https://sign.somadhan.com/verify#v1.${"A".repeat(43)}`,
         reference: "SS-1234-ABCD-5678",
         evidence_sha256: "a".repeat(64),
+        completed_at: "2026-07-29T09:55:00.000Z",
       },
     },
     new Date("2026-07-29T10:00:00.000Z"),
@@ -79,6 +80,9 @@ Deno.test("authoritative final PDF embeds a verification QR certificate", async 
   const certificateResources = finalPdf.getPage(1).node.Resources()
   if (!certificateResources?.lookup(PDFName.of("XObject"))) {
     throw new Error("The verification QR image was not embedded")
+  }
+  if (!finalPdf.getPage(1).node.lookup(PDFName.of("Annots"), PDFArray)) {
+    throw new Error("The verification QR block is not clickable")
   }
 })
 

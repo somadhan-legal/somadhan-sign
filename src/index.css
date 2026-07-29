@@ -286,6 +286,56 @@ html[lang='bn'] .landing-shell {
   to { width: calc(var(--step-end, 0.25) * 100%); }
 }
 
+.landing-closing-cta {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid hsl(var(--accent-coral-foreground) / 0.14);
+  border-radius: 2rem;
+  color: hsl(var(--accent-coral-foreground));
+  background: hsl(var(--accent-coral));
+  box-shadow: 0 28px 80px hsl(var(--accent-coral) / 0.2);
+}
+
+.landing-closing-cta::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  content: '';
+  background: hsl(var(--accent-coral-foreground) / 0.22);
+}
+
+.landing-closing-cta-orbit {
+  position: absolute;
+  display: block;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.landing-closing-cta-orbit-one {
+  top: -13rem;
+  right: -6rem;
+  width: 28rem;
+  height: 28rem;
+}
+
+.landing-closing-cta-orbit-two {
+  right: 8rem;
+  bottom: -16rem;
+  width: 24rem;
+  height: 24rem;
+}
+
+.landing-closing-cta-action {
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  box-shadow: 0 20px 60px hsl(var(--foreground) / 0.14);
+}
+
 html[lang='bn'] .landing-display,
 html[lang='bn'] .landing-section-title {
   letter-spacing: 0;
@@ -294,6 +344,7 @@ html[lang='bn'] .landing-section-title {
 
 @media (min-width: 640px) {
   .landing-container { width: min(100% - 3rem, 1240px); }
+  .landing-closing-cta-action { padding: 1.5rem; }
 }
 
 @media (min-width: 1024px) {

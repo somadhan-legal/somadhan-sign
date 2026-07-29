@@ -141,6 +141,7 @@ export default function DocumentEditorPage() {
   } | null>(null)
   const pdfContainerRef = useRef<HTMLDivElement>(null)
   const signerListRef = useRef<HTMLDivElement>(null)
+  const signerFirstNameRef = useRef<HTMLInputElement>(null)
   const initializedDocumentRef = useRef<string | null>(null)
   const lastSavedFingerprintRef = useRef('')
   const latestFingerprintRef = useRef('')
@@ -502,7 +503,7 @@ export default function DocumentEditorPage() {
       // click cannot create an accidental duplicate field.
       setSelectedFieldType(null)
       setPlacementPreview(null)
-      setSelectedField(usesOverlayWorkspacePanels() ? null : fieldId)
+      setSelectedField(fieldId)
     },
     [
       addSignatureField,
@@ -522,6 +523,8 @@ export default function DocumentEditorPage() {
   const handleSaveSigner = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id || signerSaveRequestRef.current) return
+    const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    const shouldAddAnother = !editingSignerId && submitter?.value === 'add-another'
     const fullName = [signerFirstName.trim(), signerLastName.trim()].filter(Boolean).join(' ')
     const normalizedEmail = signerEmail.trim().toLowerCase()
     const duplicate = signers.some(
@@ -564,7 +567,12 @@ export default function DocumentEditorPage() {
       setSignerLastName('')
       setSignerEmail('')
       setEditingSignerId(null)
-      setShowSignerModal(false)
+      if (shouldAddAnother) {
+        setShowSignerModal(true)
+        requestAnimationFrame(() => signerFirstNameRef.current?.focus())
+      } else {
+        setShowSignerModal(false)
+      }
     } catch (err) {
       console.error('[DocumentEditor] Error saving signer:', err)
       if (err instanceof Error && (err.message === 'DUPLICATE_SIGNER_EMAIL' || err.message.includes('document_signers_document_email_unique'))) {
@@ -1207,7 +1215,7 @@ export default function DocumentEditorPage() {
                       : (
                         <>
                           <span className="truncate px-1 text-[11px] font-semibold">{previewLabel}</span>
-                          <span className="absolute bottom-0 left-0 right-0 truncate px-0.5 text-center text-[8px] font-medium opacity-80">
+                          <span className="absolute bottom-0.5 left-0 right-0 truncate px-1 text-center text-[10px] font-semibold leading-none opacity-90">
                             {previewSigner.signer_name || previewSigner.signer_email.split('@')[0]}
                           </span>
                         </>
@@ -1246,7 +1254,7 @@ export default function DocumentEditorPage() {
                         : (
                           <>
                             <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
-                            <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
+                            <span className="absolute bottom-0.5 left-0 right-0 truncate px-1 text-center text-[10px] font-semibold leading-none opacity-90" style={{ color }}>
                               {sName}
                             </span>
                           </>
@@ -1344,7 +1352,7 @@ export default function DocumentEditorPage() {
                         : (
                           <>
                             <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
-                            <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
+                            <span className="absolute bottom-0.5 left-0 right-0 truncate px-1 text-center text-[10px] font-semibold leading-none opacity-90" style={{ color }}>
                               {sName}
                             </span>
                           </>
@@ -1510,6 +1518,7 @@ export default function DocumentEditorPage() {
             <form onSubmit={handleSaveSigner} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input
+                  ref={signerFirstNameRef}
                   label={t('editor.firstName')}
                   placeholder={t('editor.firstNamePlaceholder')}
                   value={signerFirstName}
@@ -1539,6 +1548,19 @@ export default function DocumentEditorPage() {
               {signerFormError && (
                 <p role="alert" className="text-sm font-medium text-[hsl(var(--destructive))]">{signerFormError}</p>
               )}
+              {!editingSignerId && (
+                <Button
+                  type="submit"
+                  name="signer-intent"
+                  value="add-another"
+                  variant="outline"
+                  className="w-full"
+                  disabled={savingSigner}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {savingSigner ? t('editor.saving') : t('editor.addAndAnotherSigner')}
+                </Button>
+              )}
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -1549,7 +1571,7 @@ export default function DocumentEditorPage() {
                 >
                   {t('editor.cancel')}
                 </Button>
-                <Button type="submit" className="flex-1" disabled={savingSigner}>
+                <Button type="submit" name="signer-intent" value="done" className="flex-1" disabled={savingSigner}>
                   {savingSigner ? t('editor.saving') : editingSignerId ? t('editor.saveChanges') : t('editor.addSigner')}
                 </Button>
               </div>
