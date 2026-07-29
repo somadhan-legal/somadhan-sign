@@ -472,6 +472,10 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.documentName': { en: 'Document Name', bn: 'ডকুমেন্টের নাম' },
   'editor.ccEmail': { en: 'CC: Email a copy (optional)', bn: 'CC: একটি কপি ইমেইল করুন (ঐচ্ছিক)' },
   'editor.messageForSignees': { en: 'Message for signees (optional)', bn: 'স্বাক্ষরকারীদের জন্য বার্তা (ঐচ্ছিক)' },
+  'editor.defaultSendMessage': {
+    en: 'Please review and sign this document at your earliest convenience. If you have any questions or need clarification, please contact the sender. Thank you.',
+    bn: 'অনুগ্রহ করে সুবিধাজনক সময়ে ডকুমেন্টটি পর্যালোচনা করে স্বাক্ষর করুন। কোনো প্রশ্ন বা ব্যাখ্যার প্রয়োজন হলে প্রেরকের সঙ্গে যোগাযোগ করুন। ধন্যবাদ।',
+  },
   'editor.sending': { en: 'Sending...', bn: 'পাঠানো হচ্ছে...' },
   'editor.send': { en: 'Send', bn: 'পাঠান' },
   'editor.savedSuccess': { en: 'Document saved successfully', bn: 'ডকুমেন্ট সফলভাবে সংরক্ষিত হয়েছে' },

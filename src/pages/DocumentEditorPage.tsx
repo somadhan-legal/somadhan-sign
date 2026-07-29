@@ -114,7 +114,7 @@ export default function DocumentEditorPage() {
   const [sendSummary, setSendSummary] = useState('')
   const [ccEmails, setCcEmails] = useState('')
   const [showSendConfirm, setShowSendConfirm] = useState(false)
-  const [sendMessage, setSendMessage] = useState('Please review and sign the attached document at your earliest convenience. If you have any questions or need clarification, feel free to contact. Thank you.')
+  const [sendMessage, setSendMessage] = useState(() => t('editor.defaultSendMessage'))
   const [sendFormError, setSendFormError] = useState('')
   const [countdown, setCountdown] = useState(5)
   const [placementPreview, setPlacementPreview] = useState<{
@@ -1360,8 +1360,9 @@ export default function DocumentEditorPage() {
               />
               {sendFormError && <p role="alert" className="text-sm font-medium text-[hsl(var(--destructive))]">{sendFormError}</p>}
               <div>
-                <label className="block text-sm font-medium mb-1">{t('editor.messageForSignees')}</label>
+                <label htmlFor="send-message" className="block text-sm font-medium mb-1">{t('editor.messageForSignees')}</label>
                 <textarea
+                  id="send-message"
                   className="w-full px-3 py-2 border border-[hsl(var(--border))] rounded-lg text-sm min-h-[80px] resize-y focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/30 focus:border-[hsl(var(--primary))]"
                   value={sendMessage}
                   onChange={(e) => setSendMessage(e.target.value)}
