@@ -532,6 +532,14 @@ const translations: Record<string, Record<Language, string>> = {
     en: "The document you're looking for was not found. It may have been deleted or the link is invalid.",
     bn: 'আপনি যে ডকুমেন্টটি খুঁজছেন তা পাওয়া যায়নি। এটি মুছে ফেলা হয়ে থাকতে পারে অথবা লিঙ্কটি অবৈধ।',
   },
+  'signee.noFieldsAssigned': {
+    en: 'Nothing is assigned to you',
+    bn: 'আপনার জন্য কোনো ক্ষেত্র নির্ধারিত নেই',
+  },
+  'signee.noFieldsAssignedDesc': {
+    en: 'This invitation does not contain any fields for your email address. Contact the sender and ask for a corrected signing request.',
+    bn: 'এই আমন্ত্রণে আপনার ইমেইল ঠিকানার জন্য কোনো ক্ষেত্র নেই। প্রেরকের সঙ্গে যোগাযোগ করে একটি সংশোধিত স্বাক্ষরের অনুরোধ চাইুন।',
+  },
   'signee.signingComplete': { en: 'Signing Complete!', bn: 'স্বাক্ষর সম্পন্ন!' },
   'signee.yourPartComplete': { en: 'Your Signature Is Complete', bn: 'আপনার স্বাক্ষর সম্পন্ন হয়েছে' },
   'signee.thankYou': { en: 'Thank you,', bn: 'ধন্যবাদ,' },

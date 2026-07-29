@@ -769,6 +769,34 @@ export default function InviteSigningPage() {
     )
   }
 
+  if (myFields.length === 0 && !documentCompleted) {
+    return (
+      <div className="min-h-dvh bg-[hsl(var(--background))] p-6">
+        <div className="mx-auto flex min-h-[calc(100dvh-3rem)] max-w-lg flex-col items-center justify-center text-center">
+          <a href="/">
+            <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="mb-6 h-14 cursor-pointer" />
+          </a>
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--warning))]/10" aria-hidden="true">
+            <HelpCircle className="h-8 w-8 text-[hsl(var(--warning))]" />
+          </div>
+          <div role="status">
+            <h2 className="text-xl font-bold">{t('signee.noFieldsAssigned')}</h2>
+            <p className="mt-2 leading-relaxed text-[hsl(var(--muted-foreground))]">
+              {t('signee.noFieldsAssignedDesc')}
+            </p>
+            <p className="mt-4 break-all text-sm font-medium text-[hsl(var(--foreground))]">
+              {userEmail}
+            </p>
+          </div>
+          <Link to="/" className={buttonStyles({ size: 'lg', className: 'mt-6' })}>
+            <Home className="mr-2 h-4 w-4" />
+            {t('notFound.returnHome')}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const getLatestSignedFields = (): SignedField[] => {
     if (!documentId) return []
     const latestState = useDocumentStore.getState()
