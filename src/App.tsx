@@ -104,9 +104,10 @@ function PublicViewerRoute() {
 
 function RouteMetadata() {
   const { pathname } = useLocation()
+  const lang = useLanguageStore((state) => state.lang)
 
   useEffect(() => {
-    document.title = getRouteTitle(pathname)
+    document.title = getRouteTitle(pathname, lang)
     let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
     if (!robots) {
       robots = document.createElement('meta')
@@ -114,7 +115,7 @@ function RouteMetadata() {
       document.head.appendChild(robots)
     }
     robots.content = pathname === '/' ? 'index,follow' : 'noindex,nofollow,noarchive'
-  }, [pathname])
+  }, [lang, pathname])
 
   return null
 }

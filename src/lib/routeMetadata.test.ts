@@ -15,4 +15,18 @@ describe('getRouteTitle', () => {
   ])('returns the correct title for %s', (pathname, title) => {
     expect(getRouteTitle(pathname)).toBe(title)
   })
+
+  it.each([
+    ['/', 'Somadhan Sign | সহজ ইলেকট্রনিক স্বাক্ষর'],
+    ['/login', 'সাইন ইন বা অ্যাকাউন্ট তৈরি করুন | Somadhan Sign'],
+    ['/reset-password', 'পাসওয়ার্ড রিসেট করুন | Somadhan Sign'],
+    ['/dashboard', 'আমার ডকুমেন্টস | Somadhan Sign'],
+    ['/sign/token', 'ডকুমেন্ট স্বাক্ষর করুন | Somadhan Sign'],
+    ['/view/token', 'ডকুমেন্ট দেখুন | Somadhan Sign'],
+    ['/document/id/edit', 'ডকুমেন্ট প্রস্তুত করুন | Somadhan Sign'],
+    ['/document/id', 'ডকুমেন্টের বিস্তারিত | Somadhan Sign'],
+    ['/missing', 'পৃষ্ঠা পাওয়া যায়নি | Somadhan Sign'],
+  ])('returns the Bangla title for %s', (pathname, title) => {
+    expect(getRouteTitle(pathname, 'bn')).toBe(title)
+  })
 })
