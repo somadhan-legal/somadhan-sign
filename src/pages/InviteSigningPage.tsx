@@ -119,6 +119,8 @@ export default function InviteSigningPage() {
   const hasLoggedView = useRef(false)
   const finishTimerRef = useRef<number | null>(null)
   const fieldRevealTimerRef = useRef<number | null>(null)
+  const activeDateInputRef = useRef<HTMLInputElement>(null)
+  const activeTextInputRef = useRef<HTMLInputElement>(null)
   const { isDark, toggle } = useThemeStore()
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -239,6 +241,18 @@ export default function InviteSigningPage() {
     if (finishTimerRef.current !== null) window.clearTimeout(finishTimerRef.current)
     if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
   }, [])
+
+  useEffect(() => {
+    if (!datePickerFieldId) return
+    const frame = window.requestAnimationFrame(() => activeDateInputRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [datePickerFieldId])
+
+  useEffect(() => {
+    if (!textInputFieldId) return
+    const frame = window.requestAnimationFrame(() => activeTextInputRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [textInputFieldId])
 
   const userEmail = signerData?.signer_email || ''
   const userName = signerData?.signer_name || null
@@ -1345,6 +1359,7 @@ export default function InviteSigningPage() {
                           {t('signee.signingDate')}
                         </div>
                         <input
+                          ref={activeDateInputRef}
                           type="date"
                           aria-label={t('signee.signingDate')}
                           className="absolute left-1/2 top-full z-[100] mt-1 min-h-11 w-max -translate-x-1/2 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--card))] px-3 py-2 text-sm shadow-lg outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]"
@@ -1361,6 +1376,7 @@ export default function InviteSigningPage() {
                       /* === TEXT INPUT ACTIVE === */
                       <div className="w-full h-full flex items-center">
                         <input
+                          ref={activeTextInputRef}
                           type="text"
                           aria-label={t('signee.fieldText')}
                           value={textInputValue}
