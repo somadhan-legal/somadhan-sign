@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const recoveryPdfSource = readFileSync(
-  new URL('./auditPdf.ts', import.meta.url),
+  new URL('../src/lib/auditPdf.ts', import.meta.url),
   'utf8',
 )
 
