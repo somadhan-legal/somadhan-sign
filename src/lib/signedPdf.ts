@@ -1,6 +1,6 @@
 import { PDFDocument, degrees, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import '@fontsource/noto-sans-bengali/bengali-400.css'
-import { formatSigningDate } from '@/lib/utils'
+import { formatSigningDate, formatSigningText } from '@/lib/utils'
 import { fitSingleLineFieldText } from '@/lib/fieldText'
 
 export interface SignedField {
@@ -229,7 +229,7 @@ export async function generateSignedPdf(
         }
       } else if (placement.field_type === 'text') {
         // Draw text field content
-        const textContent = placement.signature_id || ''
+        const textContent = formatSigningText(placement.signature_id || '')
         await drawFieldText(pdfDoc, page, textContent, font, rect)
       }
     }

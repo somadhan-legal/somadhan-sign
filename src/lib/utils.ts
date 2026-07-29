@@ -29,3 +29,7 @@ export function formatSigningDate(value: string): string {
   if (!match) return dateValue
   return `${match[3]}/${match[2]}/${match[1]}`
 }
+
+export function formatSigningText(value: string): string {
+  return value.startsWith('text:') ? value.slice(5) : value
+}

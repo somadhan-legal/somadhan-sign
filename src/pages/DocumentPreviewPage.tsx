@@ -23,7 +23,7 @@ import Badge from '@/components/ui/Badge'
 import type { SignedField } from '@/lib/signedPdf'
 import { supabase } from '@/lib/supabase'
 import { createOwnerDocumentUrl } from '@/lib/documentStorage'
-import { formatSigningDate } from '@/lib/utils'
+import { formatSigningDate, formatSigningText } from '@/lib/utils'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
@@ -440,7 +440,7 @@ export default function DocumentPreviewPage() {
                     )
                   }
                   if (ft === 'text' || (!isSignatureImage && val.startsWith('text:'))) {
-                    const textVal = val.startsWith('text:') ? val.replace('text:', '') : val
+                    const textVal = formatSigningText(val)
                     return <FieldTextPreview value={textVal} />
                   }
                   // Signature or initials image without a border.

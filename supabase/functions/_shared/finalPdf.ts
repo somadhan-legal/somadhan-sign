@@ -378,6 +378,9 @@ const formatSigningDate = (value: string) => {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : dateValue
 }
 
+const formatSigningText = (value: string) =>
+  value.startsWith("text:") ? value.slice(5) : value
+
 const formatAuditMetadata = (metadata: string | null | undefined) => {
   const value = cleanLine(metadata)
   if (!value) return null
@@ -779,7 +782,7 @@ export async function generateAuthoritativeFinalPdf(
         })
       }
     } else if (field.field_type === "text") {
-      await drawFittedText(pdfDoc, page, placement.signature_id, fonts, {
+      await drawFittedText(pdfDoc, page, formatSigningText(placement.signature_id), fonts, {
         x: rect.x,
         y: rect.y,
         maxWidth: rect.width,

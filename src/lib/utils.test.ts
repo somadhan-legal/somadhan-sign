@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatSigningDate } from './utils'
+import { formatDate, formatSigningDate, formatSigningText } from './utils'
 
 describe('formatDate', () => {
   it('formats document dates in the selected interface language', () => {
@@ -20,5 +20,15 @@ describe('formatSigningDate', () => {
 
   it('preserves legacy display values', () => {
     expect(formatSigningDate('20/07/2026')).toBe('20/07/2026')
+  })
+})
+
+describe('formatSigningText', () => {
+  it('removes the legacy text field prefix', () => {
+    expect(formatSigningText('text:Approved')).toBe('Approved')
+  })
+
+  it('preserves current text field values', () => {
+    expect(formatSigningText('Approved')).toBe('Approved')
   })
 })

@@ -26,7 +26,7 @@ import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
-import { formatSigningDate } from '@/lib/utils'
+import { formatSigningDate, formatSigningText } from '@/lib/utils'
 import { getNextUnsignedField } from '@/lib/fieldNavigation'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { Home, Moon, Sun, HelpCircle, XCircle } from 'lucide-react'
@@ -1314,7 +1314,7 @@ export default function InviteSigningPage() {
                         <svg className="w-[70%] h-[70%] text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </div>
                     ) : isSigned && placement && (isText || placement.signature_id.startsWith('text:')) ? (
-                      <FieldTextPreview value={placement.signature_id.replace('text:', '')} />
+                      <FieldTextPreview value={formatSigningText(placement.signature_id)} />
 
                     ) : isTapped && isSignatureType && sigData ? (
                       /* Tapped signature or initials: Apply to this / Apply to All popover. */
