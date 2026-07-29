@@ -25,4 +25,19 @@ describe('formatAuditMetadata', () => {
     expect(formatAuditMetadata('{"providerIds":["secret"]}')).toBeNull()
     expect(formatAuditMetadata('x'.repeat(350))).toHaveLength(300)
   })
+
+  it('localizes known legacy activity details in Bangla', () => {
+    expect(formatAuditMetadata('Signature placed on page 2', 'bn')).toBe('পৃষ্ঠা 2: স্বাক্ষর যোগ হয়েছে')
+    expect(formatAuditMetadata('Auto-filled 3 initials fields', 'bn')).toBe('3টি ইনিশিয়াল ক্ষেত্র স্বয়ংক্রিয়ভাবে পূরণ হয়েছে')
+    expect(formatAuditMetadata('Document uploaded', 'bn')).toBe('ডকুমেন্ট আপলোড করা হয়েছে')
+  })
+
+  it('summarizes database-authored field metadata without exposing raw identifiers', () => {
+    expect(formatAuditMetadata(JSON.stringify({
+      source: 'database',
+      fieldId: 'private-field-id',
+      fieldType: 'signature',
+      pageNumber: 4,
+    }))).toBe('Page 4')
+  })
 })
