@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 export default function Navbar() {
   const { user, signOut } = useAuthStore()
@@ -18,9 +18,11 @@ export default function Navbar() {
   const isLoginPage = location.pathname === '/login'
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState('')
+  const signOutRequestRef = useRef(false)
 
   const handleSignOut = async () => {
-    if (signingOut) return
+    if (signOutRequestRef.current) return
+    signOutRequestRef.current = true
     setSigningOut(true)
     setSignOutError('')
     try {
@@ -29,6 +31,7 @@ export default function Navbar() {
     } catch {
       setSignOutError(t('nav.signOutFailed'))
     } finally {
+      signOutRequestRef.current = false
       setSigningOut(false)
     }
   }

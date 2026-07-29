@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { Eye, EyeOff, ArrowLeft, Mail, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -34,6 +34,7 @@ export default function LoginPage() {
   const [resendTimer, setResendTimer] = useState(0)
   const [otpAttempts, setOtpAttempts] = useState<number[]>([])
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
+  const submissionRef = useRef(false)
   const [storedReturnTo] = useState(() => readAuthReturnTo())
   const returnTo = getSafeAuthReturnTo(searchParams.get('next') || storedReturnTo)
 
@@ -66,7 +67,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (submitting) return
+    if (submissionRef.current) return
+    submissionRef.current = true
     setError('')
     setMessage('')
     setSubmitting(true)
@@ -100,18 +102,21 @@ export default function LoginPage() {
     } catch (err: unknown) {
       setError(getAuthErrorMessage(err, t('login.genericError'), lang))
     } finally {
+      submissionRef.current = false
       setSubmitting(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
-    if (submitting) return
+    if (submissionRef.current) return
+    submissionRef.current = true
     setError('')
     setSubmitting(true)
     try {
       rememberAuthReturnTo(returnTo)
       await signInWithGoogle()
     } catch (err: unknown) {
+      submissionRef.current = false
       clearAuthReturnTo()
       setError(getAuthErrorMessage(err, t('login.googleStartFailed'), lang))
       setSubmitting(false)
@@ -271,7 +276,7 @@ export default function LoginPage() {
                   type="button"
                   disabled={submitting || resendTimer > 0}
                   onClick={async () => {
-                    if (submitting || resendTimer > 0) return
+                    if (submissionRef.current || resendTimer > 0) return
                     
                     // Check if blocked
                     if (blockedUntil && Date.now() < blockedUntil) {
@@ -294,6 +299,7 @@ export default function LoginPage() {
                     
                     setError('')
                     setMessage('')
+                    submissionRef.current = true
                     setSubmitting(true)
                     try {
                       await resendSignupOtp(email)
@@ -303,6 +309,7 @@ export default function LoginPage() {
                     } catch (err: unknown) {
                       setError(getAuthErrorMessage(err, t('login.resendFailed'), lang))
                     } finally {
+                      submissionRef.current = false
                       setSubmitting(false)
                     }
                   }}

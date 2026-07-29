@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
@@ -61,6 +61,7 @@ export default function DocumentPreviewPage() {
   const [showAuditTrail, setShowAuditTrail] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadError, setDownloadError] = useState('')
+  const downloadRequestRef = useRef(false)
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
 
   useEffect(() => {
@@ -89,7 +90,8 @@ export default function DocumentPreviewPage() {
   const allSigned = signers.length > 0 && signers.every((s) => s.status === 'signed')
 
   const handleDownloadWithAudit = async () => {
-    if (!id) return
+    if (!id || downloadRequestRef.current) return
+    downloadRequestRef.current = true
     setDownloadError('')
     setDownloadingPdf(true)
     try {
@@ -182,6 +184,7 @@ export default function DocumentPreviewPage() {
         ? t('dashboard.signedDownloadFailed')
         : t('dashboard.originalDownloadFailed'))
     } finally {
+      downloadRequestRef.current = false
       setDownloadingPdf(false)
     }
   }

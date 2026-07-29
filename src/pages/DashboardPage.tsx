@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const noticeTimerRef = useRef<number | null>(null)
   const signerRequestRef = useRef(0)
   const uploadValidationRequestRef = useRef(0)
+  const uploadRequestRef = useRef(false)
   const reminderRequestRef = useRef(false)
   const downloadRequestRef = useRef(false)
 
@@ -198,7 +199,7 @@ export default function DashboardPage() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !user || uploading) return
+    if (!file || !user || uploadRequestRef.current) return
 
     const normalizedTitle = normalizeDocumentTitle(title)
     if (!normalizedTitle) {
@@ -211,6 +212,7 @@ export default function DashboardPage() {
     }
 
     setUploadError('')
+    uploadRequestRef.current = true
     setUploading(true)
     try {
       const validationError = await validatePdfFile(file)
@@ -232,6 +234,7 @@ export default function DashboardPage() {
         setUploadError(t('dashboard.uploadFailed'))
       }
     } finally {
+      uploadRequestRef.current = false
       setUploading(false)
     }
   }

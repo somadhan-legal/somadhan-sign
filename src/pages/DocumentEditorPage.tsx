@@ -131,6 +131,8 @@ export default function DocumentEditorPage() {
   const latestFingerprintRef = useRef('')
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
   const pendingSaveCountRef = useRef(0)
+  const signerSaveRequestRef = useRef(false)
+  const sendRequestRef = useRef(false)
   const savedToastTimerRef = useRef<number | null>(null)
   const signerScrollTimerRef = useRef<number | null>(null)
   const sendCountdownTimerRef = useRef<number | null>(null)
@@ -428,7 +430,7 @@ export default function DocumentEditorPage() {
 
   const handleSaveSigner = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!id || savingSigner) return
+    if (!id || signerSaveRequestRef.current) return
     const fullName = [signerFirstName.trim(), signerLastName.trim()].filter(Boolean).join(' ')
     const normalizedEmail = signerEmail.trim().toLowerCase()
     const duplicate = signers.some(
@@ -439,6 +441,7 @@ export default function DocumentEditorPage() {
       return
     }
     setSignerFormError('')
+    signerSaveRequestRef.current = true
     setSavingSigner(true)
 
     try {
@@ -485,6 +488,7 @@ export default function DocumentEditorPage() {
         variant: 'danger'
       })
     } finally {
+      signerSaveRequestRef.current = false
       setSavingSigner(false)
     }
   }
@@ -605,7 +609,7 @@ export default function DocumentEditorPage() {
   }
 
   const handleSendForSigning = async () => {
-    if (!id || !user || sending || savingDraft) return
+    if (!id || !user || sendRequestRef.current || savingDraft) return
     const senderName = user.user_metadata?.full_name || user.email || 'A user'
     const enteredCcEmails = ccEmails.split(',').map((email) => email.trim().toLowerCase()).filter(Boolean)
     const invalidCcEmails = enteredCcEmails.filter((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -615,6 +619,7 @@ export default function DocumentEditorPage() {
     }
 
     setSendFormError('')
+    sendRequestRef.current = true
     setShowSendConfirm(false)
     setSending(true)
 
@@ -673,6 +678,7 @@ export default function DocumentEditorPage() {
         variant: 'warning',
       })
     } finally {
+      sendRequestRef.current = false
       setSending(false)
     }
   }

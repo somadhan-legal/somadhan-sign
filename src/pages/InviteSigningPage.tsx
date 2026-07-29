@@ -120,6 +120,7 @@ export default function InviteSigningPage() {
   const fieldSubmissionRef = useRef(false)
   const consentSubmissionRef = useRef(false)
   const completionRetryRef = useRef(false)
+  const pdfGenerationRef = useRef(false)
   const finishTimerRef = useRef<number | null>(null)
   const fieldRevealTimerRef = useRef<number | null>(null)
   const activeDateInputRef = useRef<HTMLInputElement>(null)
@@ -810,7 +811,8 @@ export default function InviteSigningPage() {
   }
 
   const handleViewDocument = async () => {
-    if (!signerData || !documentId || generatingPdf) return
+    if (!signerData || !documentId || pdfGenerationRef.current) return
+    pdfGenerationRef.current = true
     setGeneratingPdf(true)
     setPdfError('')
     try {
@@ -822,12 +824,14 @@ export default function InviteSigningPage() {
       console.error('Error generating PDF:', err)
       setPdfError(t('signee.signedDocumentGenerateFailed'))
     } finally {
+      pdfGenerationRef.current = false
       setGeneratingPdf(false)
     }
   }
 
   const handleDownloadPdf = async () => {
-    if (!signerData || !documentId || generatingPdf) return
+    if (!signerData || !documentId || pdfGenerationRef.current) return
+    pdfGenerationRef.current = true
     setGeneratingPdf(true)
     setPdfError('')
     try {
@@ -841,6 +845,7 @@ export default function InviteSigningPage() {
       console.error('Error generating signed PDF:', err)
       setPdfError(t('signee.signedPdfGenerateFailed'))
     } finally {
+      pdfGenerationRef.current = false
       setGeneratingPdf(false)
     }
   }

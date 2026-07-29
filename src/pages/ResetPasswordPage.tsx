@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -18,6 +18,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const submissionRef = useRef(false)
 
   const { updatePassword, isRecovery, user, initialized, loading } = useAuthStore()
   const navigate = useNavigate()
@@ -46,6 +47,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submissionRef.current) return
     setError('')
 
     if (password.length < 8) {
@@ -58,6 +60,7 @@ export default function ResetPasswordPage() {
       return
     }
 
+    submissionRef.current = true
     setSubmitting(true)
     try {
       await updatePassword(password)
@@ -65,6 +68,7 @@ export default function ResetPasswordPage() {
     } catch (err: unknown) {
       setError(getAuthErrorMessage(err, t('reset.failedToUpdate'), lang))
     } finally {
+      submissionRef.current = false
       setSubmitting(false)
     }
   }
