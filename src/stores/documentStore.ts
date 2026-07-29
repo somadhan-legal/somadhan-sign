@@ -19,6 +19,7 @@ import {
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 import { getSigningDispatchContext } from '@/lib/signingDispatch'
+import { appendUniqueAuditEntry } from '@/lib/auditTrail'
 import {
   classifyDocumentLoadFailure,
   type DocumentLoadFailure,
@@ -798,7 +799,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         p_metadata: metadata || null,
       })
       if (!error) {
-        set((state) => ({ auditTrail: [...state.auditTrail, data as AuditTrailEntry] }))
+        set((state) => ({
+          auditTrail: appendUniqueAuditEntry(state.auditTrail, data as AuditTrailEntry),
+        }))
         return true
       }
       console.error('Error adding audit entry:', error)
@@ -821,7 +824,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return false
     }
     set((state) => ({
-      auditTrail: [...state.auditTrail, data as AuditTrailEntry],
+      auditTrail: appendUniqueAuditEntry(state.auditTrail, data as AuditTrailEntry),
     }))
     return true
   },
