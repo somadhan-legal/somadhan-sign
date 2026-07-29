@@ -15,8 +15,8 @@ export function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('en-US', {
+export function formatDate(date: string, locale = 'en-US'): string {
+  return new Date(date).toLocaleDateString(locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

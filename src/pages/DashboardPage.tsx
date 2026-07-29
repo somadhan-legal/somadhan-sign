@@ -41,7 +41,7 @@ import {
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const { t } = useLanguageStore()
+  const { t, lang } = useLanguageStore()
   const {
     documents,
     documentsError,
@@ -537,7 +537,10 @@ export default function DashboardPage() {
                         {doc.title}
                       </Link>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                        {t('dashboard.createdOn').replace('{date}', formatDate(doc.created_at))}
+                        {t('dashboard.createdOn').replace(
+                          '{date}',
+                          formatDate(doc.created_at, lang === 'bn' ? 'bn-BD' : 'en-US'),
+                        )}
                       </p>
                     </div>
                   </div>
