@@ -193,14 +193,14 @@ export default function ViewDocumentPage() {
           <div className="mt-2 flex items-center gap-2">
             <Badge variant="default">
               <Eye className="w-3 h-3 mr-1" />
-              {lang === 'bn' ? 'শুধু দেখুন' : 'View Only'}
+              {t('viewer.viewOnly')}
             </Badge>
             <Badge variant={document.status === 'completed' ? 'success' : document.status === 'cancelled' ? 'destructive' : 'warning'}>
               {document.status === 'completed'
-                ? (lang === 'bn' ? 'সম্পন্ন' : 'Completed')
+                ? t('dashboard.completed')
                 : document.status === 'cancelled'
                   ? t('dashboard.cancelled')
-                : (lang === 'bn' ? 'স্বাক্ষরের জন্য অপেক্ষমাণ' : 'Pending')}
+                  : t('dashboard.pending')}
             </Badge>
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function ViewDocumentPage() {
         {/* Signing Progress */}
         <div className="p-4 border-b border-[hsl(var(--border))]">
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-3">
-            {lang === 'bn' ? 'স্বাক্ষর অগ্রগতি' : 'Signing Progress'}
+            {t('signee.signingProgress')}
           </h3>
           <div
             className="w-full bg-[hsl(var(--muted))] rounded-full h-2 mb-3"
@@ -224,20 +224,24 @@ export default function ViewDocumentPage() {
             />
           </div>
           <p className="text-xs text-[hsl(var(--muted-foreground))]">
-            {signedCount} / {totalSigners} {lang === 'bn' ? 'স্বাক্ষরিত' : 'signed'}
+            {t('viewer.signedCount')
+              .replace('{signed}', String(signedCount))
+              .replace('{total}', String(totalSigners))}
           </p>
         </div>
 
         {/* Signers List */}
         <div className="p-4 flex-1">
           <h3 className="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-3">
-            {lang === 'bn' ? 'স্বাক্ষরকারী' : 'Signers'}
+            {t('dashboard.signers')}
           </h3>
           <div className="space-y-2">
             {signers.map((signer) => (
               <div key={signer.signer_email} className="flex items-center gap-2 p-2 rounded-lg bg-[hsl(var(--muted))]/50">
                 {signer.status === 'signed' ? (
                   <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
+                ) : signer.status === 'viewed' ? (
+                  <Eye className="w-4 h-4 text-[hsl(var(--primary))] shrink-0" />
                 ) : (
                   <Clock className="w-4 h-4 text-[hsl(var(--warning))] shrink-0" />
                 )}
@@ -247,10 +251,12 @@ export default function ViewDocumentPage() {
                     <p className="text-xs text-[hsl(var(--muted-foreground))] truncate">{signer.signer_email}</p>
                   )}
                 </div>
-                <Badge variant={signer.status === 'signed' ? 'success' : 'warning'} className="ml-auto shrink-0 text-[10px]">
+                <Badge variant={signer.status === 'signed' ? 'success' : signer.status === 'viewed' ? 'default' : 'warning'} className="ml-auto shrink-0 text-[10px]">
                   {signer.status === 'signed'
-                    ? (lang === 'bn' ? 'স্বাক্ষরিত' : 'Signed')
-                    : (lang === 'bn' ? 'অপেক্ষমাণ' : 'Pending')}
+                    ? t('dashboard.signed')
+                    : signer.status === 'viewed'
+                      ? t('dashboard.viewed')
+                      : t('dashboard.pending')}
                 </Badge>
               </div>
             ))}

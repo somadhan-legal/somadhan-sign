@@ -698,6 +698,8 @@ const translations: Record<string, Record<Language, string>> = {
   'viewer.pdfPage': { en: 'PDF page', bn: 'PDF পৃষ্ঠা' },
   'viewer.placeCenterHint': { en: 'Press Enter to place the selected field in the center.', bn: 'নির্বাচিত ক্ষেত্রটি মাঝখানে রাখতে Enter চাপুন।' },
   'viewer.signingProgress': { en: 'Document signing progress', bn: 'ডকুমেন্ট স্বাক্ষরের অগ্রগতি' },
+  'viewer.viewOnly': { en: 'View only', bn: 'শুধু দেখুন' },
+  'viewer.signedCount': { en: '{signed} / {total} signed', bn: '{signed} / {total} স্বাক্ষরিত' },
   'viewer.hideDetails': { en: 'Hide details', bn: 'বিস্তারিত লুকান' },
   'viewer.showDetails': { en: 'Show document details', bn: 'ডকুমেন্টের বিস্তারিত দেখান' },
   'viewer.finalCopyPending': { en: 'Final signed copy is being prepared', bn: 'চূড়ান্ত স্বাক্ষরিত কপি প্রস্তুত হচ্ছে' },
