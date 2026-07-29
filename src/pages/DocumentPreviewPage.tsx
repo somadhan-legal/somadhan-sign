@@ -13,6 +13,7 @@ import {
   Download,
   PanelLeftClose,
   PanelLeftOpen,
+  XCircle,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import PdfViewer from '@/components/PdfViewer'
@@ -236,16 +237,20 @@ export default function DocumentPreviewPage() {
                 currentDocument.status === 'completed'
                   ? 'success'
                   : currentDocument.status === 'pending'
-                  ? 'warning'
-                  : 'outline'
+                    ? 'warning'
+                    : currentDocument.status === 'cancelled'
+                      ? 'destructive'
+                      : 'outline'
               }
             >
               {currentDocument.status === 'completed' ? (
                 <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t('dashboard.completed')}</span>
               ) : currentDocument.status === 'pending' ? (
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {t('dashboard.pending')}</span>
+              ) : currentDocument.status === 'cancelled' ? (
+                <span className="flex items-center gap-1"><XCircle className="w-3 h-3" /> {t('dashboard.cancelled')}</span>
               ) : (
-                currentDocument.status.charAt(0).toUpperCase() + currentDocument.status.slice(1)
+                t('dashboard.draft')
               )}
             </Badge>
             {allSigned && (
