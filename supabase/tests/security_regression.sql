@@ -87,6 +87,20 @@ insert into public.signature_placements (
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB'
 );
 
+insert into public.audit_trail (
+  document_id, action, user_email
+) values
+  (
+    '22222222-2222-4222-8222-222222222222',
+    'Document Viewed',
+    'signer@example.com'
+  ),
+  (
+    '22222222-2222-4222-8222-222222222222',
+    'Document Viewed',
+    'other-signer@example.com'
+  );
+
 select pg_temp.assert(
   (select not public from storage.buckets where id = 'documents'),
   'the documents bucket must be private'
@@ -123,6 +137,16 @@ select pg_temp.assert(
       ->'signer'->'documents'->>'title'
   ) = 'Signing regression',
   'a valid token must still return its scoped signing package'
+);
+select pg_temp.assert(
+  json_array_length(
+    public.get_signing_package(repeat('a', 64))->'audit_trail'
+  ) = 1
+  and (
+    public.get_signing_package(repeat('a', 64))
+      ->'audit_trail'->0->>'user_email'
+  ) = 'signer@example.com',
+  'a pending signer must not receive another signer''s audit entries'
 );
 reset role;
 

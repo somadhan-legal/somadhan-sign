@@ -75,6 +75,9 @@ Deno.serve(async (req) => {
       }
 
       const normalizedEmail = signer.signer_email.toLowerCase()
+      const visibleAuditTrail = document.status === 'completed'
+        ? auditTrail || []
+        : (auditTrail || []).filter((entry) => entry.user_email.toLowerCase() === normalizedEmail)
       return jsonResponse({
         signerPackage: {
           signer: {
@@ -98,7 +101,7 @@ Deno.serve(async (req) => {
               signer_id: null,
               signer_email: placement.signer_email.toLowerCase() === normalizedEmail ? signer.signer_email : '',
             })),
-          audit_trail: auditTrail || [],
+          audit_trail: visibleAuditTrail,
         },
       })
     }

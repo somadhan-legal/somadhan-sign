@@ -451,6 +451,10 @@ begin
       ) order by a.created_at)
       from public.audit_trail a
       where a.document_id = ds.document_id
+        and (
+          d.status = 'completed'
+          or lower(a.user_email) = lower(ds.signer_email)
+        )
     ), '[]'::json)
   ) into result
   from public.document_signers ds
