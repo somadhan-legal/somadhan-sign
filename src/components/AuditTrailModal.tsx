@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 import { useLanguageStore } from '@/stores/languageStore'
 import { formatAuditMetadata } from '@/lib/auditMetadata'
 
@@ -74,23 +75,40 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
   const { auditTrail, fetchAuditTrail, fetchPlacements } = useDocumentStore()
   const { lang, t } = useLanguageStore()
   const [loadedRequestKey, setLoadedRequestKey] = useState('')
-  const requestKey = isOpen ? `${documentId}:${signingToken || 'owner'}` : ''
+  const [loadError, setLoadError] = useState(false)
+  const [reloadAttempt, setReloadAttempt] = useState(0)
+  const requestKey = isOpen ? `${documentId}:${signingToken || 'owner'}:${reloadAttempt}` : ''
   const loading = Boolean(requestKey) && loadedRequestKey !== requestKey
 
   useEffect(() => {
     if (!isOpen || !documentId) return
     let cancelled = false
-    const request = signingToken
-      ? fetchPlacements(documentId, signingToken)
-      : fetchAuditTrail(documentId)
-    void request.finally(() => {
-      if (!cancelled) setLoadedRequestKey(requestKey)
-    })
+    const load = async () => {
+      let loaded: boolean
+      try {
+        loaded = signingToken
+          ? await fetchPlacements(documentId, signingToken)
+          : await fetchAuditTrail(documentId)
+      } catch {
+        loaded = false
+      }
+      if (!cancelled) {
+        setLoadError(!loaded)
+        setLoadedRequestKey(requestKey)
+      }
+    }
+    void load()
     return () => { cancelled = true }
   }, [isOpen, documentId, signingToken, fetchAuditTrail, fetchPlacements, requestKey])
 
+  const handleClose = () => {
+    setLoadedRequestKey('')
+    setLoadError(false)
+    onClose()
+  }
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('audit.title')} size="xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('audit.title')} size="xl">
       <div className="max-h-[70dvh] overflow-y-auto" aria-busy={loading}>
         {/* Header */}
         <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr] gap-4 px-4 py-2 border-b border-[hsl(var(--border))] text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wider">
@@ -103,6 +121,19 @@ export default function AuditTrailModal({ isOpen, onClose, documentId, signingTo
           <div className="flex items-center justify-center py-12" role="status">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent" aria-hidden="true" />
             <span className="sr-only">{t('audit.loading')}</span>
+          </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center px-6 py-12 text-center" role="alert">
+            <XCircle className="mb-3 h-10 w-10 text-[hsl(var(--destructive))]/70" />
+            <p className="text-sm font-medium">{t('audit.loadFailed')}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => setReloadAttempt((attempt) => attempt + 1)}
+            >
+              {t('viewer.tryAgain')}
+            </Button>
           </div>
         ) : auditTrail.length === 0 ? (
           <div className="text-center py-12">

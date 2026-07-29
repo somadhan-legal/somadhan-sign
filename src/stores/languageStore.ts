@@ -726,6 +726,10 @@ const translations: Record<string, Record<Language, string>> = {
   'audit.timeLocation': { en: 'Time and location', bn: 'সময় ও অবস্থান' },
   'audit.loading': { en: 'Loading audit history', bn: 'অডিট ইতিহাস লোড হচ্ছে' },
   'audit.noActivity': { en: 'No activity recorded yet', bn: 'এখনো কোনো কার্যক্রম রেকর্ড হয়নি' },
+  'audit.loadFailed': {
+    en: 'The audit trail could not be loaded. Check your connection and try again.',
+    bn: 'অডিট ট্রেইল লোড করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
   'audit.documentCreated': { en: 'Document created', bn: 'ডকুমেন্ট তৈরি হয়েছে' },
   'audit.documentSent': { en: 'Document sent', bn: 'ডকুমেন্ট পাঠানো হয়েছে' },
   'audit.documentViewed': { en: 'Document viewed', bn: 'ডকুমেন্ট দেখা হয়েছে' },

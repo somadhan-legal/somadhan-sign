@@ -79,7 +79,7 @@ interface DocumentState {
   fetchSignerByToken: (token: string) => Promise<SignerByTokenResult | null>
   updateSignerStatus: (signerId: string, status: 'pending' | 'viewed' | 'signed', signingToken?: string) => Promise<boolean>
 
-  fetchAuditTrail: (documentId: string) => Promise<void>
+  fetchAuditTrail: (documentId: string) => Promise<boolean>
   addAuditEntry: (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => Promise<boolean>
 
   sendForSigning: (documentId: string, senderName?: string, message?: string, ccEmails?: string[]) => Promise<SendForSigningResult>
@@ -782,10 +782,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       .order('created_at', { ascending: true })
     if (error) {
       console.error('Error fetching audit trail:', error)
-      return
+      return false
     }
     
-    if (requestId === activeAuditFetch) set({ auditTrail: (data as AuditTrailEntry[]) || [] })
+    if (requestId !== activeAuditFetch) return false
+    set({ auditTrail: (data as AuditTrailEntry[]) || [] })
+    return true
   },
 
   addAuditEntry: async (documentId: string, action: string, userEmail: string, userName?: string | null, metadata?: string, signingToken?: string) => {
