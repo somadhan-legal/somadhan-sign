@@ -117,6 +117,9 @@ export default function InviteSigningPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
   const hasLoggedView = useRef(false)
+  const fieldSubmissionRef = useRef(false)
+  const consentSubmissionRef = useRef(false)
+  const completionRetryRef = useRef(false)
   const finishTimerRef = useRef<number | null>(null)
   const fieldRevealTimerRef = useRef<number | null>(null)
   const activeDateInputRef = useRef<HTMLInputElement>(null)
@@ -263,26 +266,43 @@ export default function InviteSigningPage() {
     return false
   }
 
+  const beginFieldSubmission = () => {
+    if (fieldSubmissionRef.current) return false
+    fieldSubmissionRef.current = true
+    setSubmitting(true)
+    return true
+  }
+
+  const endFieldSubmission = () => {
+    fieldSubmissionRef.current = false
+    setSubmitting(false)
+  }
+
   const handleConsent = async () => {
-    if (!documentId || !signerData || hasConsented || savingConsent) return
+    if (!documentId || !signerData || hasConsented || consentSubmissionRef.current) return
+    consentSubmissionRef.current = true
     setSavingConsent(true)
     setActionError('')
-    const recorded = await addAuditEntry(
-      documentId,
-      'Electronic Signature Consent Given',
-      userEmail,
-      userName,
-      JSON.stringify({
-        version: CONSENT_VERSION,
-        statement: t('signee.consentDescription'),
-        language: lang,
-        source: 'signing-interface',
-      }),
-      token,
-    )
-    if (recorded) setHasConsented(true)
-    else setActionError(t('signee.consentSaveFailed'))
-    setSavingConsent(false)
+    try {
+      const recorded = await addAuditEntry(
+        documentId,
+        'Electronic Signature Consent Given',
+        userEmail,
+        userName,
+        JSON.stringify({
+          version: CONSENT_VERSION,
+          statement: t('signee.consentDescription'),
+          language: lang,
+          source: 'signing-interface',
+        }),
+        token,
+      )
+      if (recorded) setHasConsented(true)
+      else setActionError(t('signee.consentSaveFailed'))
+    } finally {
+      consentSubmissionRef.current = false
+      setSavingConsent(false)
+    }
   }
 
   const myFields = signatureFields.filter(
@@ -343,66 +363,64 @@ export default function InviteSigningPage() {
   const myUnsignedSignatureFields = mySignatureFields.filter((f) => !signedFieldIds.has(f.id))
 
   const handleAutoFillSignatures = async (data: string) => {
-    if (!documentId || !signerData || submitting || !requireConsent()) return
-    setSubmitting(true)
+    if (!documentId || !signerData || fieldSubmissionRef.current || !requireConsent()) return
+    if (!beginFieldSubmission()) return
     setActionError('')
     setShowSignatureModal(false)
     setTappedFieldId(null)
-    for (const field of myUnsignedSignatureFields) {
-      const saved = await addPlacement({
-        document_id: documentId,
-        field_id: field.id,
-        signer_id: null,
-        signer_email: userEmail,
-        signature_id: data,
-      }, token)
-      if (!saved) {
-        setActionError(t('signee.fieldSaveFailed'))
-        await fetchPlacements(documentId, token)
-        setSubmitting(false)
-        return
-      }
-    }
-    setSignatureData(data)
-    await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
     try {
+      for (const field of myUnsignedSignatureFields) {
+        const saved = await addPlacement({
+          document_id: documentId,
+          field_id: field.id,
+          signer_id: null,
+          signer_email: userEmail,
+          signature_id: data,
+        }, token)
+        if (!saved) {
+          setActionError(t('signee.fieldSaveFailed'))
+          await fetchPlacements(documentId, token)
+          return
+        }
+      }
+      setSignatureData(data)
+      await addAuditEntry(documentId, 'Signature Applied', userEmail, userName, `Auto-filled ${myUnsignedSignatureFields.length} signature fields`, token)
       await checkCompletion()
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
   const handleAutoFillInitials = async (data: string) => {
-    if (!documentId || !signerData || submitting || !requireConsent()) return
-    setSubmitting(true)
+    if (!documentId || !signerData || fieldSubmissionRef.current || !requireConsent()) return
+    if (!beginFieldSubmission()) return
     setActionError('')
     setTappedFieldId(null)
-    for (const field of myUnsignedInitialsFields) {
-      const saved = await addPlacement({
-        document_id: documentId,
-        field_id: field.id,
-        signer_id: null,
-        signer_email: userEmail,
-        signature_id: data,
-      }, token)
-      if (!saved) {
-        setActionError(t('signee.fieldSaveFailed'))
-        await fetchPlacements(documentId, token)
-        setSubmitting(false)
-        return
-      }
-    }
-    setInitialsData(data)
-    await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
     try {
+      for (const field of myUnsignedInitialsFields) {
+        const saved = await addPlacement({
+          document_id: documentId,
+          field_id: field.id,
+          signer_id: null,
+          signer_email: userEmail,
+          signature_id: data,
+        }, token)
+        if (!saved) {
+          setActionError(t('signee.fieldSaveFailed'))
+          await fetchPlacements(documentId, token)
+          return
+        }
+      }
+      setInitialsData(data)
+      await addAuditEntry(documentId, 'Initials Added', userEmail, userName, `Auto-filled ${myUnsignedInitialsFields.length} initials fields`, token)
       await checkCompletion()
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
   const handleTapToSign = async (fieldId: string) => {
-    if (submitting || !requireConsent()) return
+    if (fieldSubmissionRef.current || !requireConsent()) return
     const field = signatureFields.find((f) => f.id === fieldId)
     const isInitials = field?.field_type === 'initials'
     const dataToUse = isInitials ? initialsData : signatureData
@@ -410,111 +428,107 @@ export default function InviteSigningPage() {
     if (!dataToUse || !documentId || !signerData) {
       return
     }
-    setSubmitting(true)
+    if (!beginFieldSubmission()) return
     setActionError('')
 
-    const saved = await addPlacement({
-      document_id: documentId,
-      field_id: fieldId,
-      signer_id: null,
-      signer_email: userEmail,
-      signature_id: dataToUse,
-    }, token)
-    if (!saved) {
-      setActionError(t('signee.fieldSaveFailed'))
-      await fetchPlacements(documentId, token)
-      setSubmitting(false)
-      return
-    }
-
-    await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`, token)
-
-    setTappedFieldId(null)
     try {
+      const saved = await addPlacement({
+        document_id: documentId,
+        field_id: fieldId,
+        signer_id: null,
+        signer_email: userEmail,
+        signature_id: dataToUse,
+      }, token)
+      if (!saved) {
+        setActionError(t('signee.fieldSaveFailed'))
+        await fetchPlacements(documentId, token)
+        return
+      }
+
+      await addAuditEntry(documentId, isInitials ? 'Initials Added' : 'Signature Applied', userEmail, userName, `${isInitials ? 'Initials' : 'Signature'} placed on page ${field?.page_number}`, token)
+
+      setTappedFieldId(null)
       await checkCompletion(fieldId)
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
   const handleDateField = async (fieldId: string, dateValue: string) => {
-    if (!documentId || !signerData || !dateValue || submitting || !requireConsent()) return
-    setSubmitting(true)
+    if (!documentId || !signerData || !dateValue || fieldSubmissionRef.current || !requireConsent()) return
+    if (!beginFieldSubmission()) return
     setActionError('')
     setDatePickerFieldId(null)
-    const saved = await addPlacement({
-      document_id: documentId,
-      field_id: fieldId,
-      signer_id: null,
-      signer_email: userEmail,
-      signature_id: dateValue,
-    }, token)
-    if (!saved) {
-      setActionError(t('signee.fieldSaveFailed'))
-      await fetchPlacements(documentId, token)
-      setSubmitting(false)
-      return
-    }
-    const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
     try {
+      const saved = await addPlacement({
+        document_id: documentId,
+        field_id: fieldId,
+        signer_id: null,
+        signer_email: userEmail,
+        signature_id: dateValue,
+      }, token)
+      if (!saved) {
+        setActionError(t('signee.fieldSaveFailed'))
+        await fetchPlacements(documentId, token)
+        return
+      }
+      const field = signatureFields.find((f) => f.id === fieldId)
+      await addAuditEntry(documentId, 'Date Filled', userEmail, userName, `Date ${dateValue} on page ${field?.page_number}`, token)
       await checkCompletion(fieldId)
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
   const handleCheckboxField = async (fieldId: string) => {
-    if (!documentId || !signerData || submitting || !requireConsent()) return
-    setSubmitting(true)
+    if (!documentId || !signerData || fieldSubmissionRef.current || !requireConsent()) return
+    if (!beginFieldSubmission()) return
     setActionError('')
-    const saved = await addPlacement({
-      document_id: documentId,
-      field_id: fieldId,
-      signer_id: null,
-      signer_email: userEmail,
-      signature_id: 'checkbox:checked',
-    }, token)
-    if (!saved) {
-      setActionError(t('signee.fieldSaveFailed'))
-      await fetchPlacements(documentId, token)
-      setSubmitting(false)
-      return
-    }
-    const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
     try {
+      const saved = await addPlacement({
+        document_id: documentId,
+        field_id: fieldId,
+        signer_id: null,
+        signer_email: userEmail,
+        signature_id: 'checkbox:checked',
+      }, token)
+      if (!saved) {
+        setActionError(t('signee.fieldSaveFailed'))
+        await fetchPlacements(documentId, token)
+        return
+      }
+      const field = signatureFields.find((f) => f.id === fieldId)
+      await addAuditEntry(documentId, 'Checkbox Checked', userEmail, userName, `Checkbox on page ${field?.page_number}`, token)
       await checkCompletion(fieldId)
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
   const handleTextFieldSubmit = async (fieldId: string) => {
-    if (!documentId || !signerData || !textInputValue.trim() || submitting || !requireConsent()) return
-    setSubmitting(true)
+    if (!documentId || !signerData || !textInputValue.trim() || fieldSubmissionRef.current || !requireConsent()) return
+    if (!beginFieldSubmission()) return
     setActionError('')
-    const saved = await addPlacement({
-      document_id: documentId,
-      field_id: fieldId,
-      signer_id: null,
-      signer_email: userEmail,
-      signature_id: textInputValue.trim(),
-    }, token)
-    if (!saved) {
-      setActionError(t('signee.fieldSaveFailed'))
-      await fetchPlacements(documentId, token)
-      setSubmitting(false)
-      return
-    }
-    setTextInputFieldId(null)
-    const field = signatureFields.find((f) => f.id === fieldId)
-    await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
-    setTextInputValue('')
     try {
+      const saved = await addPlacement({
+        document_id: documentId,
+        field_id: fieldId,
+        signer_id: null,
+        signer_email: userEmail,
+        signature_id: textInputValue.trim(),
+      }, token)
+      if (!saved) {
+        setActionError(t('signee.fieldSaveFailed'))
+        await fetchPlacements(documentId, token)
+        return
+      }
+      setTextInputFieldId(null)
+      const field = signatureFields.find((f) => f.id === fieldId)
+      await addAuditEntry(documentId, 'Text Entered', userEmail, userName, `Text on page ${field?.page_number}`, token)
+      setTextInputValue('')
       await checkCompletion(fieldId)
     } finally {
-      setSubmitting(false)
+      endFieldSubmission()
     }
   }
 
@@ -832,11 +846,13 @@ export default function InviteSigningPage() {
   }
 
   const handleRetryCompletion = async () => {
-    if (retryingCompletion) return
+    if (completionRetryRef.current) return
+    completionRetryRef.current = true
     setRetryingCompletion(true)
     try {
       await checkCompletion()
     } finally {
+      completionRetryRef.current = false
       setRetryingCompletion(false)
     }
   }
