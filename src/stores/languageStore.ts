@@ -700,6 +700,16 @@ const translations: Record<string, Record<Language, string>> = {
     en: 'Everyone has signed, but the final PDF is not ready yet. Please try this link again shortly.',
     bn: 'সবাই স্বাক্ষর করেছেন, তবে চূড়ান্ত PDF এখনো প্রস্তুত নয়। কিছুক্ষণ পর এই লিংকটি আবার চেষ্টা করুন।',
   },
+  'viewer.checkFinalCopy': { en: 'Check for signed copy', bn: 'স্বাক্ষরিত কপি পরীক্ষা করুন' },
+  'viewer.finalCopyRefreshFailed': {
+    en: 'The signed copy could not be checked. Check your connection and try again.',
+    bn: 'স্বাক্ষরিত কপি পরীক্ষা করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।',
+  },
+  'viewer.originalCopyTitle': { en: 'Original document shown', bn: 'মূল ডকুমেন্ট দেখানো হচ্ছে' },
+  'viewer.originalCopyDesc': {
+    en: 'This page shows the original uploaded PDF. The completed signed copy is sent to recipients by email when it is ready.',
+    bn: 'এই পৃষ্ঠায় আপলোড করা মূল PDF দেখানো হচ্ছে। সম্পন্ন স্বাক্ষরিত কপি প্রস্তুত হলে প্রাপকদের ইমেইলে পাঠানো হয়।',
+  },
 
   // ─── Audit trail ───
   'audit.title': { en: 'Audit trail', bn: 'অডিট ইতিহাস' },

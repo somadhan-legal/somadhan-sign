@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { useThemeStore } from '@/stores/themeStore'
 import { useLanguageStore } from '@/stores/languageStore'
-import { Home, Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Home, Moon, Sun, CheckCircle2, Clock, Eye, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react'
 import SomadhanLogoLight from '@/assets/sign_Somadhan_light.svg'
 import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
@@ -77,6 +77,8 @@ export default function ViewDocumentPage() {
   const [document, setDocument] = useState<DocumentData | null>(null)
   const [signers, setSigners] = useState<SignerInfo[]>([])
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+  const [refreshingFinalCopy, setRefreshingFinalCopy] = useState(false)
+  const [finalCopyRefreshError, setFinalCopyRefreshError] = useState(false)
 
   useEffect(() => {
     if (!isViewerReference(documentId, secureDocumentAccessEnabled)) return
@@ -141,7 +143,31 @@ export default function ViewDocumentPage() {
 
   const signedCount = signers.filter(s => s.status === 'signed').length
   const totalSigners = signers.length
-  const finalCopyPending = document.status === 'completed' && !document.final_pdf_url
+  const finalCopyPending = secureDocumentAccessEnabled
+    && document.status === 'completed'
+    && !document.final_pdf_url
+  const showingOriginalCompletedDocument = !secureDocumentAccessEnabled
+    && document.status === 'completed'
+
+  const refreshViewerPackage = async () => {
+    if (!documentId) return
+    const refreshedPackage = await fetchViewerPagePackage(documentId)
+    setDocument(refreshedPackage.document)
+    setSigners(refreshedPackage.signers)
+  }
+
+  const refreshFinalCopy = async () => {
+    if (refreshingFinalCopy) return
+    setRefreshingFinalCopy(true)
+    setFinalCopyRefreshError(false)
+    try {
+      await refreshViewerPackage()
+    } catch {
+      setFinalCopyRefreshError(true)
+    } finally {
+      setRefreshingFinalCopy(false)
+    }
+  }
 
   return (
     <div className="relative flex h-dvh min-w-0">
@@ -270,16 +296,36 @@ export default function ViewDocumentPage() {
             <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
               {t('viewer.finalCopyPendingDesc')}
             </p>
+            {finalCopyRefreshError && (
+              <p className="mt-3 text-sm text-[hsl(var(--destructive))]" role="alert">
+                {t('viewer.finalCopyRefreshFailed')}
+              </p>
+            )}
+            <Button
+              className="mt-5"
+              variant="outline"
+              onClick={() => void refreshFinalCopy()}
+              disabled={refreshingFinalCopy}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshingFinalCopy ? 'animate-spin' : ''}`} />
+              {refreshingFinalCopy ? t('viewer.retrying') : t('viewer.checkFinalCopy')}
+            </Button>
           </div>
         ) : (
-          <PdfViewer
-            fileUrl={document.final_pdf_url || document.original_pdf_url}
-            onRetry={async () => {
-              const refreshedPackage = await fetchViewerPagePackage(documentId!)
-              setDocument(refreshedPackage.document)
-              setSigners(refreshedPackage.signers)
-            }}
-          />
+          <div className="flex w-full min-w-0 flex-col items-center">
+            {showingOriginalCompletedDocument && (
+              <div className="mb-4 w-full max-w-[680px] rounded-xl border border-[hsl(var(--warning))]/40 bg-[hsl(var(--warning))]/10 px-4 py-3 text-sm leading-relaxed text-[hsl(var(--foreground))]" role="note">
+                <p className="font-semibold">{t('viewer.originalCopyTitle')}</p>
+                <p className="mt-1 text-[hsl(var(--muted-foreground))]">
+                  {t('viewer.originalCopyDesc')}
+                </p>
+              </div>
+            )}
+            <PdfViewer
+              fileUrl={document.final_pdf_url || document.original_pdf_url}
+              onRetry={refreshViewerPackage}
+            />
+          </div>
         )}
       </div>
     </div>
