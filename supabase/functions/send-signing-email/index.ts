@@ -315,7 +315,7 @@ serve(async (req) => {
       }
       const { data: ownedDocument } = await authClient
         .from('documents')
-        .select('id, title')
+        .select('id, title, status')
         .eq('id', documentId)
         .eq('created_by', authData.user.id)
         .maybeSingle()
@@ -323,6 +323,12 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Document access denied' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 403,
+        })
+      }
+      if (ownedDocument.status !== 'pending') {
+        return new Response(JSON.stringify({ error: 'This signing request is no longer active' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409,
         })
       }
       verifiedDocumentId = ownedDocument.id
@@ -366,7 +372,7 @@ serve(async (req) => {
       } else {
         const { data: invitedSigner } = await authClient
           .from('document_signers')
-          .select('id')
+          .select('id, status')
           .eq('document_id', documentId)
           .eq('signer_email', recipient.toLowerCase())
           .eq('signing_token', signingToken)
@@ -375,6 +381,12 @@ serve(async (req) => {
           return new Response(JSON.stringify({ error: 'Signer authorization failed' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 403,
+          })
+        }
+        if (isReminder && invitedSigner.status === 'signed') {
+          return new Response(JSON.stringify({ error: 'This signer has already completed the document' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 409,
           })
         }
         verifiedRecipient = recipient.trim()
