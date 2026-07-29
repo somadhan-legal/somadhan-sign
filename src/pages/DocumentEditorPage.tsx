@@ -914,7 +914,7 @@ export default function DocumentEditorPage() {
                   }}
                   className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                     selectedFieldType === opt.type
-                      ? 'bg-[hsl(var(--primary))] text-white shadow-md ring-2 ring-[hsl(var(--primary))]/50 ring-offset-1'
+                      ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-md ring-2 ring-[hsl(var(--primary))]/50 ring-offset-1'
                       : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
                   }`}
                 >
@@ -1424,7 +1424,7 @@ export default function DocumentEditorPage() {
 
       {/* Saved Toast */}
       {savedToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[hsl(var(--success))] text-white px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] px-5 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
           <CheckCircle2 className="w-4 h-4" />
           {t('editor.savedSuccess')}
         </div>

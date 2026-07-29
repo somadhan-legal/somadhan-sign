@@ -27,10 +27,12 @@
     --border: 190 20% 85%;             /* light border from Mist White */
     --input: 190 20% 85%;
     --ring: 184 85% 18%;               /* #075056 Deep Teal */
-    --accent-coral: 5 95% 62%;         /* #F95943 Coral Red */
+    --accent-coral: 5 80% 48%;         /* Accessible coral red */
+    --accent-coral-foreground: 0 0% 100%;
     --radius: 0.5rem;
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
+    --success: 142 72% 27%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 28%;
   }
 
   .dark {
@@ -41,21 +43,23 @@
     --card-foreground: 0 0% 100%;      /* #FFFFFF Absolute White */
     --popover: 0 0% 14%;               /* #232323 Charcoal */
     --popover-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
-    --primary: 5 80% 49%;              /* Accessible coral red */
-    --primary-foreground: 0 0% 100%;   /* #FFFFFF Absolute White */
+    --primary: 5 90% 61%;              /* Accessible coral red on dark surfaces */
+    --primary-foreground: 0 0% 0%;
     --secondary: 0 0% 14%;             /* #232323 Charcoal */
     --secondary-foreground: 0 0% 100%; /* #FFFFFF Absolute White */
     --muted: 0 0% 14%;                 /* #232323 Charcoal */
     --muted-foreground: 0 0% 55%;      /* gray for muted text */
     --accent: 0 0% 14%;                /* #232323 Charcoal */
     --accent-foreground: 0 0% 100%;    /* #FFFFFF Absolute White */
-    --destructive: 5 80% 49%;          /* Accessible coral red */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 5 90% 61%;          /* Accessible coral red on dark surfaces */
+    --destructive-foreground: 0 0% 0%;
     --border: 0 0% 20%;                /* subtle border */
     --input: 0 0% 20%;
     --ring: 5 95% 62%;                 /* #F95943 Coral Red (dark mode) */
-    --accent-coral: 5 80% 49%;         /* Accessible coral red */
+    --accent-coral: 5 90% 61%;         /* Accessible coral red on dark surfaces */
+    --accent-coral-foreground: 0 0% 0%;
     --success: 142 76% 36%;
+    --success-foreground: 0 0% 0%;
     --warning: 38 92% 50%;
   }
 }

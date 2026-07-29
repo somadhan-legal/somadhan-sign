@@ -468,7 +468,7 @@ export default function DashboardPage() {
               onClick={() => { setFilterStatus(item.status); setCurrentPage(1) }}
               className={`min-h-11 flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                 filterStatus === item.status
-                  ? 'bg-[hsl(var(--primary))] text-white'
+                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
                   : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]'
               }`}
             >
@@ -900,9 +900,9 @@ export default function DashboardPage() {
           role={notice.kind === 'error' ? 'alert' : 'status'}
           className={`fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl ${
             notice.kind === 'success'
-              ? 'border-[hsl(var(--success))]/30 bg-[hsl(var(--success))] text-white'
+              ? 'border-[hsl(var(--success))]/30 bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]'
               : notice.kind === 'error'
-                ? 'border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))] text-white'
+                ? 'border-[hsl(var(--destructive))]/30 bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]'
                 : 'border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]'
           }`}
         >

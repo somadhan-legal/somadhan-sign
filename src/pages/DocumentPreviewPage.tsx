@@ -487,7 +487,7 @@ export default function DocumentPreviewPage() {
         <AuditTrailModal isOpen={showAuditTrail} onClose={() => setShowAuditTrail(false)} documentId={id} />
       )}
       {downloadError && (
-        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-xl">
           {downloadError}
         </div>
       )}

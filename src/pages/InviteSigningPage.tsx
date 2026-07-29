@@ -891,7 +891,7 @@ export default function InviteSigningPage() {
   }
 
   const pdfErrorNotice = pdfError ? (
-    <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+    <div role="alert" className="fixed bottom-5 left-1/2 z-[70] w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-xl">
       {pdfError}
     </div>
   ) : null
@@ -1398,7 +1398,7 @@ export default function InviteSigningPage() {
                                 else handleAutoFillSignatures(signatureData!)
                               }}
                               disabled={submitting}
-                              className="min-h-11 px-3 py-2 bg-[hsl(var(--primary))] text-white text-xs rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
+                              className="min-h-11 px-3 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-xs rounded-md font-semibold hover:opacity-90 cursor-pointer shadow-lg"
                             >
                               {submitting ? '...' : t('signee.applyToEveryField')}
                             </button>
@@ -1539,7 +1539,7 @@ export default function InviteSigningPage() {
       )}
       {pdfErrorNotice}
       {actionError && (
-        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-white shadow-xl">
+        <div role="alert" className="fixed bottom-5 left-1/2 z-[70] flex w-[min(32rem,calc(100%-2rem))] -translate-x-1/2 items-center justify-between gap-3 rounded-xl bg-[hsl(var(--destructive))] px-4 py-3 text-sm font-medium text-[hsl(var(--destructive-foreground))] shadow-xl">
           <span>{actionError}</span>
           {allMyUnsigned.length === 0 && (
             <button

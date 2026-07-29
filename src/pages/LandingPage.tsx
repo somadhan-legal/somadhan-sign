@@ -70,7 +70,7 @@ export default function LandingPage() {
       <div className="landing-shell min-h-dvh overflow-x-hidden bg-[hsl(var(--background))]">
       <a
         href="#main-content"
-        className="fixed left-4 top-4 z-[100] inline-flex min-h-11 -translate-y-24 items-center rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
+        className="fixed left-4 top-4 z-[100] inline-flex min-h-11 -translate-y-24 items-center rounded-lg bg-[hsl(var(--primary))] px-4 py-2 font-semibold text-[hsl(var(--primary-foreground))] shadow-lg transition-transform focus:translate-y-0"
       >
         {t('common.skipToContent')}
       </a>
@@ -251,7 +251,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="absolute -bottom-5 -left-3 hidden rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-4 py-3 shadow-xl sm:flex sm:items-center sm:gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-bold text-white">3</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-bold text-[hsl(var(--primary-foreground))]">3</span>
                 <div><p className="text-xs font-bold">{t('landing.demoSignersReady')}</p><p className="text-[11px] text-[hsl(var(--muted-foreground))]">{t('landing.demoFieldsAssigned')}</p></div>
               </div>
             </motion.div>
@@ -273,7 +273,7 @@ export default function LandingPage() {
             <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--border))] md:grid-cols-2">
               {features.map(({ icon: Icon, title, copy, tone }, index) => (
                 <motion.article key={title} {...reveal} transition={{ ...reveal.transition, delay: index * 0.06 }} className="group min-h-64 bg-[hsl(var(--background))] p-7 sm:p-9">
-                  <div className={`mb-12 flex h-12 w-12 items-center justify-center rounded-xl ${tone === 'coral' ? 'bg-[hsl(var(--accent-coral))] text-white' : 'bg-[hsl(var(--primary))] text-white'}`}>
+                  <div className={`mb-12 flex h-12 w-12 items-center justify-center rounded-xl ${tone === 'coral' ? 'bg-[hsl(var(--accent-coral))] text-[hsl(var(--accent-coral-foreground))]' : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
@@ -321,7 +321,7 @@ export default function LandingPage() {
         </section>
 
         <section className="landing-container pb-24 lg:pb-32">
-          <motion.div {...reveal} className="relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] px-6 py-16 text-center text-white sm:px-12 lg:py-20">
+          <motion.div {...reveal} className="relative overflow-hidden rounded-[2rem] bg-[hsl(var(--primary))] px-6 py-16 text-center text-[hsl(var(--primary-foreground))] sm:px-12 lg:py-20">
             <div className="landing-solid-lines absolute inset-0 opacity-15" aria-hidden="true" />
             <div className="relative mx-auto max-w-3xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">{t('landing.ctaEyebrow')}</p>

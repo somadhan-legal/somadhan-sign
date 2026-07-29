@@ -14,7 +14,7 @@ export function buttonStyles({
   return cn(
     'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[hsl(var(--background))] disabled:opacity-50 disabled:pointer-events-none cursor-pointer',
     {
-      'bg-[hsl(var(--primary))] text-white hover:opacity-90 focus:ring-[hsl(var(--primary))]':
+      'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 focus:ring-[hsl(var(--primary))]':
         variant === 'primary',
       'bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] hover:bg-[hsl(var(--secondary))]/80':
         variant === 'secondary',
@@ -22,7 +22,7 @@ export function buttonStyles({
         variant === 'outline',
       'bg-transparent hover:bg-[hsl(var(--accent))]':
         variant === 'ghost',
-      'bg-[hsl(var(--destructive))] text-white hover:opacity-90':
+      'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:opacity-90':
         variant === 'destructive',
     },
     {
