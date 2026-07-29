@@ -1,12 +1,15 @@
 export type FieldType = 'signature' | 'initials' | 'date' | 'text' | 'checkbox'
 
 const FIELD_SIZE_PERCENTAGES: Record<FieldType, { width: number; height: number }> = {
-  signature: { width: 20, height: 6 },
-  initials: { width: 10, height: 5 },
-  date: { width: 14, height: 4 },
-  text: { width: 18, height: 4 },
+  signature: { width: 22, height: 7 },
+  initials: { width: 12, height: 5 },
+  date: { width: 16, height: 5 },
+  text: { width: 20, height: 5 },
   checkbox: { width: 4, height: 4 },
 }
+
+export type FieldBounds = { x: number; y: number; width: number; height: number }
+export type PositionedField = FieldBounds & { id: string; page_number: number }
 
 export function getFieldPlacement(
   type: FieldType,
@@ -15,7 +18,16 @@ export function getFieldPlacement(
   pageWidth: number,
   pageHeight: number
 ) {
-  const size = FIELD_SIZE_PERCENTAGES[type]
+  const defaultSize = FIELD_SIZE_PERCENTAGES[type]
+  // Percentage units have different physical dimensions on a portrait PDF.
+  // Derive the checkbox width from the rendered page so it stays square.
+  const checkboxPixels = Math.max(24, Math.min(36, Math.min(pageWidth, pageHeight) * 0.05))
+  const size = type === 'checkbox'
+    ? {
+        width: (checkboxPixels / pageWidth) * 100,
+        height: (checkboxPixels / pageHeight) * 100,
+      }
+    : defaultSize
   const pointerXPercent = (pointerX / pageWidth) * 100
   const pointerYPercent = (pointerY / pageHeight) * 100
 
@@ -28,7 +40,27 @@ export function getFieldPlacement(
 }
 
 type ArrowKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown'
-type FieldBounds = { x: number; y: number; width: number; height: number }
+
+export function fieldsOverlap(first: FieldBounds, second: FieldBounds): boolean {
+  return (
+    first.x < second.x + second.width
+    && first.x + first.width > second.x
+    && first.y < second.y + second.height
+    && first.y + first.height > second.y
+  )
+}
+
+export function getOverlappingField(
+  fields: PositionedField[],
+  candidate: FieldBounds & { page_number: number },
+  excludeFieldId?: string,
+): PositionedField | undefined {
+  return fields.find((field) =>
+    field.id !== excludeFieldId
+    && field.page_number === candidate.page_number
+    && fieldsOverlap(field, candidate)
+  )
+}
 
 export function adjustFieldWithKeyboard(
   field: FieldBounds,

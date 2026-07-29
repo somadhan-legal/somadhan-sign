@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Check, CheckCircle2, FileText, Fingerprint, Mail, MousePointer2, Pause, Play, Send, Users } from 'lucide-react'
 import { useLanguageStore } from '@/stores/languageStore'
 
 const stepIcons = [FileText, MousePointer2, Users, CheckCircle2]
+const STEP_DURATION_MS = 3600
 
 export default function HowItWorks() {
   const { t } = useLanguageStore()
@@ -20,7 +22,7 @@ export default function HowItWorks() {
 
   useEffect(() => {
     if (userPaused || reduceMotion) return
-    const timer = window.setInterval(() => setActiveStep((step) => (step + 1) % steps.length), 3600)
+    const timer = window.setInterval(() => setActiveStep((step) => (step + 1) % steps.length), STEP_DURATION_MS)
     return () => window.clearInterval(timer)
   }, [userPaused, reduceMotion, steps.length])
 
@@ -47,7 +49,20 @@ export default function HowItWorks() {
           className="mt-14 overflow-hidden rounded-[2rem] border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-[0_24px_80px_hsl(var(--foreground)/0.08)]"
         >
           <div className="grid lg:grid-cols-[330px_1fr]">
-            <div className="border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 lg:border-b-0 lg:border-r lg:p-6">
+            <div className="min-w-0 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 lg:border-b-0 lg:border-r lg:p-6">
+              <div className="mb-4 px-1">
+                <div className="landing-flow-track" aria-hidden="true">
+                  <div
+                    key={activeStep}
+                    className={`landing-flow-track-progress ${userPaused || reduceMotion ? 'is-paused' : ''}`}
+                    style={{
+                      '--step-start': reduceMotion ? (activeStep + 1) / steps.length : activeStep / steps.length,
+                      '--step-end': (activeStep + 1) / steps.length,
+                      '--step-duration': `${STEP_DURATION_MS}ms`,
+                    } as CSSProperties}
+                  />
+                </div>
+              </div>
               <div className="mb-3 flex justify-end">
                 <button
                   type="button"
@@ -60,10 +75,14 @@ export default function HowItWorks() {
                   {t(userPaused ? 'landing.resume' : 'landing.pause')}
                 </button>
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+              <div className="relative flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-rows-4 lg:overflow-visible">
+                <p className="sr-only" aria-live="polite">
+                  {steps[activeStep].label}, {activeStep + 1} / {steps.length}
+                </p>
                 {steps.map((step, index) => {
                   const Icon = stepIcons[index]
                   const active = activeStep === index
+                  const complete = index < activeStep
                   return (
                     <button
                       type="button"
@@ -73,12 +92,13 @@ export default function HowItWorks() {
                         setUserPaused(true)
                       }}
                       aria-label={`${step.label}: ${step.caption}`}
-                      className={`min-w-[180px] rounded-2xl border p-4 text-left transition-colors lg:min-w-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' : 'border-transparent hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'}`}
+                      aria-current={active ? 'step' : undefined}
+                      className={`relative z-10 min-w-[180px] rounded-2xl border bg-[hsl(var(--background))] p-4 text-left transition-[color,background-color,border-color,transform] lg:min-w-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-[0_12px_32px_hsl(var(--primary)/0.18)] lg:translate-x-1' : 'border-transparent hover:border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]'}`}
                       aria-pressed={active}
                     >
                       <div className="flex items-center gap-3">
-                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${active ? 'bg-white/14' : 'bg-[hsl(var(--muted))]'}`}>
-                          <Icon className="h-4 w-4" />
+                        <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-4 ring-[hsl(var(--background))] ${active ? 'bg-white/14 ring-[hsl(var(--primary))]' : complete ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' : 'bg-[hsl(var(--muted))]'}`}>
+                          {complete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                         </span>
                         <div>
                           <p className="text-sm font-extrabold"><span className="mr-2 opacity-60">0{index + 1}</span>{step.label}</p>

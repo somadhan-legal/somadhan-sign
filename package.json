@@ -11,7 +11,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/anek-bangla": "^5.2.9",
+    "@fontsource/dm-sans": "^5.2.9",
     "@fontsource/noto-sans-bengali": "^5.2.9",
+    "@fontsource/playfair-display": "^5.2.9",
     "@supabase/supabase-js": "^2.98.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.2",

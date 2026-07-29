@@ -18,6 +18,7 @@ interface PdfViewerProps {
   onPagePointerMove?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number, pointerType: string) => void
   onPageMouseLeave?: () => void
   onRetry?: () => Promise<void>
+  placementMode?: boolean
 }
 
 function PageWithOverlay({
@@ -28,6 +29,7 @@ function PageWithOverlay({
   renderPageOverlay,
   onPagePointerMove,
   onPageMouseLeave,
+  placementMode,
 }: {
   pageNumber: number
   scale: number
@@ -36,6 +38,7 @@ function PageWithOverlay({
   renderPageOverlay?: (pageNumber: number) => React.ReactNode
   onPagePointerMove?: (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number, pointerType: string) => void
   onPageMouseLeave?: () => void
+  placementMode: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const { t } = useLanguageStore()
@@ -99,19 +102,23 @@ function PageWithOverlay({
   return (
     <div
       ref={ref}
-      className={`relative ${onPageClick ? 'cursor-crosshair' : 'cursor-default'}`}
+      className={`relative ${placementMode ? 'cursor-crosshair' : 'cursor-default'}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       onPointerMove={handlePointerMove}
       onPointerLeave={onPageMouseLeave}
       role={onPageClick ? 'region' : undefined}
       tabIndex={onPageClick ? 0 : undefined}
-      aria-label={onPageClick ? `${t('viewer.pdfPage')} ${pageNumber}. ${t('viewer.placeCenterHint')}` : undefined}
+      aria-label={onPageClick
+        ? placementMode
+          ? `${t('viewer.pdfPage')} ${pageNumber}. ${t('viewer.placeCenterHint')}`
+          : `${t('viewer.pdfPage')} ${pageNumber}`
+        : undefined}
       style={{
         minHeight: `${estimatedHeight}px`,
         width: `${displayWidth}px`,
         userSelect: 'none',
-        touchAction: onPageClick ? 'manipulation' : 'pan-y pinch-zoom',
+        touchAction: placementMode ? 'manipulation' : 'pan-y pinch-zoom',
       }}
     >
       {isNearViewport ? (
@@ -151,6 +158,7 @@ export default function PdfViewer({
   onPagePointerMove,
   onPageMouseLeave,
   onRetry,
+  placementMode = Boolean(onPageClick),
 }: PdfViewerProps) {
   const { t } = useLanguageStore()
   const [totalPages, setTotalPages] = useState(0)
@@ -264,6 +272,7 @@ export default function PdfViewer({
                 renderPageOverlay={renderPageOverlay}
                 onPagePointerMove={onPagePointerMove}
                 onPageMouseLeave={onPageMouseLeave}
+                placementMode={placementMode}
               />
             </div>
           ))}

@@ -17,6 +17,8 @@ import {
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
+  MousePointer2,
+  Trash2,
 } from 'lucide-react'
 import { useDocumentStore } from '@/stores/documentStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -27,7 +29,13 @@ import Input from '@/components/ui/Input'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import InlineConfirm from '@/components/ui/InlineConfirm'
 import Modal from '@/components/ui/Modal'
-import { adjustFieldWithKeyboard, getFieldPlacement, type FieldType } from '@/lib/fieldPlacement'
+import {
+  adjustFieldWithKeyboard,
+  getFieldPlacement,
+  getOverlappingField,
+  type FieldBounds,
+  type FieldType,
+} from '@/lib/fieldPlacement'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
 import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
@@ -54,8 +62,9 @@ const fieldTypeOptions: { type: FieldType }[] = [
   { type: 'text' },
 ]
 
-function DraggableField({ children, onStop, bounds, style, className, fieldId }: {
+function DraggableField({ children, onStart, onStop, bounds, style, className, fieldId }: {
   children: React.ReactNode
+  onStart?: () => void
   onStop: (e: unknown, data: { x: number; y: number }) => void
   bounds?: string
   style?: React.CSSProperties
@@ -64,7 +73,13 @@ function DraggableField({ children, onStop, bounds, style, className, fieldId }:
 }) {
   const nodeRef = useRef<HTMLDivElement>(null)
   return (
-    <Draggable nodeRef={nodeRef as React.RefObject<HTMLElement>} position={{ x: 0, y: 0 }} onStop={onStop} bounds={bounds}>
+    <Draggable
+      nodeRef={nodeRef as React.RefObject<HTMLElement>}
+      position={{ x: 0, y: 0 }}
+      onStart={onStart}
+      onStop={onStop}
+      bounds={bounds}
+    >
       <div ref={nodeRef} style={{ ...style, touchAction: 'none' }} className={className} data-field-id={fieldId}>{children}</div>
     </Draggable>
   )
@@ -107,7 +122,7 @@ export default function DocumentEditorPage() {
   const [readyFieldDraftDocumentId, setReadyFieldDraftDocumentId] = useState<string | null>(null)
   const [savingSigner, setSavingSigner] = useState(false)
   const [sending, setSending] = useState(false)
-  const [selectedFieldType, setSelectedFieldType] = useState<FieldType>('signature')
+  const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null)
   const [selectedSignerIdx, setSelectedSignerIdx] = useState(0)
   const [savedToast, setSavedToast] = useState(false)
   const [sentToast, setSentToast] = useState(false)
@@ -147,6 +162,7 @@ export default function DocumentEditorPage() {
     message: string
     onConfirm: () => void
     variant?: 'danger' | 'warning' | 'info'
+    confirmText?: string
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'warning' })
   
   // Inline confirmation for signer deletion
@@ -286,6 +302,41 @@ export default function DocumentEditorPage() {
 
   const isInteracting = useRef(false)
   const getFieldTypeLabel = (fieldType: FieldType) => t(`editor.${fieldType}`)
+  const showOverlapWarning = useCallback(() => {
+    setConfirmDialog({
+      isOpen: true,
+      title: t('editor.fieldOverlapTitle'),
+      message: t('editor.fieldOverlapMessage'),
+      onConfirm: () => {},
+      variant: 'warning',
+    })
+  }, [t])
+
+  const overlapsAnotherField = useCallback((
+    pageNumber: number,
+    bounds: FieldBounds,
+    excludeFieldId?: string,
+  ) => Boolean(getOverlappingField(
+    signatureFields.filter((field) => field.document_id === id),
+    { ...bounds, page_number: pageNumber },
+    excludeFieldId,
+  )), [id, signatureFields])
+
+  const removeField = useCallback((fieldId: string) => {
+    const hasPlacements = placements.some((placement) => placement.field_id === fieldId)
+    if (hasPlacements) {
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.error'),
+        message: t('editor.cannotDeleteSigned'),
+        onConfirm: () => {},
+        variant: 'danger',
+      })
+      return
+    }
+    removeSignatureField(fieldId)
+    setSelectedField(null)
+  }, [placements, removeSignatureField, t])
 
   const handleResizeStart = useCallback((fieldId: string, corner: 'nw' | 'ne' | 'sw' | 'se', e: React.PointerEvent) => {
     e.stopPropagation()
@@ -361,12 +412,23 @@ export default function DocumentEditorPage() {
       }
     }
     const commitLatestSize = () => {
-      updateSignatureField(fieldId, {
+      const nextBounds = {
         width: latestSize.newW,
         height: latestSize.newH,
         x: latestSize.newLeft,
         y: latestSize.newTop,
-      })
+      }
+      if (overlapsAnotherField(field.page_number, nextBounds, fieldId)) {
+        applySize({
+          newW: startW,
+          newH: startH,
+          newLeft: startLeft,
+          newTop: startTop,
+        })
+        showOverlapWarning()
+      } else {
+        updateSignatureField(fieldId, nextBounds)
+      }
       if (interactionReleaseTimerRef.current !== null) window.clearTimeout(interactionReleaseTimerRef.current)
       interactionReleaseTimerRef.current = window.setTimeout(() => {
         isInteracting.current = false
@@ -393,12 +455,16 @@ export default function DocumentEditorPage() {
     document.addEventListener('pointerup', handlePointerUp)
     document.addEventListener('pointercancel', handlePointerCancel)
     activeResizeCleanupRef.current = stopListening
-  }, [signatureFields, updateSignatureField])
+  }, [overlapsAnotherField, showOverlapWarning, signatureFields, updateSignatureField])
 
   const handlePageClick = useCallback(
     (pageNumber: number, x: number, y: number, pageWidth: number, pageHeight: number) => {
       if (!id || !user || isInteracting.current) return
       if (currentDocument?.status !== 'draft') return // Locked
+      if (!selectedFieldType) {
+        setSelectedField(null)
+        return
+      }
       if (signers.length === 0) {
         setConfirmDialog({
           isOpen: true,
@@ -413,6 +479,11 @@ export default function DocumentEditorPage() {
       const assignedEmail = signers[selectedSignerIdx]?.signer_email || signers[0].signer_email
       const fieldId = `field_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
       const placement = getFieldPlacement(selectedFieldType, x, y, pageWidth, pageHeight)
+      if (overlapsAnotherField(pageNumber, placement)) {
+        setPlacementPreview(null)
+        showOverlapWarning()
+        return
+      }
       addSignatureField({
         id: fieldId,
         document_id: id,
@@ -427,10 +498,25 @@ export default function DocumentEditorPage() {
         label: null,
         isNew: true,
       })
-      // Keep the PDF visible on tablets and phones. A placed field can still be tapped to edit it.
+      // Placement is deliberately one-shot. Return to selection mode so the next
+      // click cannot create an accidental duplicate field.
+      setSelectedFieldType(null)
+      setPlacementPreview(null)
       setSelectedField(usesOverlayWorkspacePanels() ? null : fieldId)
     },
-    [id, user, signers, signatureFields.length, addSignatureField, selectedFieldType, selectedSignerIdx, currentDocument?.status, t]
+    [
+      addSignatureField,
+      currentDocument?.status,
+      id,
+      overlapsAnotherField,
+      selectedFieldType,
+      selectedSignerIdx,
+      showOverlapWarning,
+      signers,
+      signatureFields.length,
+      t,
+      user,
+    ]
   )
 
   const handleSaveSigner = async (e: React.FormEvent) => {
@@ -700,9 +786,46 @@ export default function DocumentEditorPage() {
     const newX = field.x + (data.x / rect.width) * 100
     const newY = field.y + (data.y / rect.height) * 100
 
-    updateSignatureField(fieldId, {
+    const nextBounds = {
       x: Math.max(0, Math.min(100 - field.width, newX)),
       y: Math.max(0, Math.min(100 - field.height, newY)),
+      width: field.width,
+      height: field.height,
+    }
+    if (overlapsAnotherField(field.page_number, nextBounds, fieldId)) {
+      showOverlapWarning()
+      return
+    }
+    updateSignatureField(fieldId, nextBounds)
+  }
+
+  const clearAllFields = () => {
+    if (docFields.length === 0) return
+    const hasSignedFields = docFields.some((field) =>
+      placements.some((placement) => placement.field_id === field.id)
+    )
+    if (hasSignedFields) {
+      setConfirmDialog({
+        isOpen: true,
+        title: t('editor.error'),
+        message: t('editor.cannotClearSignedFields'),
+        onConfirm: () => {},
+        variant: 'danger',
+      })
+      return
+    }
+    setConfirmDialog({
+      isOpen: true,
+      title: t('editor.clearAllFields'),
+      message: t('editor.clearAllFieldsConfirm'),
+      confirmText: t('editor.clearFields'),
+      onConfirm: () => {
+        docFields.forEach((field) => removeSignatureField(field.id))
+        setSelectedField(null)
+        setSelectedFieldType(null)
+        setPlacementPreview(null)
+      },
+      variant: 'danger',
     })
   }
 
@@ -903,6 +1026,23 @@ export default function DocumentEditorPage() {
           <div className="px-3 py-2 border-b border-[hsl(var(--border))]">
             <h3 className="font-semibold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] mb-1.5">{t('editor.fields')}</h3>
             <div className="space-y-0.5">
+              <button
+                type="button"
+                aria-pressed={selectedFieldType === null}
+                onClick={() => {
+                  setSelectedFieldType(null)
+                  setPlacementPreview(null)
+                  if (usesOverlayWorkspacePanels()) setLeftPanelCollapsed(true)
+                }}
+                className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                  selectedFieldType === null
+                    ? 'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] ring-2 ring-[hsl(var(--border))]'
+                    : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]'
+                }`}
+              >
+                <MousePointer2 className="h-4 w-4" />
+                {t('editor.selectTool')}
+              </button>
               {fieldTypeOptions.map((opt) => (
                 <button
                   key={opt.type}
@@ -910,6 +1050,7 @@ export default function DocumentEditorPage() {
                   aria-pressed={selectedFieldType === opt.type}
                   onClick={() => {
                     setSelectedFieldType(opt.type)
+                    setSelectedField(null)
                     if (usesOverlayWorkspacePanels()) setLeftPanelCollapsed(true)
                   }}
                   className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
@@ -922,6 +1063,16 @@ export default function DocumentEditorPage() {
                   {t(`editor.${opt.type}`)}
                 </button>
               ))}
+              {docFields.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllFields}
+                  className="mt-2 flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-[hsl(var(--destructive))] transition-colors hover:bg-[hsl(var(--destructive))]/10 cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t('editor.clearAllFields')}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1015,8 +1166,9 @@ export default function DocumentEditorPage() {
             }
           }}
           onPageClick={isLocked ? undefined : handlePageClick}
+          placementMode={selectedFieldType !== null}
           onPagePointerMove={(pageNumber, x, y, pageWidth, pageHeight, pointerType) => {
-            if (!isLocked && signers.length > 0 && pointerType !== 'touch') {
+            if (!isLocked && selectedFieldType && signers.length > 0 && pointerType !== 'touch') {
               setPlacementPreview({
                 pageNumber,
                 ...getFieldPlacement(selectedFieldType, x, y, pageWidth, pageHeight),
@@ -1028,10 +1180,10 @@ export default function DocumentEditorPage() {
             const pageFields = getPageFields(pageNumber)
             const previewColor = SIGNER_COLORS[selectedSignerIdx % SIGNER_COLORS.length]
             const previewSigner = signers[selectedSignerIdx]
-            const previewLabel = getFieldTypeLabel(selectedFieldType)
+            const previewLabel = selectedFieldType ? getFieldTypeLabel(selectedFieldType) : ''
             return (
             <>
-              {placementPreview?.pageNumber === pageNumber && !isLocked && previewSigner && (
+              {placementPreview?.pageNumber === pageNumber && !isLocked && previewSigner && selectedFieldType && (
                 <div
                   aria-hidden="true"
                   className="absolute z-30 pointer-events-none"
@@ -1050,10 +1202,16 @@ export default function DocumentEditorPage() {
                       color: previewColor,
                     }}
                   >
-                    <span className="truncate px-1 text-[11px] font-semibold">{previewLabel}</span>
-                    <span className="absolute bottom-0 left-0 right-0 truncate px-0.5 text-center text-[8px] font-medium opacity-80">
-                      {previewSigner.signer_name || previewSigner.signer_email.split('@')[0]}
-                    </span>
+                    {selectedFieldType === 'checkbox'
+                      ? <SquareCheck className="h-4/5 w-4/5" aria-hidden="true" />
+                      : (
+                        <>
+                          <span className="truncate px-1 text-[11px] font-semibold">{previewLabel}</span>
+                          <span className="absolute bottom-0 left-0 right-0 truncate px-0.5 text-center text-[8px] font-medium opacity-80">
+                            {previewSigner.signer_name || previewSigner.signer_email.split('@')[0]}
+                          </span>
+                        </>
+                      )}
                   </div>
                 </div>
               )}
@@ -1083,16 +1241,27 @@ export default function DocumentEditorPage() {
                         color: color,
                       }}
                     >
-                      <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
-                      <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
-                        {sName}
-                      </span>
+                      {ft === 'checkbox'
+                        ? <SquareCheck className="h-4/5 w-4/5" aria-hidden="true" />
+                        : (
+                          <>
+                            <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
+                            <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
+                              {sName}
+                            </span>
+                          </>
+                        )}
                     </div>
                   </div>
                 ) : (
                   <DraggableField
                     key={field.id}
                     fieldId={field.id}
+                    onStart={() => {
+                      setSelectedFieldType(null)
+                      setPlacementPreview(null)
+                      setSelectedField(field.id)
+                    }}
                     onStop={(_e, data) => handleFieldDragStop(field.id, _e, data)}
                     bounds="parent"
                     className={`absolute cursor-move group ${isSelected ? 'z-20' : 'z-10'}`}
@@ -1112,17 +1281,38 @@ export default function DocumentEditorPage() {
                         backgroundColor: isSelected ? `${color}08` : `${color}18`,
                         color: color,
                       }}
-                      onClick={(e) => { e.stopPropagation(); if (!isLocked) setSelectedField(field.id) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (!isLocked) {
+                          setSelectedFieldType(null)
+                          setPlacementPreview(null)
+                          setSelectedField(field.id)
+                        }
+                      }}
                       onPointerUp={(event) => {
                         if (event.pointerType !== 'touch') return
                         event.stopPropagation()
-                        if (!isLocked) setSelectedField(field.id)
+                        if (!isLocked) {
+                          setSelectedFieldType(null)
+                          setPlacementPreview(null)
+                          setSelectedField(field.id)
+                        }
                       }}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault()
                           event.stopPropagation()
-                          if (!isLocked) setSelectedField(field.id)
+                          if (!isLocked) {
+                            setSelectedFieldType(null)
+                            setPlacementPreview(null)
+                            setSelectedField(field.id)
+                          }
+                          return
+                        }
+                        if ((event.key === 'Delete' || event.key === 'Backspace') && !isLocked) {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          removeField(field.id)
                           return
                         }
                         if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
@@ -1130,15 +1320,17 @@ export default function DocumentEditorPage() {
                         event.stopPropagation()
                         if (isLocked) return
 
-                        updateSignatureField(
-                          field.id,
-                          adjustFieldWithKeyboard(
-                            field,
-                            event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
-                            event.shiftKey,
-                            event.altKey,
-                          ),
+                        const nextBounds = adjustFieldWithKeyboard(
+                          field,
+                          event.key as 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown',
+                          event.shiftKey,
+                          event.altKey,
                         )
+                        if (overlapsAnotherField(field.page_number, nextBounds, field.id)) {
+                          showOverlapWarning()
+                          return
+                        }
+                        updateSignatureField(field.id, nextBounds)
                         setSelectedField(field.id)
                       }}
                       role="button"
@@ -1147,10 +1339,16 @@ export default function DocumentEditorPage() {
                       aria-describedby={`field-keyboard-hint-${field.id}`}
                     >
                       <span id={`field-keyboard-hint-${field.id}`} className="sr-only">{t('editor.fieldKeyboardHint')}</span>
-                      <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
-                      <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
-                        {sName}
-                      </span>
+                      {ft === 'checkbox'
+                        ? <SquareCheck className="h-4/5 w-4/5" aria-hidden="true" />
+                        : (
+                          <>
+                            <span className="truncate px-1 text-[11px] font-semibold">{ftLabel}</span>
+                            <span className="absolute bottom-0 left-0 right-0 text-center text-[8px] font-medium truncate px-0.5 opacity-80" style={{ color }}>
+                              {sName}
+                            </span>
+                          </>
+                        )}
                     </div>
                     {isSelected && (
                       <button
@@ -1159,19 +1357,7 @@ export default function DocumentEditorPage() {
                         className="absolute -top-[22px] left-1/2 z-40 flex h-11 w-11 -translate-x-1/2 items-center justify-center cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation()
-                          const hasPlacements = placements.some(p => p.field_id === field.id)
-                          if (hasPlacements) {
-                            setConfirmDialog({
-                              isOpen: true,
-                              title: t('editor.error'),
-                              message: t('editor.cannotDeleteSigned'),
-                              onConfirm: () => {},
-                              variant: 'danger'
-                            })
-                            return
-                          }
-                          removeSignatureField(field.id)
-                          setSelectedField(null)
+                          removeField(field.id)
                         }}
                       >
                         <span
@@ -1486,6 +1672,7 @@ export default function DocumentEditorPage() {
         title={confirmDialog.title}
         message={confirmDialog.message}
         variant={confirmDialog.variant}
+        confirmText={confirmDialog.confirmText}
       />
     </div>
   )

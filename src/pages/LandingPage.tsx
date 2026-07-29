@@ -121,7 +121,7 @@ export default function LandingPage() {
               ))}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Link to="/login" className={buttonStyles({ variant: 'outline', className: 'w-full' })}>{t('landing.signIn')}</Link>
-                <Link to="/login?mode=signup" className={buttonStyles({ className: 'w-full' })}>{t('nav.getStarted')}</Link>
+                <Link to="/login?mode=signup" className={buttonStyles({ className: 'w-full' })}>{t('landing.startNow')}</Link>
               </div>
               <div className="mt-3 flex gap-2">
                 <button onClick={toggleLang} aria-label={t(lang === 'en' ? 'common.switchToBangla' : 'common.switchToEnglish')} className="landing-icon-button flex-1 px-4 text-xs font-extrabold">{lang === 'en' ? 'বাংলা' : 'EN'}</button>
@@ -341,7 +341,7 @@ export default function LandingPage() {
           <p className="text-sm text-[hsl(var(--muted-foreground))]">&copy; {new Date().getFullYear()} {t('landing.footer')}</p>
           <div className="flex items-center gap-1 text-sm font-semibold">
             <Link to="/login" className="inline-flex min-h-11 items-center px-2">{t('landing.signIn')}</Link>
-            <Link to="/login?mode=signup" className="inline-flex min-h-11 items-center px-2">{t('nav.getStarted')}</Link>
+            <Link to="/login?mode=signup" className="inline-flex min-h-11 items-center px-2">{t('landing.startNow')}</Link>
           </div>
         </div>
       </footer>

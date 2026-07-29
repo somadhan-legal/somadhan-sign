@@ -1,3 +1,14 @@
+@import '@fontsource/dm-sans/latin-400.css';
+@import '@fontsource/dm-sans/latin-500.css';
+@import '@fontsource/dm-sans/latin-600.css';
+@import '@fontsource/dm-sans/latin-700.css';
+@import '@fontsource/dm-sans/latin-800.css';
+@import '@fontsource/playfair-display/latin-600.css';
+@import '@fontsource/playfair-display/latin-700.css';
+@import '@fontsource/anek-bangla/bengali-400.css';
+@import '@fontsource/anek-bangla/bengali-500.css';
+@import '@fontsource/anek-bangla/bengali-600.css';
+@import '@fontsource/anek-bangla/bengali-700.css';
 @import '@fontsource/noto-sans-bengali/400.css';
 @import '@fontsource/noto-sans-bengali/500.css';
 @import '@fontsource/noto-sans-bengali/600.css';
@@ -70,8 +81,20 @@
   }
 body {
     @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))] antialiased;
-    font-family: 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     margin: 0;
+  }
+  h1, h2, h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  html[lang='bn'] body {
+    font-family: 'Li Ador Noirrit', 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
+    font-stretch: semi-condensed;
+  }
+  html[lang='bn'] h1,
+  html[lang='bn'] h2,
+  html[lang='bn'] h3 {
+    font-family: 'Li Shadhinata 2.0', 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
   }
   button, a, input, textarea, select {
     -webkit-tap-highlight-color: transparent;
@@ -128,6 +151,26 @@ html { scroll-behavior: smooth; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Landing page */
+.landing-shell {
+  --landing-font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --landing-font-display: 'Playfair Display', Georgia, serif;
+  font-family: var(--landing-font-body);
+}
+
+html[lang='bn'] .landing-shell {
+  --landing-font-body: 'Li Ador Noirrit', 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
+  --landing-font-display: 'Li Shadhinata 2.0', 'Anek Bangla', 'Noto Sans Bengali', sans-serif;
+  font-stretch: semi-condensed;
+}
+
+.landing-shell h1,
+.landing-shell h2,
+.landing-shell h3,
+.landing-display,
+.landing-section-title {
+  font-family: var(--landing-font-display);
+}
+
 .landing-container {
   width: min(100% - 2rem, 1240px);
   margin-inline: auto;
@@ -172,16 +215,16 @@ html { scroll-behavior: smooth; }
 
 .landing-display {
   font-size: clamp(3.4rem, 7vw, 6.8rem);
-  line-height: 0.94;
-  letter-spacing: -0.065em;
-  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 700;
 }
 
 .landing-section-title {
   font-size: clamp(2.5rem, 5vw, 4.6rem);
-  line-height: 1.02;
-  letter-spacing: -0.05em;
-  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 700;
 }
 
 .landing-eyebrow {
@@ -215,6 +258,38 @@ html { scroll-behavior: smooth; }
 .landing-solid-lines {
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M0 48L48 0M24 48L48 24M0 24L24 0' fill='none' stroke='white' stroke-opacity='.22'/%3E%3C/svg%3E");
+}
+
+.landing-flow-track {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: hsl(var(--border));
+}
+
+.landing-flow-track-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--step-start, 0) * 100%);
+  border-radius: inherit;
+  background: hsl(var(--primary));
+  animation: landing-step-progress-x var(--step-duration, 3600ms) linear forwards;
+}
+
+.landing-flow-track-progress.is-paused {
+  animation-play-state: paused;
+}
+
+@keyframes landing-step-progress-x {
+  from { width: calc(var(--step-start, 0) * 100%); }
+  to { width: calc(var(--step-end, 0.25) * 100%); }
+}
+
+html[lang='bn'] .landing-display,
+html[lang='bn'] .landing-section-title {
+  letter-spacing: 0;
+  line-height: 1.15;
 }
 
 @media (min-width: 640px) {
