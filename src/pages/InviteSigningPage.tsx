@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   ChevronLeft,
@@ -242,16 +242,14 @@ export default function InviteSigningPage() {
     if (fieldRevealTimerRef.current !== null) window.clearTimeout(fieldRevealTimerRef.current)
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!datePickerFieldId) return
-    const frame = window.requestAnimationFrame(() => activeDateInputRef.current?.focus())
-    return () => window.cancelAnimationFrame(frame)
+    activeDateInputRef.current?.focus()
   }, [datePickerFieldId])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!textInputFieldId) return
-    const frame = window.requestAnimationFrame(() => activeTextInputRef.current?.focus())
-    return () => window.cancelAnimationFrame(frame)
+    activeTextInputRef.current?.focus()
   }, [textInputFieldId])
 
   const userEmail = signerData?.signer_email || ''
