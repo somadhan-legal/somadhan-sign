@@ -526,7 +526,9 @@ export default function DashboardPage() {
             return (
               <div
                 key={doc.id}
-                className="group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition-[border-color,box-shadow,transform] hover:border-[hsl(var(--primary))]/35 hover:shadow-md focus-within:border-[hsl(var(--primary))]/45"
+                className={`group relative rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-4 transition-[border-color,box-shadow] hover:border-[hsl(var(--primary))]/35 hover:shadow-md focus-within:border-[hsl(var(--primary))]/45 ${
+                  menuOpen === doc.id ? 'z-30' : 'z-0'
+                }`}
               >
                 <Link
                   to={getDashboardDocumentRoute(doc)}
@@ -592,7 +594,7 @@ export default function DashboardPage() {
                         <MoreVertical className="w-4 h-4" />
                       </button>
                       {menuOpen === doc.id && (
-                        <div id={`document-menu-${doc.id}`} role="menu" className="absolute right-0 top-full mt-1 w-48 bg-[hsl(var(--card))] rounded-lg shadow-lg border border-[hsl(var(--border))] py-1 z-10">
+                        <div id={`document-menu-${doc.id}`} role="menu" className="absolute right-0 top-full z-40 mt-1 w-48 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] py-1 shadow-xl">
                           {doc.status === 'draft' && (
                             <Link
                               to={`/document/${doc.id}/edit`}
