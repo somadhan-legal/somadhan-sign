@@ -28,6 +28,7 @@ import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
 import { useResponsivePanel } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
+import FieldTextPreview from '@/components/FieldTextPreview'
 
 const SIGNER_COLORS = [
   '#3B82F6', '#F59E0B', '#10B981', '#EF4444',
@@ -429,11 +430,7 @@ export default function DocumentPreviewPage() {
                   const isSignatureImage = val.startsWith('data:image')
 
                   if (ft === 'date' || val.startsWith('date:')) {
-                    return (
-                      <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight">{formatSigningDate(val)}</span>
-                      </div>
-                    )
+                    return <FieldTextPreview value={formatSigningDate(val)} />
                   }
                   if (ft === 'checkbox' || val === 'checkbox:checked' || val === 'checked') {
                     return (
@@ -444,11 +441,7 @@ export default function DocumentPreviewPage() {
                   }
                   if (ft === 'text' || (!isSignatureImage && val.startsWith('text:'))) {
                     const textVal = val.startsWith('text:') ? val.replace('text:', '') : val
-                    return (
-                      <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight truncate px-0.5">{textVal}</span>
-                      </div>
-                    )
+                    return <FieldTextPreview value={textVal} />
                   }
                   // Signature or initials image without a border.
                   return (

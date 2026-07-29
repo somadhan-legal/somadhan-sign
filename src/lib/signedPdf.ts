@@ -1,6 +1,7 @@
 import { PDFDocument, degrees, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib'
 import '@fontsource/noto-sans-bengali/bengali-400.css'
 import { formatSigningDate } from '@/lib/utils'
+import { fitSingleLineFieldText } from '@/lib/fieldText'
 
 export interface SignedField {
   field_type: string
@@ -76,16 +77,6 @@ export const getContainedImageRect = (
   return { ...point, width, height, rotation: rect.rotation }
 }
 
-const fitText = (text: string, font: PDFFont, maxWidth: number, preferredSize: number) => {
-  const safeText = text.replace(/[\r\n\t]+/g, ' ').trim()
-  let size = Math.max(6, preferredSize)
-  while (size > 6 && font.widthOfTextAtSize(safeText, size) > maxWidth) size -= 0.5
-  if (font.widthOfTextAtSize(safeText, size) <= maxWidth) return { text: safeText, size }
-  let fitted = safeText
-  while (fitted.length > 1 && font.widthOfTextAtSize(`${fitted}...`, size) > maxWidth) fitted = fitted.slice(0, -1)
-  return { text: `${fitted}...`, size }
-}
-
 const drawFieldText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, font: PDFFont, rect: PdfPlacementRect) => {
   const padding = Math.min(5, rect.width * 0.08)
   const preferredSize = Math.min(11, Math.max(7, rect.height * 0.55))
@@ -116,7 +107,12 @@ const drawFieldText = async (pdfDoc: PDFDocument, page: PDFPage, value: string, 
     })
     return
   }
-  const fitted = fitText(value, font, Math.max(rect.width - padding * 2, 8), preferredSize)
+  const fitted = fitSingleLineFieldText(
+    value,
+    (text, size) => font.widthOfTextAtSize(text, size),
+    Math.max(rect.width - padding * 2, 8),
+    preferredSize,
+  )
   page.drawText(fitted.text, {
     x: rect.x,
     y: rect.y,

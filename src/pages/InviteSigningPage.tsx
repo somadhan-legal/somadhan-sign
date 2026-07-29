@@ -37,6 +37,7 @@ import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
 import { getSignedSignerRecoveryAction } from '@/lib/signingCompletion'
 import { mapPlacementsToSignedFields } from '@/lib/signedFields'
 import { buttonStyles } from '@/components/ui/buttonStyles'
+import FieldTextPreview from '@/components/FieldTextPreview'
 
 const blobToBase64 = (blob: Blob) => new Promise<string>((resolve, reject) => {
   const reader = new FileReader()
@@ -1295,17 +1296,13 @@ export default function InviteSigningPage() {
                         <img src={placement.signature_id} alt={t('signee.signedValue')} className="max-w-full max-h-full object-contain" />
                       </div>
                     ) : isSigned && placement && (isDate || placement.signature_id.startsWith('date:')) ? (
-                      <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight">{formatSigningDate(placement.signature_id)}</span>
-                      </div>
+                      <FieldTextPreview value={formatSigningDate(placement.signature_id)} />
                     ) : isSigned && placement && (isCheckbox || placement.signature_id === 'checkbox:checked') ? (
                       <div className="w-full h-full flex items-center justify-center">
                         <svg className="w-[70%] h-[70%] text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       </div>
                     ) : isSigned && placement && (isText || placement.signature_id.startsWith('text:')) ? (
-                      <div className="w-full h-full flex items-end">
-                        <span className="text-sm font-bold text-black leading-tight">{placement.signature_id.replace('text:', '')}</span>
-                      </div>
+                      <FieldTextPreview value={placement.signature_id.replace('text:', '')} />
 
                     ) : isTapped && isSignatureType && sigData ? (
                       /* Tapped signature or initials: Apply to this / Apply to All popover. */
