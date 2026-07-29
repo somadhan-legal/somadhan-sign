@@ -153,7 +153,7 @@ export default function DocumentEditorPage() {
   const [deleteSignerId, setDeleteSignerId] = useState<string | null>(null)
   
   // Panel collapse state
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+  const [leftPanelCollapsed, setLeftPanelCollapsed, leftPanelRef] = useResponsivePanel()
 
   useEffect(() => () => {
     activeResizeCleanupRef.current()
@@ -745,7 +745,14 @@ export default function DocumentEditorPage() {
       )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden xl:static xl:z-auto xl:w-56 xl:shadow-none">
+      <div
+        ref={leftPanelRef}
+        role={usesOverlayWorkspacePanels() ? 'dialog' : undefined}
+        aria-modal={usesOverlayWorkspacePanels() ? true : undefined}
+        aria-label={t('editor.expandPanel')}
+        tabIndex={-1}
+        className="absolute inset-y-0 left-0 z-40 w-72 border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col overflow-hidden xl:static xl:z-auto xl:w-56 xl:shadow-none"
+      >
         {/* Scrollable sidebar content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-3 py-2 border-b border-[hsl(var(--border))]">

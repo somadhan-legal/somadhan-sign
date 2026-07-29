@@ -11,6 +11,7 @@ export const usesOverlayWorkspacePanels = () =>
 export const useResponsivePanel = () => {
   const [collapsed, setCollapsed] = useState(usesOverlayWorkspacePanels)
   const panelTriggerRef = useRef<HTMLElement | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const updateCollapsed = useCallback((nextState: SetStateAction<boolean>) => {
     setCollapsed((previousState) => {
@@ -52,5 +53,49 @@ export const useResponsivePanel = () => {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [collapsed, updateCollapsed])
 
-  return [collapsed, updateCollapsed] as const
+  useEffect(() => {
+    const panel = panelRef.current
+    if (collapsed || !panel || !usesOverlayWorkspacePanels()) return
+
+    const focusableSelector = [
+      'button:not([disabled])',
+      'a[href]',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',')
+    requestAnimationFrame(() => {
+      panel.querySelector<HTMLElement>(focusableSelector)?.focus()
+    })
+
+    const containPanelFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const activeModal = Array.from(document.querySelectorAll<HTMLElement>(
+        '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]'
+      )).find((candidate) => candidate !== panel)
+      if (activeModal) return
+
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector))
+      if (focusable.length === 0) {
+        event.preventDefault()
+        panel.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', containPanelFocus)
+    return () => document.removeEventListener('keydown', containPanelFocus)
+  }, [collapsed])
+
+  return [collapsed, updateCollapsed, panelRef] as const
 }

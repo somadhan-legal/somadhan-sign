@@ -126,7 +126,7 @@ export default function InviteSigningPage() {
   const activeDateInputRef = useRef<HTMLInputElement>(null)
   const activeTextInputRef = useRef<HTMLInputElement>(null)
   const { isDark, toggle } = useThemeStore()
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+  const [leftPanelCollapsed, setLeftPanelCollapsed, leftPanelRef] = useResponsivePanel()
   const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => {
@@ -1009,7 +1009,14 @@ export default function InviteSigningPage() {
       )}
       {/* Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none">
+      <div
+        ref={leftPanelRef}
+        role={usesOverlayWorkspacePanels() ? 'dialog' : undefined}
+        aria-modal={usesOverlayWorkspacePanels() ? true : undefined}
+        aria-label={t('signee.expandPanel')}
+        tabIndex={-1}
+        className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none"
+      >
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />

@@ -26,7 +26,7 @@ import { createOwnerDocumentUrl } from '@/lib/documentStorage'
 import { formatSigningDate, formatSigningText } from '@/lib/utils'
 import { downloadBlob, downloadPdfUrl, safePdfFilename } from '@/lib/download'
 import { useLanguageStore } from '@/stores/languageStore'
-import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
 import FieldTextPreview from '@/components/FieldTextPreview'
 
@@ -62,7 +62,7 @@ export default function DocumentPreviewPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadError, setDownloadError] = useState('')
   const downloadRequestRef = useRef(false)
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+  const [leftPanelCollapsed, setLeftPanelCollapsed, leftPanelRef] = useResponsivePanel()
 
   useEffect(() => {
     if (id) {
@@ -222,7 +222,14 @@ export default function DocumentPreviewPage() {
       )}
       {/* Left Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none">
+      <div
+        ref={leftPanelRef}
+        role={usesOverlayWorkspacePanels() ? 'dialog' : undefined}
+        aria-modal={usesOverlayWorkspacePanels() ? true : undefined}
+        aria-label={t('viewer.showDetails')}
+        tabIndex={-1}
+        className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-xl flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none"
+      >
         <div className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="p-4 border-b border-[hsl(var(--border))]">

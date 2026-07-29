@@ -12,7 +12,7 @@ import SomadhanLogoDark from '@/assets/sign_Somadhan_dark.svg'
 import type { ViewerPackageResult } from '@/types/database'
 import { getLegacyPublicDocumentUrl } from '@/lib/documentStorage'
 import { secureDocumentAccessEnabled } from '@/lib/secureDocumentAccess'
-import { useResponsivePanel } from '@/hooks/useResponsivePanel'
+import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import { isViewerReference } from '@/lib/publicAccessReference'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 
@@ -76,7 +76,7 @@ export default function ViewDocumentPage() {
   const [error, setError] = useState<string | null>(null)
   const [document, setDocument] = useState<DocumentData | null>(null)
   const [signers, setSigners] = useState<SignerInfo[]>([])
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useResponsivePanel()
+  const [leftPanelCollapsed, setLeftPanelCollapsed, leftPanelRef] = useResponsivePanel()
   const [refreshingFinalCopy, setRefreshingFinalCopy] = useState(false)
   const [finalCopyRefreshError, setFinalCopyRefreshError] = useState(false)
 
@@ -181,7 +181,14 @@ export default function ViewDocumentPage() {
       )}
       {/* Sidebar */}
       {!leftPanelCollapsed && (
-      <div className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none">
+      <div
+        ref={leftPanelRef}
+        role={usesOverlayWorkspacePanels() ? 'dialog' : undefined}
+        aria-modal={usesOverlayWorkspacePanels() ? true : undefined}
+        aria-label={t('viewer.showDetails')}
+        tabIndex={-1}
+        className="absolute inset-y-0 left-0 z-50 w-[min(20rem,88vw)] border-r border-[hsl(var(--border))] bg-[hsl(var(--background))] shadow-xl overflow-y-auto flex flex-col xl:static xl:z-auto xl:w-80 xl:shadow-none"
+      >
         <div className="p-3 border-b border-[hsl(var(--border))] flex items-center">
           <a href="/">
             <img src={isDark ? SomadhanLogoDark : SomadhanLogoLight} alt="SomadhanSign" className="h-14 cursor-pointer" />
