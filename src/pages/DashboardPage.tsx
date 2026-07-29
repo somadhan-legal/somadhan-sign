@@ -256,15 +256,27 @@ export default function DashboardPage() {
 
   const handleDownload = async (documentId: string) => {
     if (downloadRequestRef.current) return
-    const currentDoc = documents.find((document) => document.id === documentId)
-    if (!currentDoc) return
+    const listedDoc = documents.find((document) => document.id === documentId)
+    if (!listedDoc) return
 
     downloadRequestRef.current = true
     setDownloadingDocumentId(documentId)
     setMenuOpen(null)
     showNotice(t('dashboard.preparingDownload'), 'info')
+    let downloadWasCompleted = listedDoc.status === 'completed'
 
     try {
+      const { data: freshDocument, error: documentError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', documentId)
+        .single()
+      if (documentError || !freshDocument) {
+        throw documentError || new Error('The document is unavailable')
+      }
+      const currentDoc = freshDocument as Document
+      downloadWasCompleted = currentDoc.status === 'completed'
+
       if (currentDoc.status !== 'completed') {
         const sourcePdfUrl = await createOwnerDocumentUrl(currentDoc.original_pdf_url)
         await downloadPdfUrl(sourcePdfUrl, safePdfFilename(currentDoc.title))
@@ -348,7 +360,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error downloading PDF:', error)
       showNotice(
-        currentDoc.status === 'completed'
+        downloadWasCompleted
           ? t('dashboard.completedPdfFailed')
           : t('dashboard.originalDownloadFailed'),
         'error',
