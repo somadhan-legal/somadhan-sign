@@ -74,7 +74,7 @@ export default function DocumentEditorPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { t } = useLanguageStore()
+  const { lang, t } = useLanguageStore()
   const {
     currentDocument,
     signatureFields,
@@ -136,6 +136,7 @@ export default function DocumentEditorPage() {
   const sendCountdownTimerRef = useRef<number | null>(null)
   const interactionReleaseTimerRef = useRef<number | null>(null)
   const activeResizeCleanupRef = useRef<() => void>(() => undefined)
+  const defaultSendMessageRef = useRef(sendMessage)
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -159,6 +160,14 @@ export default function DocumentEditorPage() {
     if (sendCountdownTimerRef.current !== null) window.clearInterval(sendCountdownTimerRef.current)
     if (interactionReleaseTimerRef.current !== null) window.clearTimeout(interactionReleaseTimerRef.current)
   }, [])
+
+  useEffect(() => {
+    const localizedDefault = t('editor.defaultSendMessage')
+    setSendMessage((currentMessage) =>
+      currentMessage === defaultSendMessageRef.current ? localizedDefault : currentMessage
+    )
+    defaultSendMessageRef.current = localizedDefault
+  }, [lang, t])
 
   useEffect(() => {
     if (id) fetchDocument(id)
@@ -929,7 +938,13 @@ export default function DocumentEditorPage() {
                 role={draftSaveState === 'error' ? 'alert' : 'status'}
                 aria-live="polite"
               >
-                {savingDraft ? t('editor.saving') : draftSaveState === 'error' ? t('editor.autosaveFailed') : t('editor.saved')}
+                {savingDraft
+                  ? t('editor.saving')
+                  : draftSaveState === 'error'
+                    ? t('editor.autosaveFailed')
+                    : draftSaveState === 'idle'
+                      ? t('editor.changesPending')
+                      : t('editor.saved')}
               </p>
               <Button size="sm" className="w-full text-xs" onClick={handlePreSend} disabled={savingDraft || sending}>
                 <Send className="w-3.5 h-3.5 mr-1.5" />

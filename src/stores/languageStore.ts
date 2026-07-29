@@ -410,6 +410,7 @@ const translations: Record<string, Record<Language, string>> = {
   'editor.saveDraft': { en: 'Save Draft', bn: 'খসড়া সংরক্ষণ' },
   'editor.saving': { en: 'Saving...', bn: 'সংরক্ষণ হচ্ছে...' },
   'editor.saved': { en: 'All changes saved', bn: 'সব পরিবর্তন সংরক্ষিত' },
+  'editor.changesPending': { en: 'Changes waiting to save', bn: 'পরিবর্তনগুলো সংরক্ষণের অপেক্ষায় আছে' },
   'editor.autosaveFailed': { en: 'Changes are not saved. Check your connection and try again.', bn: 'পরিবর্তন সংরক্ষিত হয়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।' },
   'editor.unsavedChanges': { en: 'Save your changes?', bn: 'আপনার পরিবর্তন সংরক্ষণ করবেন?' },
   'editor.unsavedChangesMessage': {
