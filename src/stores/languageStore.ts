@@ -83,13 +83,17 @@ const translations: Record<string, Record<Language, string>> = {
   'verify.copyReference': { en: 'Copy verification reference', bn: 'যাচাইকরণ রেফারেন্স কপি করুন' },
   'verify.guidanceTitle': { en: 'What this check means', bn: 'এই যাচাইয়ের অর্থ' },
   'verify.guidanceBody': {
-    en: 'The QR connects this certificate to a Somadhan Sign completion record. Review the audit trail inside the signed PDF for the recorded signing events.',
-    bn: 'QR কোডটি এই সনদকে Somadhan Sign-এর একটি সম্পন্ন রেকর্ডের সঙ্গে যুক্ত করে। স্বাক্ষরের ঘটনাগুলো দেখতে স্বাক্ষরিত PDF-এর অডিট ইতিহাস দেখুন।',
+    en: 'The QR connects this certificate to a Somadhan Sign completion record. Open the audit trail to review the recorded signing events.',
+    bn: 'QR কোডটি এই সনদকে Somadhan Sign-এর একটি সম্পন্ন রেকর্ডের সঙ্গে যুক্ত করে। রেকর্ড করা স্বাক্ষরের ঘটনাগুলো দেখতে অডিট ইতিহাস খুলুন।',
   },
   'verify.privacyNote': {
     en: 'For privacy, this page does not show the document title or signer details.',
     bn: 'গোপনীয়তার জন্য এই পৃষ্ঠায় ডকুমেন্টের নাম বা স্বাক্ষরকারীদের তথ্য দেখানো হয় না।',
   },
+  'verify.viewAuditTrail': { en: 'View audit trail', bn: 'অডিট ইতিহাস দেখুন' },
+  'verify.hideAuditTrail': { en: 'Hide audit trail', bn: 'অডিট ইতিহাস লুকান' },
+  'verify.auditTrailTitle': { en: 'Recorded signing events', bn: 'রেকর্ড করা স্বাক্ষরের ঘটনাসমূহ' },
+  'verify.auditTrailEmpty': { en: 'No signing events are available for this record.', bn: 'এই রেকর্ডের জন্য স্বাক্ষরের কোনো ঘটনা পাওয়া যায়নি।' },
   'verify.tryAgain': { en: 'Try again', bn: 'আবার চেষ্টা করুন' },
   'verify.disclaimer': {
     en: 'This page confirms a Somadhan Sign completion record. It does not independently determine legal validity or a signer’s identity.',

@@ -3,8 +3,10 @@ import { Link } from 'react-router'
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   Copy,
   FileSearch,
+  History,
   LoaderCircle,
   Moon,
   ShieldCheck,
@@ -25,6 +27,26 @@ import { useThemeStore } from '@/stores/themeStore'
 
 type PageState = 'checking' | 'active' | 'not_found' | 'revoked' | 'unavailable'
 
+const auditActionTranslationKeys: Record<string, string> = {
+  'Document Created': 'audit.documentCreated',
+  'Document Sent': 'audit.documentSent',
+  'Document Viewed': 'audit.documentViewed',
+  'Document Signed': 'audit.documentSigned',
+  'Field Signed': 'audit.fieldSigned',
+  'All Fields Signed': 'audit.allFieldsSigned',
+  'Signature Applied': 'audit.signatureApplied',
+  'Initials Added': 'audit.initialsAdded',
+  'Date Filled': 'audit.dateFilled',
+  'Checkbox Checked': 'audit.checkboxChecked',
+  'Text Entered': 'audit.textEntered',
+  'Document Completed': 'audit.documentCompleted',
+  'Document Sent for Signing': 'audit.sentForSigning',
+  'Reminder Sent': 'audit.reminderSent',
+  'Electronic Signature Consent Given': 'audit.consentGiven',
+  'Completion Emails Sent': 'audit.completionEmailsSent',
+  'Document Cancelled': 'audit.documentCancelled',
+}
+
 export default function VerifyDocumentPage() {
   const { lang, toggle: toggleLanguage, t } = useLanguageStore()
   const { isDark, toggle: toggleTheme } = useThemeStore()
@@ -32,6 +54,7 @@ export default function VerifyDocumentPage() {
   const [record, setRecord] = useState<ActiveVerificationRecord | null>(null)
   const [referenceCode, setReferenceCode] = useState('')
   const [copiedReference, setCopiedReference] = useState(false)
+  const [auditTrailOpen, setAuditTrailOpen] = useState(false)
   const verificationRequestRef = useRef(0)
   const verificationAbortRef = useRef<AbortController | null>(null)
 
@@ -59,6 +82,7 @@ export default function VerifyDocumentPage() {
     verificationAbortRef.current = controller
     setState('checking')
     setRecord(null)
+    setAuditTrailOpen(false)
     const token = readVerificationToken(window.location.hash)
     if (!token) {
       if (requestId !== verificationRequestRef.current) return
@@ -228,6 +252,67 @@ export default function VerifyDocumentPage() {
                   </dd>
                 </div>
               </dl>
+
+              {record.auditTrail && (
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full justify-between"
+                    onClick={() => setAuditTrailOpen((open) => !open)}
+                    aria-expanded={auditTrailOpen}
+                    aria-controls="verification-audit-trail"
+                  >
+                    <span className="flex items-center gap-2">
+                      <History className="h-4 w-4" aria-hidden="true" />
+                      {t(auditTrailOpen ? 'verify.hideAuditTrail' : 'verify.viewAuditTrail')}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${auditTrailOpen ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </Button>
+
+                  {auditTrailOpen && (
+                    <div
+                      id="verification-audit-trail"
+                      className="mt-3 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4"
+                    >
+                      <h2 className="text-sm font-bold">{t('verify.auditTrailTitle')}</h2>
+                      {record.auditTrail.length === 0 ? (
+                        <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
+                          {t('verify.auditTrailEmpty')}
+                        </p>
+                      ) : (
+                        <ol className="mt-4 space-y-0">
+                          {record.auditTrail.map((event, index) => {
+                            const eventLabelKey = auditActionTranslationKeys[event.action]
+                            const eventLabel = eventLabelKey ? t(eventLabelKey) : event.action
+                            const eventTime = new Intl.DateTimeFormat(lang === 'bn' ? 'bn-BD' : 'en-GB', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                              timeZone: 'UTC',
+                            }).format(new Date(event.occurredAt))
+                            return (
+                              <li key={`${event.occurredAt}-${event.action}-${index}`} className="relative flex gap-3 pb-5 last:pb-0">
+                                {index < record.auditTrail!.length - 1 && (
+                                  <span className="absolute left-[5px] top-3 h-full w-px bg-[hsl(var(--border))]" aria-hidden="true" />
+                                )}
+                                <span className="relative mt-1.5 h-3 w-3 shrink-0 rounded-full border-2 border-[hsl(var(--primary))] bg-[hsl(var(--background))]" aria-hidden="true" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold">{eventLabel}</p>
+                                  <p className="mt-0.5 text-xs text-[hsl(var(--muted-foreground))]">{eventTime} UTC</p>
+                                </div>
+                              </li>
+                            )
+                          })}
+                        </ol>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-6 rounded-2xl bg-[hsl(var(--muted))] p-5">
                 <h2 className="font-bold">{t('verify.guidanceTitle')}</h2>

@@ -1,6 +1,11 @@
 export const MAX_VERIFICATION_PDF_BYTES = 30_000_000
 const TOKEN_PATTERN = /^v1\.[A-Za-z0-9_-]{43}$/
 
+export interface VerificationAuditEvent {
+  action: string
+  occurredAt: string
+}
+
 export interface ActiveVerificationRecord {
   schemaVersion: 1
   status: 'active'
@@ -12,6 +17,7 @@ export interface ActiveVerificationRecord {
   hashScheme: 'raw-pdf-bytes-v1'
   completedAt: string
   issuedAt: string
+  auditTrail?: VerificationAuditEvent[]
 }
 
 export type VerificationResult =
@@ -40,6 +46,21 @@ const isActiveRecord = (value: unknown): value is ActiveVerificationRecord => {
     && record.hashScheme === 'raw-pdf-bytes-v1'
     && Number.isFinite(Date.parse(String(record.completedAt)))
     && Number.isFinite(Date.parse(String(record.issuedAt)))
+    && (
+      record.auditTrail === undefined
+      || (
+        Array.isArray(record.auditTrail)
+        && record.auditTrail.length <= 250
+        && record.auditTrail.every((entry) => {
+          if (!entry || typeof entry !== 'object') return false
+          const event = entry as Record<string, unknown>
+          return typeof event.action === 'string'
+            && event.action.length > 0
+            && event.action.length <= 100
+            && Number.isFinite(Date.parse(String(event.occurredAt)))
+        })
+      )
+    )
 }
 
 export async function fetchDocumentVerification(

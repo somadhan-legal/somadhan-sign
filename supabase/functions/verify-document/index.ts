@@ -139,6 +139,14 @@ Deno.serve(async (request) => {
       }, 410, origin)
     }
 
+    const { data: auditRows, error: auditError } = await serviceClient
+      .from("audit_trail")
+      .select("action, created_at")
+      .eq("document_id", verification.document_id)
+      .order("created_at", { ascending: true })
+      .limit(250)
+    if (auditError) throw auditError
+
     return jsonResponse({
       schemaVersion: 1,
       status: "active",
@@ -150,6 +158,10 @@ Deno.serve(async (request) => {
       hashScheme: verification.hash_scheme,
       completedAt: verification.completed_at,
       issuedAt: verification.issued_at,
+      auditTrail: (auditRows || []).map((entry) => ({
+        action: entry.action,
+        occurredAt: entry.created_at,
+      })),
     }, 200, origin)
   } catch {
     return jsonResponse({ status: "unavailable" }, 503, origin)
