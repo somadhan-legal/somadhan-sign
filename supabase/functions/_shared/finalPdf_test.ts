@@ -129,6 +129,52 @@ Deno.test("audit continuation pages preserve a landscape original page size", as
   }
 })
 
+Deno.test("A3 audit pages preserve dimensions with long content", async () => {
+  const original = await PDFDocument.create()
+  original.addPage([841.89, 1190.55])
+  const longValue = "A deliberately long audit value used to verify that participant names, email addresses, event descriptions, and metadata remain inside their measured columns"
+  const auditTrail = Array.from({ length: 42 }, (_, index) => ({
+    action: `${longValue} event ${index + 1}`,
+    user_email: `long.participant.address.${index + 1}.with.extra.context@example-document-signing.test`,
+    user_name: `${longValue} participant ${index + 1}`,
+    created_at: `2026-07-29T10:${String(index % 60).padStart(2, "0")}:00.000Z`,
+    metadata: `${longValue}. ${longValue}.`,
+  }))
+  const finalBytes = await generateAuthoritativeFinalPdf(
+    await original.save(),
+    {
+      title: `${longValue}. ${longValue}.`,
+      fields: [{
+        id: "text-field",
+        field_type: "text",
+        page_number: 1,
+        x: 10,
+        y: 10,
+        width: 25,
+        height: 8,
+      }],
+      placements: [{ field_id: "text-field", signature_id: "Approved" }],
+      audit_trail: auditTrail,
+      verification: {
+        url: `https://sign.somadhan.com/verify#v1.${"A".repeat(43)}`,
+        reference: "SS-1234-ABCD-5678",
+        evidence_sha256: "a".repeat(64),
+        completed_at: "2026-07-29T09:55:00.000Z",
+      },
+    },
+  )
+  const finalPdf = await PDFDocument.load(finalBytes)
+  if (finalPdf.getPageCount() < 3) {
+    throw new Error("The long A3 audit trail did not create continuation pages")
+  }
+  for (const page of finalPdf.getPages().slice(1)) {
+    const size = page.getSize()
+    if (size.width !== 841.89 || size.height !== 1190.55) {
+      throw new Error("An A3 audit page did not preserve the source dimensions")
+    }
+  }
+})
+
 Deno.test("authoritative final PDF rejects missing field values", async () => {
   const original = await PDFDocument.create()
   original.addPage([612, 792])

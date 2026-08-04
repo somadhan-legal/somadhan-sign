@@ -65,4 +65,19 @@ describe('signing email trust boundary', () => {
     expect(finalPdfFunction).toContain('BENGALI_FONT_SHA256')
     expect(finalPdfFunction).toContain('RESVG_WASM_SHA256')
   })
+
+  it('uses the actual Somadhan Sign logo in every email', () => {
+    expect(emailFunction).toContain(
+      'import { SOMADHAN_SIGN_LOGO_PNG_BASE64 } from "../_shared/somadhanLogo.ts"',
+    )
+    expect(emailFunction).toContain('src="cid:somadhan-sign-logo"')
+    expect(emailFunction).toContain("content_id: 'somadhan-sign-logo'")
+    expect(emailFunction).not.toContain('Somadhan<span')
+    expect((emailFunction.match(/headerLogo\(`/g) || []).length).toBe(4)
+  })
+
+  it('keeps the verification caption minimal and omits the reference number', () => {
+    expect(finalPdfFunction).toContain('const qrCaption = "Scan to verify"')
+    expect(finalPdfFunction).not.toContain('Scan to verify - ${verification.reference}')
+  })
 })

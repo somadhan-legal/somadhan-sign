@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useReducer } from 'react'
 import { useBlocker, useParams, useNavigate } from 'react-router'
 import Draggable from 'react-draggable'
 import {
@@ -37,6 +37,10 @@ import {
   type FieldType,
 } from '@/lib/fieldPlacement'
 import { getFieldDraftFingerprint } from '@/lib/fieldDraft'
+import {
+  editorFieldInteractionReducer,
+  initialEditorFieldInteractionState,
+} from '@/lib/editorFieldInteraction'
 import { useResponsivePanel, usesOverlayWorkspacePanels } from '@/hooks/useResponsivePanel'
 import DocumentLoadFailureState from '@/components/DocumentLoadFailureState'
 
@@ -116,13 +120,15 @@ export default function DocumentEditorPage() {
   const [signerLastName, setSignerLastName] = useState('')
   const [signerEmail, setSignerEmail] = useState('')
   const [signerFormError, setSignerFormError] = useState('')
-  const [selectedField, setSelectedField] = useState<string | null>(null)
+  const [{ selectedFieldId: selectedField, activeFieldType: selectedFieldType }, dispatchFieldInteraction] = useReducer(
+    editorFieldInteractionReducer,
+    initialEditorFieldInteractionState,
+  )
   const [savingDraft, setSavingDraft] = useState(false)
   const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saved' | 'error'>('idle')
   const [readyFieldDraftDocumentId, setReadyFieldDraftDocumentId] = useState<string | null>(null)
   const [savingSigner, setSavingSigner] = useState(false)
   const [sending, setSending] = useState(false)
-  const [selectedFieldType, setSelectedFieldType] = useState<FieldType | null>(null)
   const [selectedSignerIdx, setSelectedSignerIdx] = useState(0)
   const [savedToast, setSavedToast] = useState(false)
   const [sentToast, setSentToast] = useState(false)
@@ -240,7 +246,6 @@ export default function DocumentEditorPage() {
         lastSavedFingerprintRef.current = fingerprint
         if (latestFingerprintRef.current === fingerprint) setDraftSaveState('saved')
         if (showConfirmation) {
-          setSelectedField(null)
           showSavedConfirmation()
         }
       })
@@ -336,7 +341,7 @@ export default function DocumentEditorPage() {
       return
     }
     removeSignatureField(fieldId)
-    setSelectedField(null)
+    dispatchFieldInteraction({ type: 'remove-field', fieldId })
   }, [placements, removeSignatureField, t])
 
   const handleResizeStart = useCallback((fieldId: string, corner: 'nw' | 'ne' | 'sw' | 'se', e: React.PointerEvent) => {
@@ -463,7 +468,7 @@ export default function DocumentEditorPage() {
       if (!id || !user || isInteracting.current) return
       if (currentDocument?.status !== 'draft') return // Locked
       if (!selectedFieldType) {
-        setSelectedField(null)
+        dispatchFieldInteraction({ type: 'clear-selection' })
         return
       }
       if (signers.length === 0) {
@@ -499,11 +504,8 @@ export default function DocumentEditorPage() {
         label: null,
         isNew: true,
       })
-      // Placement is deliberately one-shot. Return to selection mode so the next
-      // click cannot create an accidental duplicate field.
-      setSelectedFieldType(null)
       setPlacementPreview(null)
-      setSelectedField(fieldId)
+      dispatchFieldInteraction({ type: 'place-field', fieldId })
     },
     [
       addSignatureField,
@@ -829,8 +831,7 @@ export default function DocumentEditorPage() {
       confirmText: t('editor.clearFields'),
       onConfirm: () => {
         docFields.forEach((field) => removeSignatureField(field.id))
-        setSelectedField(null)
-        setSelectedFieldType(null)
+        dispatchFieldInteraction({ type: 'reset' })
         setPlacementPreview(null)
       },
       variant: 'danger',
@@ -990,7 +991,7 @@ export default function DocumentEditorPage() {
                           onConfirm={async () => {
                             try {
                               await removeSigner(signer.id)
-                              setSelectedField(null)
+                              dispatchFieldInteraction({ type: 'clear-selection' })
                               setSelectedSignerIdx((current) => Math.max(0, Math.min(current, signers.length - 2)))
                             } catch (removeError) {
                               console.error('[DocumentEditor] Error removing signer:', removeError)
@@ -1038,7 +1039,7 @@ export default function DocumentEditorPage() {
                 type="button"
                 aria-pressed={selectedFieldType === null}
                 onClick={() => {
-                  setSelectedFieldType(null)
+                  dispatchFieldInteraction({ type: 'choose-pointer-tool' })
                   setPlacementPreview(null)
                   if (usesOverlayWorkspacePanels()) setLeftPanelCollapsed(true)
                 }}
@@ -1057,8 +1058,7 @@ export default function DocumentEditorPage() {
                   type="button"
                   aria-pressed={selectedFieldType === opt.type}
                   onClick={() => {
-                    setSelectedFieldType(opt.type)
-                    setSelectedField(null)
+                    dispatchFieldInteraction({ type: 'choose-field-tool', fieldType: opt.type })
                     if (usesOverlayWorkspacePanels()) setLeftPanelCollapsed(true)
                   }}
                   className={`flex min-h-11 items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
@@ -1266,9 +1266,8 @@ export default function DocumentEditorPage() {
                     key={field.id}
                     fieldId={field.id}
                     onStart={() => {
-                      setSelectedFieldType(null)
                       setPlacementPreview(null)
-                      setSelectedField(field.id)
+                      dispatchFieldInteraction({ type: 'select-field', fieldId: field.id })
                     }}
                     onStop={(_e, data) => handleFieldDragStop(field.id, _e, data)}
                     bounds="parent"
@@ -1292,18 +1291,16 @@ export default function DocumentEditorPage() {
                       onClick={(e) => {
                         e.stopPropagation()
                         if (!isLocked) {
-                          setSelectedFieldType(null)
                           setPlacementPreview(null)
-                          setSelectedField(field.id)
+                          dispatchFieldInteraction({ type: 'select-field', fieldId: field.id })
                         }
                       }}
                       onPointerUp={(event) => {
                         if (event.pointerType !== 'touch') return
                         event.stopPropagation()
                         if (!isLocked) {
-                          setSelectedFieldType(null)
                           setPlacementPreview(null)
-                          setSelectedField(field.id)
+                          dispatchFieldInteraction({ type: 'select-field', fieldId: field.id })
                         }
                       }}
                       onKeyDown={(event) => {
@@ -1311,9 +1308,8 @@ export default function DocumentEditorPage() {
                           event.preventDefault()
                           event.stopPropagation()
                           if (!isLocked) {
-                            setSelectedFieldType(null)
                             setPlacementPreview(null)
-                            setSelectedField(field.id)
+                            dispatchFieldInteraction({ type: 'select-field', fieldId: field.id })
                           }
                           return
                         }
@@ -1339,7 +1335,7 @@ export default function DocumentEditorPage() {
                           return
                         }
                         updateSignatureField(field.id, nextBounds)
-                        setSelectedField(field.id)
+                        dispatchFieldInteraction({ type: 'select-field', fieldId: field.id })
                       }}
                       role="button"
                       tabIndex={0}
@@ -1419,7 +1415,7 @@ export default function DocumentEditorPage() {
           return (
             <>
               <div className="flex justify-end p-2">
-                <button type="button" aria-label={t('editor.closeFieldSettings')} onClick={() => setSelectedField(null)} className="flex h-11 w-11 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
+                <button type="button" aria-label={t('editor.closeFieldSettings')} onClick={() => dispatchFieldInteraction({ type: 'clear-selection' })} className="flex h-11 w-11 items-center justify-center hover:bg-[hsl(var(--muted))] rounded cursor-pointer">
                   <X className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                 </button>
               </div>

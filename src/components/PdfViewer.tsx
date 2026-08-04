@@ -65,6 +65,10 @@ function PageWithOverlay({
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!onPageClick || !ref.current) return
+      // Field controls sit inside the page overlay. Treat only the uncovered
+      // document surface as a page click so selection, dragging, resizing and
+      // touch interaction can never create a second field underneath.
+      if ((e.target as HTMLElement).closest('[data-field-id]')) return
       const rect = ref.current.getBoundingClientRect()
       const x = e.clientX - rect.left
       const y = e.clientY - rect.top
@@ -76,6 +80,10 @@ function PageWithOverlay({
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (!onPagePointerMove || !ref.current) return
+      if ((e.target as HTMLElement).closest('[data-field-id]')) {
+        onPageMouseLeave?.()
+        return
+      }
       const rect = ref.current.getBoundingClientRect()
       onPagePointerMove(
         pageNumber,
@@ -86,7 +94,7 @@ function PageWithOverlay({
         e.pointerType
       )
     },
-    [onPagePointerMove, pageNumber]
+    [onPageMouseLeave, onPagePointerMove, pageNumber]
   )
 
   const handleKeyDown = useCallback(

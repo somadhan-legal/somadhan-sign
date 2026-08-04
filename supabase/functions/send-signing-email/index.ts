@@ -12,6 +12,7 @@ import {
   sha256Hex,
 } from "../_shared/documentVerification.ts"
 import { withPublicSupabaseOrigin } from "../_shared/publicSupabaseUrl.ts"
+import { SOMADHAN_SIGN_LOGO_PNG_BASE64 } from "../_shared/somadhanLogo.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -75,19 +76,18 @@ const bytesToBase64 = (bytes: Uint8Array) => {
   return btoa(binary)
 }
 
-// Text branding keeps email rendering independent from private document storage.
 const headerLogo = (afterLogo: string) => `
-  <div style="background-color: #075056; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <div style="color: white; font-family: Arial, sans-serif; font-size: 25px; font-weight: 700; letter-spacing: -0.5px;">
-      Somadhan<span style="color: #F95943; font-style: italic; font-weight: 500;">Sign</span>
+  <div style="background-color: #075056; padding: 28px 24px; border-radius: 16px 16px 0 0; text-align: center;">
+    <div style="display: inline-block; padding: 9px 14px; border-radius: 10px; background-color: #ffffff; line-height: 0;">
+      <img src="cid:somadhan-sign-logo" width="196" alt="Somadhan Sign" style="display: block; width: 196px; max-width: 100%; height: auto; border: 0;" />
     </div>
     ${afterLogo}
   </div>`
 
 // Footer - simple text only, no logo
 const footer = `
-  <div style="text-align: center; padding: 20px;">
-    <p style="color: #9ca3af; font-size: 11px; margin: 0;">
+  <div style="text-align: center; padding: 18px 20px 6px;">
+    <p style="color: #7b848d; font-size: 11px; line-height: 1.5; margin: 0;">
       Somadhan &middot; Dhaka, Bangladesh
     </p>
   </div>`
@@ -461,21 +461,21 @@ serve(async (req) => {
 
     // --- Completion email ---
     const downloadButton = safeDownloadUrl !== '#' ? `
-      <div style="text-align: center; margin: 28px 0;">
+      <div style="text-align: center; margin: 28px 0 24px;">
         <a href="${safeDownloadUrl}"
-           style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
-          ⬇ DOWNLOAD SIGNED DOCUMENT
+           style="background-color: #075056; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; line-height: 1.2;">
+          Download signed document
         </a>
       </div>` : ''
 
     const completionHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: Arial, 'Helvetica Neue', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px 12px; background-color: #f5f8f8;">
         ${headerLogo(`
           <div style="margin-top: 16px;">
-            <span style="background: #10b981; color: white; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;">✓ Document Completed</span>
+            <span style="background-color: #dff7e8; color: #147a3c; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;">Document completed</span>
           </div>
         `)}
-        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background-color: #ffffff; padding: 32px 28px; border: 1px solid #dfe7e8; border-top: none; border-radius: 0 0 16px 16px;">
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
           <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${safeDocumentTitle}</p>
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 8px;">
@@ -483,7 +483,7 @@ serve(async (req) => {
           </p>
           ${downloadButton}
           ${verifiedPdfBase64 ? '<p style="color: #6b7280; font-size: 13px; line-height: 1.6;">The signed document is also attached to this email.</p>' : ''}
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Regards,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             This is an automated notification from Somadhan Sign. The signed document is securely stored and can be accessed from your dashboard.
@@ -505,17 +505,17 @@ serve(async (req) => {
     }
 
     const ccNotificationHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: Arial, 'Helvetica Neue', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px 12px; background-color: #f5f8f8;">
         ${headerLogo(`
           <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
             <strong>${safeSenderName}</strong> initiated signing on a document
           </p>
         `)}
-        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background-color: #ffffff; padding: 32px 28px; border: 1px solid #dfe7e8; border-top: none; border-radius: 0 0 16px 16px;">
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${safeViewLink}"
-               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
-              VIEW DOCUMENT
+               style="background-color: #075056; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; line-height: 1.2;">
+              View document
             </a>
           </div>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
@@ -532,7 +532,7 @@ serve(async (req) => {
             <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
             <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${safeMessage}</p>
           ` : ''}
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Regards,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             You are receiving this email because you were added as a viewer (CC) on this document. This is a view-only link, so you cannot sign the document.
@@ -543,17 +543,17 @@ serve(async (req) => {
 
     // --- Invitation email ---
     const invitationHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: Arial, 'Helvetica Neue', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px 12px; background-color: #f5f8f8;">
         ${headerLogo(`
           <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
             <strong>${safeSenderName}</strong> sent you a document to review and sign
           </p>
         `)}
-        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background-color: #ffffff; padding: 32px 28px; border: 1px solid #dfe7e8; border-top: none; border-radius: 0 0 16px 16px;">
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${safeSigningLink}"
-               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
-              REVIEW AND SIGN
+               style="background-color: #075056; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; line-height: 1.2;">
+              Review and sign
             </a>
           </div>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
@@ -563,7 +563,7 @@ serve(async (req) => {
             <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Message</p>
             <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${safeMessage}</p>
           ` : ''}
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Regards,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             Disclaimer: This email contains a unique signature link intended solely for the recipient. Please do not forward or share this email. Somadhan Sign is not liable for signatures executed by anyone other than the intended recipient.
@@ -573,26 +573,26 @@ serve(async (req) => {
       </div>`
 
     const reminderHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="font-family: Arial, 'Helvetica Neue', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px 12px; background-color: #f5f8f8;">
         ${headerLogo(`
           <p style="color: rgba(255,255,255,0.85); margin: 16px 0 0; font-size: 14px;">
             Friendly reminder from <strong>${safeSenderName}</strong>
           </p>
         `)}
-        <div style="background: white; padding: 36px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background-color: #ffffff; padding: 32px 28px; border: 1px solid #dfe7e8; border-top: none; border-radius: 0 0 16px 16px;">
           <p style="font-size: 14px; color: #374151; line-height: 1.6; margin: 0 0 24px;">
             Your signature is still needed to keep this document moving.
           </p>
           <div style="text-align: center; margin-bottom: 28px;">
             <a href="${safeSigningLink}"
-               style="background: #075056; color: white; padding: 14px 36px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
-              REVIEW AND SIGN
+               style="background-color: #075056; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 15px; line-height: 1.2;">
+              Review and sign
             </a>
           </div>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px; font-weight: 600;">Document</p>
           <p style="margin: 0 0 20px; font-size: 16px; font-weight: 600; color: #111827;">${safeDocumentTitle}</p>
-          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Best,<br>The <strong>Somadhan Sign</strong> Team</p>
+          <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin-top: 20px;">Regards,<br>The <strong>Somadhan Sign</strong> Team</p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #9ca3af; font-size: 11px; line-height: 1.5;">
             This secure signature link is unique to you. Please do not forward or share it.
@@ -625,7 +625,7 @@ serve(async (req) => {
       subject: string
       html: string
       cc?: string[]
-      attachments?: Array<{ filename: string; content: string }>
+      attachments?: Array<{ filename: string; content: string; content_id?: string }>
     } = {
       from: 'Somadhan Sign <noreply@somadhan.com>',
       to: toRecipients,
@@ -637,11 +637,17 @@ serve(async (req) => {
             ? `Reminder: ${subjectSender} is waiting for your signature on "${subjectTitle}"`
           : `${subjectSender} has requested your signature on "${subjectTitle}"`,
       html: emailHtml,
+      attachments: [{
+        filename: 'somadhan-sign-logo.png',
+        content: SOMADHAN_SIGN_LOGO_PNG_BASE64,
+        content_id: 'somadhan-sign-logo',
+      }],
     }
 
     // Add PDF attachment for completion emails
     if (isCompletion && verifiedPdfBase64) {
       emailPayload.attachments = [
+        ...(emailPayload.attachments || []),
         {
           filename: getSignedPdfFilename(subjectTitle),
           content: verifiedPdfBase64,

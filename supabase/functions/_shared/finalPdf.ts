@@ -363,6 +363,109 @@ const drawFittedText = async (
   }
 }
 
+const wrapTextLines = (
+  value: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  maxLines: number,
+) => {
+  const source = cleanLine(value)
+  if (!source) return []
+  const words = source.split(" ")
+  const lines: string[] = []
+  let current = ""
+  const pushBrokenWord = (word: string) => {
+    let chunk = ""
+    for (const character of word) {
+      if (chunk && font.widthOfTextAtSize(chunk + character, size) > maxWidth) {
+        lines.push(chunk)
+        chunk = character
+      } else {
+        chunk += character
+      }
+      if (lines.length >= maxLines) break
+    }
+    return chunk
+  }
+
+  for (const word of words) {
+    if (lines.length >= maxLines) break
+    const candidate = current ? `${current} ${word}` : word
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+      current = candidate
+      continue
+    }
+    if (current) lines.push(current)
+    if (lines.length >= maxLines) break
+    current = font.widthOfTextAtSize(word, size) <= maxWidth ? word : pushBrokenWord(word)
+  }
+  if (current && lines.length < maxLines) lines.push(current)
+
+  const consumed = lines.join(" ").replace(/\s+/g, "").length
+  const expected = source.replace(/\s+/g, "").length
+  if (consumed < expected && lines.length > 0) {
+    let last = lines[lines.length - 1]
+    while (last && font.widthOfTextAtSize(`${last}...`, size) > maxWidth) last = last.slice(0, -1)
+    lines[lines.length - 1] = `${last}...`
+  }
+  return lines
+}
+
+const drawWrappedText = async (
+  pdfDoc: PDFDocument,
+  page: PDFPage,
+  value: string,
+  fonts: PdfFonts,
+  options: {
+    x: number
+    y: number
+    maxWidth: number
+    size: number
+    lineHeight: number
+    maxLines: number
+    color: ReturnType<typeof rgb>
+    bold?: boolean
+  },
+) => {
+  const font = options.bold ? fonts.bold : fonts.regular
+  const normalized = cleanLine(value)
+  const lines = hasBengali(normalized)
+    ? (() => {
+      const approximateCharacters = Math.max(4, Math.floor(options.maxWidth / (options.size * 0.64)))
+      const words = normalized.split(" ")
+      const result: string[] = []
+      let line = ""
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word
+        if (candidate.length <= approximateCharacters || !line) line = candidate
+        else {
+          result.push(line)
+          line = word
+        }
+        if (result.length >= options.maxLines) break
+      }
+      if (line && result.length < options.maxLines) result.push(line)
+      if (result.join(" ").length < normalized.length && result.length > 0) {
+        result[result.length - 1] = `${result[result.length - 1].replace(/\.*$/, "")}...`
+      }
+      return result
+    })()
+    : wrapTextLines(normalized, font, options.size, options.maxWidth, options.maxLines)
+
+  for (const [index, line] of lines.entries()) {
+    await drawFittedText(pdfDoc, page, line, fonts, {
+      x: options.x,
+      y: options.y - index * options.lineHeight,
+      maxWidth: options.maxWidth,
+      preferredSize: options.size,
+      color: options.color,
+      bold: options.bold,
+    })
+  }
+  return lines.length
+}
+
 const decodeSignaturePng = (value: string) => {
   const match = /^data:image\/png;base64,([A-Za-z0-9+/=\s]+)$/i.exec(value)
   if (!match) throw new Error("A completed signature has an invalid image format")
@@ -448,7 +551,7 @@ const drawBrand = (
   pageHeight: number,
   margin: number,
 ) => {
-  const logoWidth = Math.min(132, pageWidth * 0.28)
+  const logoWidth = Math.min(154, pageWidth * 0.3)
   const logoHeight = logoWidth * (logo.height / logo.width)
   page.drawImage(logo, {
     x: margin,
@@ -478,7 +581,15 @@ const appendAuditCertificate = async (
     : originalCrop.height
   const margin = Math.max(24, Math.min(50, pageWidth * 0.08))
   const contentWidth = pageWidth - margin * 2
-  const smallLine = 13
+  const scale = Math.max(0.82, Math.min(1.18, Math.min(pageWidth / 595.28, pageHeight / 841.89)))
+  const smallLine = 12 * scale
+  const bodySize = 8.5 * scale
+  const columnGap = Math.max(8, contentWidth * 0.025)
+  const eventWidth = contentWidth * 0.33
+  const participantWidth = contentWidth * 0.35
+  const dateWidth = contentWidth - eventWidth - participantWidth - columnGap * 2
+  const participantX = margin + eventWidth + columnGap
+  const dateX = participantX + participantWidth + columnGap
   if (verification) {
     const verificationUrl = new URL(verification.url)
     if (
@@ -502,11 +613,14 @@ const appendAuditCertificate = async (
   let y = pageHeight - margin
 
   drawBrand(page, logo, pageWidth, pageHeight, margin)
+  let headerBottom = pageHeight - margin - Math.min(154, pageWidth * 0.3) * (logo.height / logo.width)
   if (verification && qrImage) {
-    const qrSize = Math.min(66, pageWidth * 0.14)
+    const qrSize = Math.min(76 * scale, pageWidth * 0.16)
+    const qrX = pageWidth - margin - qrSize
+    const qrY = pageHeight - margin - qrSize
     page.drawImage(qrImage, {
-      x: pageWidth - margin - qrSize,
-      y: pageHeight - margin - qrSize,
+      x: qrX,
+      y: qrY,
       width: qrSize,
       height: qrSize,
     })
@@ -514,8 +628,8 @@ const appendAuditCertificate = async (
       Type: "Annot",
       Subtype: "Link",
       Rect: [
-        pageWidth - margin - qrSize,
-        pageHeight - margin - qrSize,
+        qrX,
+        qrY,
         pageWidth - margin,
         pageHeight - margin,
       ],
@@ -526,15 +640,19 @@ const appendAuditCertificate = async (
       ?? pdfDoc.context.obj([])
     annotations.push(linkAnnotation)
     page.node.set(PDFName.of("Annots"), annotations)
-    page.drawText(`Scan to verify - ${verification.reference}`, {
-      x: Math.max(margin, pageWidth - margin - 155),
-      y: pageHeight - margin - qrSize - 11,
-      size: 7.5,
+    const qrCaption = "Scan to verify"
+    const qrCaptionSize = 7.5 * scale
+    const captionWidth = fonts.regular.widthOfTextAtSize(qrCaption, qrCaptionSize)
+    page.drawText(qrCaption, {
+      x: qrX + (qrSize - captionWidth) / 2,
+      y: qrY - 12 * scale,
+      size: qrCaptionSize,
       font: fonts.regular,
       color: rgb(0.35, 0.39, 0.39),
     })
+    headerBottom = Math.min(headerBottom, qrY - 12 * scale)
   }
-  y -= 88
+  y = headerBottom - 24 * scale
   page.drawText("Certificate of completion", {
     x: margin,
     y,
@@ -565,14 +683,16 @@ const appendAuditCertificate = async (
     font: fonts.bold,
     color: rgb(0.2, 0.2, 0.2),
   })
-  await drawFittedText(pdfDoc, page, documentTitle, fonts, {
+  const titleLines = await drawWrappedText(pdfDoc, page, documentTitle, fonts, {
     x: margin + 70,
     y,
-    preferredSize: 10,
+    size: 10,
+    lineHeight: 13,
+    maxLines: 2,
     maxWidth: contentWidth - 70,
     color: rgb(0.2, 0.2, 0.2),
   })
-  y -= 15
+  y -= Math.max(1, titleLines) * 13 + 2
   const formatUtc = (date: Date) => date.toLocaleString("en-US", {
     year: "numeric",
     month: "long",
@@ -591,10 +711,12 @@ const appendAuditCertificate = async (
     font: fonts.bold,
     color: rgb(0.2, 0.2, 0.2),
   })
-  page.drawText(`${formatUtc(completedAt)} UTC`, {
+  const completedText = `${formatUtc(completedAt)} UTC`
+  const fittedCompleted = fitLatinText(completedText, fonts.regular, contentWidth - 70, 10)
+  page.drawText(fittedCompleted.text, {
     x: margin + 70,
     y,
-    size: 10,
+    size: fittedCompleted.size,
     font: fonts.regular,
     color: rgb(0.2, 0.2, 0.2),
   })
@@ -615,15 +737,16 @@ const appendAuditCertificate = async (
       color: rgb(0.8, 0.8, 0.8),
     })
     y -= 20
-    for (const [label, x] of [
-      ["EVENT", margin],
-      ["PARTICIPANT", margin + contentWidth * 0.36],
-      ["DATE AND TIME (UTC)", margin + contentWidth * 0.74],
+    for (const [label, x, width] of [
+      ["EVENT", margin, eventWidth],
+      ["PARTICIPANT", participantX, participantWidth],
+      [dateWidth < 105 ? "UTC" : "DATE AND TIME (UTC)", dateX, dateWidth],
     ] as const) {
-      page.drawText(label, {
+      const fitted = fitLatinText(label, fonts.bold, width, 8 * scale)
+      page.drawText(fitted.text, {
         x,
         y,
-        size: 8,
+        size: fitted.size,
         font: fonts.bold,
         color: rgb(0.4, 0.4, 0.4),
       })
@@ -634,12 +757,22 @@ const appendAuditCertificate = async (
 
   for (const entry of entries) {
     const metadata = formatAuditMetadata(entry.metadata)
-    const rowHeight = metadata ? smallLine * 3 + 12 : smallLine * 2 + 12
+    const actionLines = wrapTextLines(cleanLine(entry.action), fonts.bold, bodySize, eventWidth, 2)
+    const nameValue = cleanLine(entry.user_name || entry.user_email.split("@")[0])
+    const nameLines = hasBengali(nameValue) ? 2 : wrapTextLines(nameValue, fonts.bold, bodySize, participantWidth, 2).length
+    const emailLines = wrapTextLines(cleanLine(entry.user_email), fonts.regular, bodySize - 0.5, participantWidth, 2)
+    const participantLines = Math.max(1, nameLines) + Math.max(1, emailLines.length)
+    const primaryLines = Math.max(2, actionLines.length, participantLines)
+    const metadataLines = metadata
+      ? Math.max(1, wrapTextLines(metadata, fonts.regular, bodySize - 0.5, contentWidth - 10, 2).length)
+      : 0
+    const rowHeight = primaryLines * smallLine + metadataLines * smallLine + 12 * scale
     if (y < margin + rowHeight) {
       page = pdfDoc.addPage([pageWidth, pageHeight])
       y = pageHeight - margin
       drawBrand(page, logo, pageWidth, pageHeight, margin)
-      y -= 75
+      const continuationLogoHeight = Math.min(154, pageWidth * 0.3) * (logo.height / logo.width)
+      y -= continuationLogoHeight + 24 * scale
       page.drawText("Audit trail continued", {
         x: margin,
         y,
@@ -667,49 +800,59 @@ const appendAuditCertificate = async (
       timeZone: "UTC",
     })
 
-    await drawFittedText(pdfDoc, page, entry.action, fonts, {
+    await drawWrappedText(pdfDoc, page, entry.action, fonts, {
       x: margin,
       y,
-      preferredSize: 9,
-      maxWidth: contentWidth * 0.32,
+      size: bodySize,
+      lineHeight: smallLine,
+      maxLines: 2,
+      maxWidth: eventWidth,
       color: rgb(0.15, 0.15, 0.15),
       bold: true,
     })
-    await drawFittedText(pdfDoc, page, entry.user_name || entry.user_email.split("@")[0], fonts, {
-      x: margin + contentWidth * 0.36,
+    const renderedNameLines = await drawWrappedText(pdfDoc, page, nameValue, fonts, {
+      x: participantX,
       y,
-      preferredSize: 9,
-      maxWidth: contentWidth * 0.34,
+      size: bodySize,
+      lineHeight: smallLine,
+      maxLines: 2,
+      maxWidth: participantWidth,
       color: rgb(0.15, 0.15, 0.15),
       bold: true,
     })
-    await drawFittedText(pdfDoc, page, entry.user_email, fonts, {
-      x: margin + contentWidth * 0.36,
-      y: y - smallLine,
-      preferredSize: 8,
-      maxWidth: contentWidth * 0.34,
+    await drawWrappedText(pdfDoc, page, entry.user_email, fonts, {
+      x: participantX,
+      y: y - Math.max(1, renderedNameLines) * smallLine,
+      size: bodySize - 0.5,
+      lineHeight: smallLine,
+      maxLines: 2,
+      maxWidth: participantWidth,
       color: rgb(0.5, 0.5, 0.5),
     })
-    page.drawText(dateText, {
-      x: margin + contentWidth * 0.74,
+    const fittedDate = fitLatinText(dateText, fonts.regular, dateWidth, bodySize)
+    page.drawText(fittedDate.text, {
+      x: dateX,
       y,
-      size: 9,
+      size: fittedDate.size,
       font: fonts.regular,
       color: rgb(0.15, 0.15, 0.15),
     })
-    page.drawText(`${timeText} UTC`, {
-      x: margin + contentWidth * 0.74,
+    const fittedTime = fitLatinText(`${timeText} UTC`, fonts.regular, dateWidth, bodySize - 0.5)
+    page.drawText(fittedTime.text, {
+      x: dateX,
       y: y - smallLine,
-      size: 8,
+      size: fittedTime.size,
       font: fonts.regular,
       color: rgb(0.5, 0.5, 0.5),
     })
     if (metadata) {
-      await drawFittedText(pdfDoc, page, metadata, fonts, {
+      await drawWrappedText(pdfDoc, page, metadata, fonts, {
         x: margin + 10,
-        y: y - smallLine * 2,
-        preferredSize: 8,
-        maxWidth: contentWidth * 0.68,
+        y: y - primaryLines * smallLine,
+        size: bodySize - 0.5,
+        lineHeight: smallLine,
+        maxLines: 2,
+        maxWidth: contentWidth - 10,
         color: rgb(0.5, 0.5, 0.5),
       })
     }
@@ -731,10 +874,12 @@ const appendAuditCertificate = async (
       color: rgb(0.8, 0.8, 0.8),
     })
     y -= 16
-    await drawFittedText(pdfDoc, page, "This record summarizes events captured by Somadhan Sign and does not independently determine legal validity or identity.", fonts, {
+    await drawWrappedText(pdfDoc, page, "This record summarizes events captured by Somadhan Sign and does not independently determine legal validity or identity.", fonts, {
       x: margin,
       y,
-      preferredSize: 8,
+      size: 8 * scale,
+      lineHeight: 11 * scale,
+      maxLines: 2,
       maxWidth: contentWidth,
       color: rgb(0.45, 0.45, 0.45),
     })

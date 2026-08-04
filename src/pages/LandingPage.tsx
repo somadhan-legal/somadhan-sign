@@ -155,7 +155,7 @@ export default function LandingPage() {
                 transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
                 className="landing-display text-balance"
               >
-                {t('landing.heroNewTitle')}
+                {t('landing.heroNewTitle')}{' '}
                 <span className="block text-[hsl(var(--primary))]">{t('landing.heroNewAccent')}</span>
               </motion.h1>
 
@@ -163,7 +163,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.65, delay: 0.2 }}
-                className="mt-7 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))] sm:text-xl"
+                className="mt-7 max-w-xl text-pretty text-lg leading-8 text-[hsl(var(--muted-foreground))] sm:text-xl"
               >
                 {t('landing.heroNewDesc')}
               </motion.p>
@@ -265,9 +265,9 @@ export default function LandingPage() {
             <motion.div {...reveal} className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
               <div>
                 <p className="landing-eyebrow">{t('landing.capabilityEyebrow')}</p>
-                <h2 className="landing-section-title mt-4">{t('landing.capabilityTitle')}</h2>
+                <h2 className="landing-section-title mt-4 text-balance">{t('landing.capabilityTitle')}</h2>
               </div>
-              <p className="max-w-2xl text-lg leading-8 text-[hsl(var(--muted-foreground))] lg:justify-self-end">{t('landing.capabilityDesc')}</p>
+              <p className="max-w-2xl text-pretty text-lg leading-8 text-[hsl(var(--muted-foreground))] lg:justify-self-end">{t('landing.capabilityDesc')}</p>
             </motion.div>
 
             <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-[hsl(var(--border))] bg-[hsl(var(--border))] md:grid-cols-2">
@@ -276,8 +276,8 @@ export default function LandingPage() {
                   <div className={`mb-12 flex h-12 w-12 items-center justify-center rounded-xl ${tone === 'coral' ? 'bg-[hsl(var(--accent-coral))] text-[hsl(var(--accent-coral-foreground))]' : 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'}`}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-2xl font-bold tracking-tight">{title}</h3>
-                  <p className="mt-3 max-w-md leading-7 text-[hsl(var(--muted-foreground))]">{copy}</p>
+                  <h3 className="text-balance text-2xl font-bold tracking-tight">{title}</h3>
+                  <p className="mt-3 max-w-md text-pretty leading-7 text-[hsl(var(--muted-foreground))]">{copy}</p>
                 </motion.article>
               ))}
             </div>
@@ -288,8 +288,8 @@ export default function LandingPage() {
           <div className="landing-container grid gap-12 lg:grid-cols-2 lg:items-center">
             <motion.div {...reveal}>
               <p className="landing-eyebrow">{t('landing.securityEyebrow')}</p>
-              <h2 className="landing-section-title mt-4">{t('landing.securityTitle')}</h2>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-[hsl(var(--muted-foreground))]">{t('landing.securityDesc')}</p>
+              <h2 className="landing-section-title mt-4 text-balance">{t('landing.securityTitle')}</h2>
+              <p className="mt-6 max-w-xl text-pretty text-lg leading-8 text-[hsl(var(--muted-foreground))]">{t('landing.securityDesc')}</p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 {[t('landing.securityItem1'), t('landing.securityItem2'), t('landing.securityItem3'), t('landing.securityItem4')].map((item) => (
                   <div key={item} className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border))] p-4 font-semibold">
@@ -333,7 +333,7 @@ export default function LandingPage() {
                 <h2 id="landing-final-cta-title" className="mt-5 text-balance text-4xl font-bold tracking-[-0.035em] sm:text-5xl lg:text-6xl">
                   {t('landing.ctaNewTitle')}
                 </h2>
-                <p className="mt-5 max-w-2xl text-base leading-7 opacity-75 sm:text-lg sm:leading-8">{t('landing.ctaNewDesc')}</p>
+                <p className="mt-5 max-w-2xl text-pretty text-base leading-7 opacity-75 sm:text-lg sm:leading-8">{t('landing.ctaNewDesc')}</p>
               </div>
 
               <div className="landing-closing-cta-action">
