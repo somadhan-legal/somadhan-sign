@@ -537,7 +537,9 @@ export default function DashboardPage() {
                 >
                   <span className="sr-only">{t('dashboard.openDocument').replace('{title}', doc.title)}</span>
                 </Link>
-                <div className="pointer-events-none relative z-[1] flex items-start justify-between gap-3 sm:items-center">
+                <div className={`pointer-events-none relative flex items-start justify-between gap-3 sm:items-center ${
+                  menuOpen === doc.id ? 'z-20' : 'z-[1]'
+                }`}>
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--primary))]/10 transition-colors group-hover:bg-[hsl(var(--primary))]/15">
                       <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
